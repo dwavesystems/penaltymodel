@@ -1,0 +1,8 @@
+*.pyc
+
+# virtual environment
+venv/
+
+# sublime support
+*.sublime-project
+*.sublime-workspace
