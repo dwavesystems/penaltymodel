@@ -74,16 +74,14 @@ class _Theta(object):
     #     return ((v, bias) for v, bias in self._linear.items())
 
 
-def generate_ising_small_no_aux(graph, configurations, decision_variables,
-                                linear_energy_ranges=None, quadratic_energy_ranges=None):
+def generate_ising_no_aux(graph, configurations, decision_variables,
+                          linear_energy_ranges=None, quadratic_energy_ranges=None):
     """TODO"""
 
     # this only works for models with no auxiliary variables and less than
     # 4 nodes
     num_nodes = len(graph)
 
-    if num_nodes > 4:
-        raise ValueError("input 'graph' must have 4 or fewer nodes")
     if len(decision_variables) != num_nodes:
         raise ValueError("every node must correspond to a decision variable")
 
