@@ -6,3 +6,6 @@ venv/
 # sublime support
 *.sublime-project
 *.sublime-workspace
+
+# smt files
+*.smt2
