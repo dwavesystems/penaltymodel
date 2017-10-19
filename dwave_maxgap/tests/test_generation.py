@@ -28,6 +28,11 @@ class TestGeneration(unittest.TestCase):
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges)
 
+        # print(h)
+        # print(J)
+        # print(offset)
+        # print(gap)
+
     def test_basic_noaux(self):
         graph = nx.complete_graph(4)
 
@@ -40,7 +45,24 @@ class TestGeneration(unittest.TestCase):
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges)
 
-        print(h)
-        print(J)
-        print(offset)
-        print(gap)
+        # print(h)
+        # print(J)
+        # print(offset)
+        # print(gap)
+
+    def test_one_aux(self):
+        graph = nx.complete_graph(3)
+
+        configurations = {(-1, -1), (1, 1)}
+
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, [0, 1],
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges)
+
+        # print(h)
+        # print(J)
+        # print(offset)
+        # print(gap)
