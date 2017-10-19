@@ -3,6 +3,7 @@ Generation of max-gap penalty models using pysmt.
 """
 import itertools
 
+import networkx as nx
 import dwave_networkx as dnx
 from six import iteritems
 
@@ -37,7 +38,10 @@ class Theta(object):
         self.assertions = assertions = set()
 
         # there is a real-valued offset
-        self.offset = Symbol('offset', REAL)
+        if graph:
+            self.offset = Symbol('offset', REAL)
+        else:
+            self.offset = Real(0.0)
 
         # next we need a variable for each of the linear biases
         def linear_bias(v):
@@ -74,20 +78,62 @@ class Theta(object):
 
         self.quadratic = {(u, v): quadratic_bias(u, v) for u, v in graph.edges()}
 
+    def fix_variables(self, spins):
+        """TODO"""
+        # build a new theta from an empty graph
+        subtheta = Theta(nx.Graph(), {}, {})
 
-# class Table(object):
-#     """TODO"""
-#     def __init__(self, graph, decision_variables, theta):
-#         aux_subgraph = graph.subgraph(v for v in graph if v not in decision_variables)
-#         __, order = dnx.treewidth_branch_and_bound(aux_subgraph)
+        # offset is initially the same
+        subtheta.offset = self.offset
 
-#         self.theta = theta
+        # now, for each variable in self, if it is spins then its bias
+        # gets added to the offset, otherwise it gets added to subtheta
+        for v, bias in iteritems(self.linear):
+            if v in spins:
+                subtheta.offset = Plus(subtheta.offset, Real(spins[v]) * bias)
+            else:
+                subtheta.linear[v] = bias
 
-#     def energy_upperbound(self, values):
+        # and now the quadratic biases get allocated.
+        for (u, v), bias in iteritems(self.quadratic):
+            if u in spins and v in spins:
+                subtheta.offset = Plus(subtheta.offset, Real(spins[v] * spins[u]) * bias)
+            elif u in spins:
+                subtheta.linear[v] = Plus(subtheta.linear[v], Real(spins[u]) * bias)
+            elif v in spins:
+                subtheta.linear[u] = Plus(subtheta.linear[u], Real(spins[v]) * bias)
+            else:
+                subtheta.quadratic[(u, v)] = bias
 
-#         subtheta = self.theta.fix_variables(values)
+        # finally build subtheta's adjacency
+        adj = subtheta.adj
+        for (u, v), bias in iteritems(subtheta.quadratic):
+            if u in adj:
+                adj[u][v] = bias
+            else:
+                adj[u] = {v: bias}
+            if v in adj:
+                adj[v][u] = bias
+            else:
+                adj[v] = {u: bias}
 
-#         # now we need to add the elimina
+        return subtheta
+
+
+class Table(object):
+    """TODO"""
+    def __init__(self, graph, decision_variables, theta):
+        aux_subgraph = graph.subgraph(v for v in graph if v not in decision_variables)
+        __, order = dnx.treewidth_branch_and_bound(aux_subgraph)
+
+        self.theta = theta
+
+    def energy_upperbound(self, values):
+
+        subtheta = self.theta.fix_variables(values)
+
+        # now we need to add the elimina
+        raise NotImplementedError
 
 
 def generate_ising_no_aux(graph, configurations, decision_variables,
@@ -156,25 +202,23 @@ def generate_ising(graph, configurations, decision_variables,
     """TODO"""
     pass
 
-#     num_nodes = len(graph)
+    num_nodes = len(graph)
 
-#     # need the smt variables
-#     theta = Theta()
-#     theta.add_linear_biases_from(graph, linear_energy_ranges)
-#     theta.add_quadratic_biases_from(graph.edges(), quadratic_energy_ranges)
+    # need the smt variables for the biases
+    theta = Theta(graph, linear_energy_ranges, quadratic_energy_ranges)
 
-#     # we need to build a table of messages
-#     table = Table(graph, decision_variables, theta)
+    # we need to build a table of messages
+    table = Table(graph, decision_variables, theta)
 
-#     gap = Symbol('gap', REAL)
-#     for config in itertools.product((-1, 1), repeat=num_nodes):
+    gap = Symbol('gap', REAL)
+    for config in itertools.product((-1, 1), repeat=num_nodes):
 
-#         # get the exact energy for the configuration
-#         spins = dict(zip(decision_variables, config))
+        # get the exact energy for the configuration
+        spins = dict(zip(decision_variables, config))
 
-#         if config in configurations:
-#             energy = table.energy(spins)
-#             assertions.add(Equals(energy, Real(0.0)))
-#         else:
-#             energy = table.energy_upperbound(spins)
-#             assertions.add(GE(energy, gap))
+        if config in configurations:
+            energy = table.energy(spins)
+            assertions.add(Equals(energy, Real(0.0)))
+        else:
+            energy = table.energy_upperbound(spins)
+            assertions.add(GE(energy, gap))
