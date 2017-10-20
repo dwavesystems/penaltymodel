@@ -1,6 +1,7 @@
 """module abstracts setting up the smt problem.
 """
 import logging
+import itertools
 
 from six import iteritems, itervalues
 
@@ -132,11 +133,43 @@ class Theta(object):
         return subtheta
 
 
+def _determine_elimination(graph, decision_variables):
+    """get the elimination order and the induces elimination sets
+    for the auxiliary subgraph.
+    """
+    # auxiliary variables are any variables that are not decision
+    auxiliary_variables = set(n for n in graph if n not in decision_variables)
+
+    # get the adjacency of the auxiliary subgraph
+    adj = {v: {u for u in graph[v] if u in auxiliary_variables}
+           for v in graph if v in auxiliary_variables}
+
+    # get the elimination order that minimizes treewidth
+    __, order = dnx.treewidth_branch_and_bound(adj)
+
+    # we need the elimination set, that is the set of variables that determine
+    # the spin of v for each v in order
+    elimination_sets = {}
+    for n in order:
+        elimination_sets[n] = set(adj[n])
+
+        # now make v simplicial by making its neighborhood a clique, then
+        # continue
+        neighbors = adj[n]
+        for u, v in itertools.combinations(neighbors, 2):
+            adj[u].add(v)
+            adj[v].add(u)
+        for v in neighbors:
+            adj[v].discard(n)
+        del adj[n]
+
+    return order, elimination_sets
+
+
 class Table(object):
     """TODO"""
     def __init__(self, graph, decision_variables, theta):
-        aux_subgraph = graph.subgraph(v for v in graph if v not in decision_variables)
-        __, self.order = dnx.treewidth_branch_and_bound(aux_subgraph)
+        self.order, self.elimination_sets = _determine_elimination(graph, decision_variables)
 
         self.theta = theta
 
