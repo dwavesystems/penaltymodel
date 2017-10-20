@@ -3,7 +3,7 @@
 import logging
 import itertools
 
-from six import iteritems, itervalues
+from six import iteritems, itervalues, moves
 
 import dwave_networkx as dnx
 
@@ -133,10 +133,42 @@ class Theta(object):
         return subtheta
 
 
-def _determine_elimination(graph, decision_variables):
-    """get the elimination order and the induced elimination sets
-    for the auxiliary subgraph.
-    """
+# def _determine_elimination(graph, decision_variables):
+#     """get the elimination order and the induced elimination sets
+#     for the auxiliary subgraph.
+#     """
+#     # auxiliary variables are any variables that are not decision
+#     auxiliary_variables = set(n for n in graph if n not in decision_variables)
+
+#     # get the adjacency of the auxiliary subgraph
+#     adj = {v: {u for u in graph[v] if u in auxiliary_variables}
+#            for v in graph if v in auxiliary_variables}
+
+#     # get the elimination order that minimizes treewidth
+#     tw, order = dnx.treewidth_branch_and_bound(adj)
+
+#     # we need the elimination set, that is the set of variables that determine
+#     # the spin of v for each v in order
+#     elimination_sets = {}
+#     for n in order:
+#         elimination_sets[n] = tuple(adj[n])
+
+#         # now make v simplicial by making its neighborhood a clique, then
+#         # continue
+#         neighbors = adj[n]
+#         for u, v in itertools.combinations(neighbors, 2):
+#             adj[u].add(v)
+#             adj[v].add(u)
+#         for v in neighbors:
+#             adj[v].discard(n)
+#         del adj[n]
+
+#     assert tw == max(len(es) for es in elimination_sets.values())
+
+#     return order, elimination_sets
+
+
+def _elimination_trees(graph, decision_variables):
     # auxiliary variables are any variables that are not decision
     auxiliary_variables = set(n for n in graph if n not in decision_variables)
 
@@ -147,11 +179,9 @@ def _determine_elimination(graph, decision_variables):
     # get the elimination order that minimizes treewidth
     tw, order = dnx.treewidth_branch_and_bound(adj)
 
-    # we need the elimination set, that is the set of variables that determine
-    # the spin of v for each v in order
-    elimination_sets = {}
+    ancestors = {}
     for n in order:
-        elimination_sets[n] = set(adj[n])
+        ancestors[n] = set(adj[n])
 
         # now make v simplicial by making its neighborhood a clique, then
         # continue
@@ -163,15 +193,29 @@ def _determine_elimination(graph, decision_variables):
             adj[v].discard(n)
         del adj[n]
 
-    assert tw == max(len(es) for es in elimination_sets.values())
+    roots = {}
+    nodes = {v: {} for v in ancestors}
+    for vidx in range(len(order) - 1, -1, -1):
+        v = order[vidx]
 
-    return order, elimination_sets
+        if ancestors[v]:
+            for u in order[vidx + 1:]:
+                if u in ancestors[v]:
+                    # v is a child of u
+                    nodes[u][v] = nodes[v]  # nodes[u][v] = children of v
+                    break
+        else:
+            roots[v] = nodes[v]  # roots[v] = children of v
+
+    return roots, ancestors
 
 
 class Table(object):
     """TODO"""
     def __init__(self, graph, decision_variables, theta):
-        self.order, self.elimination_sets = _determine_elimination(graph, decision_variables)
+        # self.order, self.elimination_sets = _determine_elimination(graph, decision_variables)
+
+        self.trees, self.ancestors = _elimination_trees(graph, decision_variables)
 
         self.theta = theta
 
@@ -184,10 +228,10 @@ class Table(object):
         subtheta = self.theta.fix_variables(values)
 
         # ok, let's start eliminating variables
-        order = list(self.order)
+        trees = self.trees
 
-        if order:
-            return Plus(self.message_upperbound(order, {}, subtheta), subtheta.offset)
+        if trees:
+            return Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
         else:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
@@ -210,98 +254,99 @@ class Table(object):
 
         self.fresh_auxvar += 1
 
-        # ok, let's start eliminating variables
-        order = list(self.order)
+        trees = self.trees
 
-        if order:
-            return Plus(self.message(order, {}, subtheta, auxvars), subtheta.offset)
+        if trees:
+            return Plus(self.message(trees, {}, subtheta, auxvars), subtheta.offset)
         else:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
             assert not subtheta.linear and not subtheta.quadratic
             return subtheta.offset
 
-    def message(self, order, spins, subtheta, auxvars):
-        # get the last variable in the elimination order
-        v = order.pop()
-        aux = auxvars[v]
+    def message(self, tree, spins, subtheta, auxvars):
+        # given the current tree, determine the energy
 
-        # build an iterable over all of the energies contributions
-        # that we can exactly determine given v and our known spins
-        # in these contributions we assume that v is positive
-        def energy_contributions():
-            yield subtheta.linear[v]
+        energy_sources = set()
+        for v, children in iteritems(tree):
+            aux = auxvars[v]
 
-            for u, bias in iteritems(subtheta.adj[v]):
-                if u in spins:
-                    yield Times(Real(spins[u]), bias)
+            # build an iterable over all of the energies contributions
+            # that we can exactly determine given v and our known spins
+            # in these contributions we assume that v is positive
+            def energy_contributions():
+                yield subtheta.linear[v]
 
-        energy = Plus(energy_contributions())
+                for u, bias in iteritems(subtheta.adj[v]):
+                    if u in spins:
+                        yield Times(Real(spins[u]), bias)
 
-        # if there are no more variables in the order, we can stop
-        # otherwise we need the next message variable
-        if order:
-            spins[v] = 1.0
-            plus = self.message(order, spins, subtheta, auxvars)
-            spins[v] = -1.0
-            minus = self.message(order, spins, subtheta, auxvars)
-            del spins[v]
-        else:
-            plus = minus = Real(0.0)
+            energy = Plus(energy_contributions())
 
-        # we now need a real-valued smt variable to be our message
-        m = FreshSymbol(REAL)
+            # if there are no more variables in the order, we can stop
+            # otherwise we need the next message variable
+            if children:
+                spins[v] = 1.0
+                plus = self.message(children, spins, subtheta, auxvars)
+                spins[v] = -1.0
+                minus = self.message(children, spins, subtheta, auxvars)
+                del spins[v]
+            else:
+                plus = minus = Real(0.0)
 
-        self.assertions.update({LE(m, Plus(energy, plus)),
-                                LE(m, Plus(Times(energy, Real(-1.)), minus)),
-                                Implies(aux, GE(m, Plus(energy, plus))),
-                                Implies(Not(aux), GE(m, Plus(Times(energy, Real(-1.)), minus)))
-                                })
-        smtlog.debug('%s <= %s', m, Plus(energy, plus))
-        smtlog.debug('%s <= %s', m, Plus(Times(energy, Real(-1.)), minus))
-        smtlog.debug('%s implies %s >= %s', aux, m, Plus(energy, plus))
-        smtlog.debug('%s implies %s >= %s', Not(aux), m, Plus(Times(energy, Real(-1.)), minus))
+            # we now need a real-valued smt variable to be our message
+            m = FreshSymbol(REAL)
 
-        order.append(v)
+            self.assertions.update({LE(m, Plus(energy, plus)),
+                                    LE(m, Plus(Times(energy, Real(-1.)), minus)),
+                                    Implies(aux, GE(m, Plus(energy, plus))),
+                                    Implies(Not(aux), GE(m, Plus(Times(energy, Real(-1.)), minus)))
+                                    })
+            smtlog.debug('%s <= %s', m, Plus(energy, plus))
+            smtlog.debug('%s <= %s', m, Plus(Times(energy, Real(-1.)), minus))
+            smtlog.debug('%s implies %s >= %s', aux, m, Plus(energy, plus))
+            smtlog.debug('%s implies %s >= %s', Not(aux), m, Plus(Times(energy, Real(-1.)), minus))
 
-        return m
+            energy_sources.add(m)
 
-    def message_upperbound(self, order, spins, subtheta):
+        return Plus(energy_sources)
 
-        # get the last variable in the elimination order
-        v = order.pop()
+    def message_upperbound(self, tree, spins, subtheta):
 
-        # build an iterable over all of the energies contributions
-        # that we can exactly determine given v and our known spins
-        # in these contributions we assume that v is positive
-        def energy_contributions():
-            yield subtheta.linear[v]
+        energy_sources = set()
+        for v, subtree in iteritems(tree):
 
-            for u, bias in iteritems(subtheta.adj[v]):
-                if u in spins:
-                    yield Times(Real(spins[u]), bias)
+            # build an iterable over all of the energies contributions
+            # that we can exactly determine given v and our known spins
+            # in these contributions we assume that v is positive
+            def energy_contributions():
+                yield subtheta.linear[v]
 
-        energy = Plus(energy_contributions())
+                for u, bias in iteritems(subtheta.adj[v]):
+                    if u in spins:
+                        yield Times(Real(spins[u]), bias)
 
-        # if there are no more variables in the order, we can stop
-        # otherwise we need the next message variable
-        if order:
-            spins[v] = 1.
-            plus = self.message_upperbound(order, spins, subtheta)
-            spins[v] = -1.
-            minus = self.message_upperbound(order, spins, subtheta)
-            del spins[v]
-        else:
-            plus = minus = Real(0.0)
+            energy = Plus(energy_contributions())
 
-        # we now need a real-valued smt variable to be our message
-        m = FreshSymbol(REAL)
+            # if there are no more variables in the order, we can stop
+            # otherwise we need the next message variable
+            if subtree:
+                spins[v] = 1.
+                plus = self.message_upperbound(subtree, spins, subtheta)
+                spins[v] = -1.
+                minus = self.message_upperbound(subtree, spins, subtheta)
+                del spins[v]
+            else:
+                plus = minus = Real(0.0)
 
-        self.assertions.update({LE(m, Plus(energy, plus)),
-                                LE(m, Plus(Times(energy, Real(-1.)), minus))})
-        smtlog.debug('%s <= %s', m, Plus(energy, plus))
-        smtlog.debug('%s <= %s', m, Plus(Times(energy, Real(-1.)), minus))
+            # we now need a real-valued smt variable to be our message
+            m = FreshSymbol(REAL)
 
-        order.append(v)
+            self.assertions.update({LE(m, Plus(energy, plus)),
+                                    LE(m, Plus(Times(energy, Real(-1.)), minus))})
+            smtlog.debug('%s <= %s', m, Plus(energy, plus))
+            smtlog.debug('%s <= %s', m, Plus(Times(energy, Real(-1.)), minus))
 
-        return m
+            energy_sources.add(m)
+
+        return Plus(m)

@@ -1,2 +1,2 @@
-dwave_networkx>=0.5.1
+dwave_networkx>=0.5.2
 six
