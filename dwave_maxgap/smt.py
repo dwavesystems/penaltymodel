@@ -134,7 +134,7 @@ class Theta(object):
 
 
 def _determine_elimination(graph, decision_variables):
-    """get the elimination order and the induces elimination sets
+    """get the elimination order and the induced elimination sets
     for the auxiliary subgraph.
     """
     # auxiliary variables are any variables that are not decision
@@ -145,7 +145,7 @@ def _determine_elimination(graph, decision_variables):
            for v in graph if v in auxiliary_variables}
 
     # get the elimination order that minimizes treewidth
-    __, order = dnx.treewidth_branch_and_bound(adj)
+    tw, order = dnx.treewidth_branch_and_bound(adj)
 
     # we need the elimination set, that is the set of variables that determine
     # the spin of v for each v in order
@@ -162,6 +162,8 @@ def _determine_elimination(graph, decision_variables):
         for v in neighbors:
             adj[v].discard(n)
         del adj[n]
+
+    assert tw == max(len(es) for es in elimination_sets.values())
 
     return order, elimination_sets
 
