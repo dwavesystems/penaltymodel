@@ -2,7 +2,7 @@
 """
 import logging
 
-from six import iteritems
+from six import iteritems, itervalues
 
 import dwave_networkx as dnx
 
@@ -12,10 +12,12 @@ from pysmt.typing import REAL, BOOL
 
 
 logging.basicConfig()
+
+# smtlog logs all of the smt assertions for debugging
 smtlog = logging.getLogger('smt')
 smtlog.propogate = False
-smtlog.setLevel(logging.DEBUG)
 
+# log provides regular debugging
 log = logging.getLogger()
 log.propogate = False
 
@@ -164,6 +166,13 @@ class Table(object):
         # we need aux variables
         av = self.fresh_auxvar
         auxvars = {v: Symbol('aux{}_{}'.format(av, v), BOOL) for v in subtheta.linear}
+        if av == 0:
+            # without loss of generatlity, we can assume that the aux variables are all
+            # spin-up for one configuration
+            self.assertions.update(set(itervalues(auxvars)))
+            for bias in itervalues(auxvars):
+                smtlog.debug('%s', bias)
+
         self.fresh_auxvar += 1
 
         # ok, let's start eliminating variables

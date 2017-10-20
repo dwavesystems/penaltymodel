@@ -12,6 +12,10 @@ class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
+    def test_trivial(self):
+        # this should test things like empty graphs and empty configs
+        pass
+
     def test_basic(self):
         graph = dnx.chimera_graph(1)
 
@@ -28,12 +32,12 @@ class TestGeneration(unittest.TestCase):
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges)
 
-        # print(h)
-        # print(J)
-        # print(offset)
-        # print(gap)
+        print(h)
+        print(J)
+        print(offset)
+        print(gap)
 
-    def test_basic_noaux(self):
+    def test_basic_no_aux(self):
         graph = nx.complete_graph(4)
 
         configurations = {(-1, -1, -1, -1), (1, 1, 1, 1)}
