@@ -29,12 +29,8 @@ def generate_ising(graph, configurations, decision_variables,
     if any(len(config) != num_variables for config in configurations):
         raise ValueError('mismatched configurations and decision_variables')
 
-    # need the smt variables for the biases
-    theta = Theta()
-    theta.build_from_graph(graph, linear_energy_ranges, quadratic_energy_ranges)
-
     # we need to build a table of messages
-    table = Table(graph, decision_variables, theta)
+    table = Table(graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges)
 
     assertions = set()
     gap = allocate_gap()
@@ -51,7 +47,6 @@ def generate_ising(graph, configurations, decision_variables,
             energy = table.energy_upperbound(spins)
             assertions.add(GE(energy, gap))
 
-    assertions.update(theta.assertions)
     assertions.update(table.assertions)
 
     # ok, problem is set up, let's get solving
@@ -70,6 +65,7 @@ def generate_ising(graph, configurations, decision_variables,
     # finally we need to convert our values back into python floats.
     # we use limit_denominator to deal with some of the rounding
     # issues.
+    theta = table.theta
     h = {v: float(model.get_py_value(bias).limit_denominator())
          for v, bias in iteritems(theta.linear)}
     J = {(u, v): float(model.get_py_value(bias).limit_denominator())

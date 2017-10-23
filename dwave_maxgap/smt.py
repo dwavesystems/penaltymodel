@@ -285,7 +285,9 @@ class Table(object):
         trees = self.trees
 
         if trees:
-            return Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
+            energy = Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
+            smtlog.debug(';;; energy <= %s', energy)
+            return energy
         else:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
@@ -418,4 +420,4 @@ class Table(object):
 
             energy_sources.add(m)
 
-        return Plus(m)
+        return Plus(energy_sources)
