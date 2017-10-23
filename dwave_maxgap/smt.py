@@ -1,6 +1,7 @@
 """module abstracts setting up the smt problem.
 """
 import logging
+import logging.config
 import itertools
 
 from six import iteritems, itervalues, moves
@@ -12,19 +13,33 @@ from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not
 from pysmt.typing import REAL, BOOL
 
 
-logging.basicConfig()
-
-# smtlog logs all of the smt assertions for debugging
+logging.config.fileConfig('logging.conf')
 smtlog = logging.getLogger('smt')
-smtlog.propogate = False
-
-# log provides regular debugging
-log = logging.getLogger()
-log.propogate = False
 
 
 def allocate_gap():
     return Symbol('gap', REAL)
+
+
+def SpinTimes(spin, bias):
+    """Define our own multiplication for bias times spins. This allows for
+    cleaner log code as well as value checking.
+
+    Args:
+        spin (int/float): -1.0 or 1.0
+        bias (pysmt.shortcuts.Symbol): The bias
+
+    Returns:
+        spins * bias
+
+    """
+    if spin == -1.:
+        return Times(Real(spin), bias)
+    elif spin == 1.:
+        # identity
+        return bias
+    else:
+        raise ValueError('expected spins to be -1., or 1.')
 
 
 class Theta(object):
@@ -131,6 +146,27 @@ class Theta(object):
             adj[v][u] = bias
 
         return subtheta
+
+    def energy(self, spins):
+        """The formula that calculates the energy of theta.
+
+        Args:
+            spins (dict): A dict of the form {v: s, ...} where v is
+                every variable in theta and s is -.0 or 1.0.
+
+        Returns:
+            The formula for the energy of theta given spins.
+
+        Raises:
+            KeyError: If and v in theta is not in spins.
+            ValueError: If any spin is not -1.0 or 1.0.
+
+        """
+        # get the energy of theta with every variable set in spins
+        linear_energy = (SpinTimes(spins[v], bias) for v, bias in iteritems(self.linear))
+        quadratic_energy = (SpinTimes(spins[v] * spins[u], bias)
+                            for (u, v), bias in iteritems(self.quadratic))
+        return Plus(itertools.chain(linear_energy, quadratic_energy, [self.offset]))
 
 
 # def _determine_elimination(graph, decision_variables):
@@ -256,6 +292,8 @@ class Table(object):
 
         trees = self.trees
 
+        print(trees)
+
         if trees:
             return Plus(self.message(trees, {}, subtheta, auxvars), subtheta.offset)
         else:
@@ -270,6 +308,8 @@ class Table(object):
         energy_sources = set()
         for v, children in iteritems(tree):
             aux = auxvars[v]
+
+            assert all(u in spins for u in self.ancestors[v])
 
             # build an iterable over all of the energies contributions
             # that we can exactly determine given v and our known spins
@@ -315,6 +355,8 @@ class Table(object):
 
         energy_sources = set()
         for v, subtree in iteritems(tree):
+
+            assert all(u in spins for u in self.ancestors[v])
 
             # build an iterable over all of the energies contributions
             # that we can exactly determine given v and our known spins

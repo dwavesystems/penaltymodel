@@ -18,6 +18,8 @@ class TestGeneration(unittest.TestCase):
 
     def test_basic(self):
         graph = dnx.chimera_graph(1)
+        # graph.remove_node(7)
+        # graph.remove_node(6)
 
         configurations = {(-1, -1, -1),
                           (-1, +1, -1),
