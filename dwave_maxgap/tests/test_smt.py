@@ -239,6 +239,14 @@ class TestTable(pysmt.test.TestCase):
         J = {(u, v): 1 for u, v in graph.edges}
         self.check_table_energies_exact(graph, decision_variables, h, J)
 
+    def test_typical(self):
+        """check tables for a chimera tile"""
+        graph = dnx.chimera_graph(1)
+        decision_variables = (0, 1, 2)
+        h = {0: 1, 1: -1, 2: 1, 3: -1, 4: 1, 5: 0, 6: .4, 7: -1.3}
+        J = {(u, v): 1 for u, v in graph.edges}
+        self.check_table_energies_exact(graph, decision_variables, h, J)
+
     def check_table_energies_exact(self, graph, decision_variables, h, J):
         """For a given ising problem, check that the table gives the correct
         energies when linear and quadratic energies are specified exactly.
