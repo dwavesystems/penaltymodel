@@ -6,10 +6,10 @@ from collections import defaultdict
 
 from six import iteritems
 
-from pysmt.shortcuts import Equals, GE, Real, Solver, And
+from pysmt.shortcuts import Equals, GE, Real, Solver, And, GT, Plus, Max, Times
 
 from dwave_maxgap.penalty_model import PenaltyModel
-from dwave_maxgap.smt import Theta, Table, allocate_gap
+from dwave_maxgap.smt import Theta, Table, allocate_gap, limitReal
 
 __all__ = ['generate_ising']
 
@@ -49,23 +49,47 @@ def generate_ising(graph, configurations, decision_variables,
 
     assertions.update(table.assertions)
 
-    # ok, problem is set up, let's get solving
+    theta = table.theta
+
+    # we also want to go ahead and state the the gap is > 0
+    assertions.add(GT(gap, Real(0)))
+
     with Solver() as solver:
+
         solver.add_assertion(And(assertions))
 
-        g = 0.0
-        solver.add_assertion(GE(gap, Real(g)))
+        if solver.solve():
 
-        while solver.solve():
-            model = solver.get_model()
+            gmin = 0
+            gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
+            gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)]) for (u, v) in graph.edges)
 
-            g += .1
-            solver.add_assertion(GE(gap, Real(g)))
+            # gmax = 6
+            g = 2  # our desired gap
+
+            while abs(gmax - gmin) >= .01:
+                solver.push()
+
+                solver.add_assertion(GE(gap, limitReal(g)))
+
+                if solver.solve():
+                    model = solver.get_model()
+                    gmin = float(model.get_py_value(gap).limit_denominator())
+                else:
+                    solver.pop()
+                    gmax = g
+
+                g = (gmax + gmin) / 2
+
+                print(gmax, gmin, g)
+
+        else:
+            raise NotImplementedError('no model found')
 
     # finally we need to convert our values back into python floats.
     # we use limit_denominator to deal with some of the rounding
     # issues.
-    theta = table.theta
+
     h = {v: float(model.get_py_value(bias).limit_denominator())
          for v, bias in iteritems(theta.linear)}
     J = {(u, v): float(model.get_py_value(bias).limit_denominator())

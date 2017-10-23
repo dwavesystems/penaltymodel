@@ -17,7 +17,7 @@ class TestGeneration(unittest.TestCase):
         pass
 
     def test_basic(self):
-        graph = dnx.chimera_graph(1)
+        graph = dnx.chimera_graph(1, 1, 4)
         # graph.remove_node(7)
         # graph.remove_node(6)
 
