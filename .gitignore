@@ -10,3 +10,10 @@ venv/
 scratch.py
 
 *.egg-info/
+build/
+dist/
+
+generated/
+
+htmlcov/
+.coverage
