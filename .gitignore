@@ -1,0 +1,12 @@
+*.pyc
+
+# virtualenv
+venv/
+
+# sublime support
+*.sublime-workspace
+*.sublime-project
+
+scratch.py
+
+*.egg-info/
