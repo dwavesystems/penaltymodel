@@ -2,7 +2,8 @@ from setuptools import setup
 
 from penaltymodel import __version__
 
-install_requires = []
+install_requires = ['dimod>=0.3.1',
+                    'six']
 extras_require = {}
 
 packages = ['penaltymodel']
