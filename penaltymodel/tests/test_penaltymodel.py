@@ -1,6 +1,16 @@
 import unittest
 
+import networkx as nx
+
 import penaltymodel as pm
+
+
+class TestSpecification(unittest.TestCase):
+    def test_creation(self):
+        graph = nx.complete_graph(4)
+        decision_variables = [0, 1]
+        feasible_configurations = {(0, 0), (1, 1)}
+        specification = pm.Specification(graph, decision_variables, feasible_configurations)
 
 
 class TestPenaltyModel(unittest.TestCase):
