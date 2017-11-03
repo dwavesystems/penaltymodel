@@ -10,3 +10,8 @@ venv/
 # smt files
 *.smt2
 *.log
+
+# python build stuff
+build
+dist
+*.egg-info

@@ -8,7 +8,6 @@ from six import iteritems
 
 from pysmt.shortcuts import Equals, GE, Real, Solver, And, GT, Plus, Max, Times
 
-from dwave_maxgap.penalty_model import PenaltyModel
 from dwave_maxgap.smt import Theta, Table, allocate_gap, limitReal
 
 __all__ = ['generate_ising']
@@ -62,7 +61,8 @@ def generate_ising(graph, configurations, decision_variables,
 
             gmin = 0
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
-            gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)]) for (u, v) in graph.edges)
+            gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
+                        for (u, v) in graph.edges)
 
             # gmax = 6
             g = 2  # our desired gap
@@ -79,9 +79,7 @@ def generate_ising(graph, configurations, decision_variables,
                     solver.pop()
                     gmax = g
 
-                g = (gmax + gmin) / 2
-
-                print(gmax, gmin, g)
+                g = min(gmin + .1, (gmax + gmin) / 2)
 
         else:
             raise NotImplementedError('no model found')

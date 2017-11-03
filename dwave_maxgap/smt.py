@@ -14,8 +14,10 @@ from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not, And
 from pysmt.typing import REAL, BOOL
 
 
-logging.config.fileConfig('logging.conf')
-smtlog = logging.getLogger('smt')
+# from os import path
+# log_file_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'logging.config')
+# logging.config.fileConfig(log_file_path)
+# smtlog = logging.getLogger('smt')
 
 
 def limitReal(x, max_denominator=1000000):
