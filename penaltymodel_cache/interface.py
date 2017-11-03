@@ -1,19 +1,40 @@
-from penaltymodel import PenaltyModel, Ising
-from penaltymodel.decorators import entry_point
+from penaltymodel import PenaltyModel
+from penaltymodel.plugins import entry_point
+from penaltymodel.exceptions import MissingPenaltyModel
 
-from dwave_maxgap.generation import generate_ising
+from penaltymodel_cache.database_manager import load_penalty_model, connection
 
-__all__ = ['get_penalty_model']
+__all__ = ['get_penalty_model_from_specification',
+           'cache_penalty_model']
 
 
 @entry_point(100)
-def get_penalty_model(graph, decision_variables, constraint, **kwargs):
-    """dummy for testing"""
+def get_penalty_model_from_specification(specification, database=None):
+    """TODO"""
 
-    model = Ising({}, {})
+    # this cache is only interested in the graph, the feasible_configurations
+    # and the decision_variables
+    graph = specification.graph
+    decision_variables = specification.decision_variables
+    feasible_configurations = specification.feasible_configurations
 
-    return PenaltyModel(graph, decision_variables, constraint, model, gap)
+    penalty_models = query_penalty_model(conn, graph, decision_variables, feasible_configurations)
+
+    for penalty_model in penalty_models:
+        raise NotImplementedError
+
+    raise MissingPenaltyModel('no penalty model found in penaltymodel_cache')
 
 
 def cache_penalty_model(penalty_model):
-    pass
+    """TODO"""
+
+    conn = connection()
+
+    load_penalty_model(conn, graph, decision_variables, feasible_configurations,
+                       linear_biases, quadratic_biases, offset, classical_gap)
+
+
+    conn.close()
+
+    raise NotImplementedError
