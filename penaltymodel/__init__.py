@@ -1,4 +1,4 @@
-from penaltymodel.penaltymodel import *
+from penaltymodel.classes import *
 
 import penaltymodel.plugins
 

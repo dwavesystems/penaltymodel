@@ -22,7 +22,7 @@ class TestPenaltyModel(unittest.TestCase):
         quadratic = {(0, 1): .5, (1, 2): 1.5}
         offset = 1.4
 
-        m = pm.Model(linear, quadratic, offset, pm.Model.SPIN)
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
 
         self.assertEqual(linear, m.linear)
         self.assertEqual(quadratic, m.quadratic)
@@ -42,7 +42,7 @@ class TestPenaltyModel(unittest.TestCase):
             for v in m.adj[u]:
                 self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
 
-        m = pm.Model(linear, quadratic, offset, pm.Model.BINARY)
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.BINARY)
 
         self.assertEqual(linear, m.linear)
         self.assertEqual(quadratic, m.quadratic)
@@ -68,10 +68,10 @@ class TestPenaltyModel(unittest.TestCase):
         quadratic = {(0, 1): .5, (1, 2): 1.5}
         offset = 1.4
 
-        m = pm.Model(linear, quadratic, offset, pm.Model.SPIN)
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
 
         # should recreate the model
-        from penaltymodel import Model
+        from penaltymodel import BinaryQuadraticModel
         m2 = eval(m.__repr__())
 
         self.assertEqual(m, m2)

@@ -4,13 +4,18 @@ from enum import Enum
 from six import itervalues, iteritems
 import networkx as nx
 
+__all__ = ['BinaryQuadraticModel', 'PenaltyModel', 'Specification',
+           'VARTYPES', 'SPIN', 'BINARY']
+
 
 class VARTYPES(Enum):
     SPIN = -1
     BINARY = 1
+SPIN = VARTYPES.SPIN
+BINARY = VARTYPES.BINARY
 
 
-class Model(object):
+class BinaryQuadraticModel(object):
     """Encodes a binary quadratic model.
 
     Args:
@@ -115,7 +120,8 @@ class Model(object):
         self.offset = offset
 
     def __repr__(self):
-        return ('Model({}, {}, {}, Model.{})'.format(self.linear, self.quadratic, self.offset, self.vartype))
+        return 'BinaryQuadraticModel({}, {}, {}, BinaryQuadraticModel.{})'.format(self.linear, self.quadratic,
+                                                                                  self.offset, self.vartype)
 
     def __eq__(self, model):
         """Model is equal if linear, quadratic, offset and vartype are all equal."""
@@ -303,15 +309,19 @@ class Specification(object):
 
 
 class PenaltyModel(Specification):
-    def __init__(self):
-        # want to overwrite the constructor for specification
-        pass
+    def __init__(self, specification, model, infeasible_gap, ground_energy):
 
-    def load_from_specification(self, specification, linear, quadratic, offset=0.0):
+        # there might be a more clever way to do this but this will work
+        # for now.
         self.graph = specification.graph
         self.decision_variables = specification.decision_variables
         self.feasible_configurations = specification.decision_variables
         self.linear_energy_ranges = specification.linear_energy_ranges
         self.quadratic_energy_ranges = specification.quadratic_energy_ranges
 
-        self.model = Model(linear, quadratic, offset)
+        if not isinstance(model, BinaryQuadraticModel):
+            raise TypeError("expected model to be a Model")
+        self.model = model
+
+        self.infeasible_gap = infeasible_gap
+        self.ground_energy = ground_energy
