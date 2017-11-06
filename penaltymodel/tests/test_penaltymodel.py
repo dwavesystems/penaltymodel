@@ -5,41 +5,73 @@ import networkx as nx
 import penaltymodel as pm
 
 
-class TestSpecification(unittest.TestCase):
-    def test_creation(self):
-        graph = nx.complete_graph(4)
-        decision_variables = [0, 1]
-        feasible_configurations = {(0, 0), (1, 1)}
-        specification = pm.Specification(graph, decision_variables, feasible_configurations)
-
-
-class TestPenaltyModel(unittest.TestCase):
+class TestModel(unittest.TestCase):
     pass
 
 
-class TestIsing(unittest.TestCase):
-    def test_trivial(self):
-        model = pm.Ising({}, {})
-        self.assertEqual(model.quadratic, {})
-        self.assertEqual(model.offset, 0.0)
+class TestSpecification(unittest.TestCase):
+    pass
 
 
-class TestQUBO(unittest.TestCase):
-    def test_trivial(self):
-        model = pm.QUBO({}, 0.0)
+class TestPenaltyModel(unittest.TestCase):
+    def test_construction(self):
+        """smoke test for construction. Make sure all the information got
+        propogated properly."""
 
-        self.assertEqual(model.quadratic, {})
-        self.assertEqual(model.offset, 0.0)
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = 1.4
 
-        model = pm.QUBO({(0, 0): -1.}, .5)
+        m = pm.Model(linear, quadratic, offset, pm.Model.SPIN)
 
-        self.assertEqual(model.quadratic, {(0, 0): -1.})
-        self.assertEqual(model.offset, .5)
+        self.assertEqual(linear, m.linear)
+        self.assertEqual(quadratic, m.quadratic)
+        self.assertEqual(offset, m.offset)
 
-    def test_convert_from_ising(self):
+        for (u, v), bias in quadratic.items():
+            self.assertIn(u, m.adj)
+            self.assertIn(v, m.adj[u])
+            self.assertEqual(m.adj[u][v], bias)
 
-        ising_model = pm.Ising({0: 1, 1: -1}, {(0, 1): -.5})
+            v, u = u, v
+            self.assertIn(u, m.adj)
+            self.assertIn(v, m.adj[u])
+            self.assertEqual(m.adj[u][v], bias)
 
-        model = pm.QUBO(ising_model)
+        for u in m.adj:
+            for v in m.adj[u]:
+                self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
 
-        # TODO, more here
+        m = pm.Model(linear, quadratic, offset, pm.Model.BINARY)
+
+        self.assertEqual(linear, m.linear)
+        self.assertEqual(quadratic, m.quadratic)
+        self.assertEqual(offset, m.offset)
+
+        for (u, v), bias in quadratic.items():
+            self.assertIn(u, m.adj)
+            self.assertIn(v, m.adj[u])
+            self.assertEqual(m.adj[u][v], bias)
+
+            v, u = u, v
+            self.assertIn(u, m.adj)
+            self.assertIn(v, m.adj[u])
+            self.assertEqual(m.adj[u][v], bias)
+
+        for u in m.adj:
+            for v in m.adj[u]:
+                self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
+
+    def test__repr__(self):
+        """check that repr works correctly."""
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = 1.4
+
+        m = pm.Model(linear, quadratic, offset, pm.Model.SPIN)
+
+        # should recreate the model
+        from penaltymodel import Model
+        m2 = eval(m.__repr__())
+
+        self.assertEqual(m, m2)
