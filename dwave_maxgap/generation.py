@@ -10,70 +10,63 @@ __all__ = ['generate_ising']
 
 
 def generate_ising(graph, feasible_configurations, decision_variables,
-                   linear_energy_ranges=None, quadratic_energy_ranges=None,
-                   smt_solver_name=None):
+                   linear_energy_ranges, quadratic_energy_ranges,
+                   smt_solver_name):
     """Generates the Ising model that induces the given feasible configurations.
 
     Args:
         graph (nx.Graph): The target graph on which the Ising model is build.
-        feasible_configurations (set/dict): The set of feasible configurations
-            of the decision variables. If a set it is assumes that the energy
-            for each feasible configuration should be ground. If a dict, then
-            the value is the target energy.
+        feasible_configurations (dict): The set of feasible configurations
+            of the decision variables. The key is a feasible configuration
+            as a tuple of spins, the values are the associated energy
         decision_variables (list/tuple): Which variables in the graph are
             assigned as decision variables.
         linear_energy_ranges (dict, optional): A dict of the form
             {v: (min_, max_), ...} where min_ and max_ are the range
-            of values allowed to v. Default is (-2., 2.) for each v.
-        quadratic_energy_ranges (dict, optional): A dict of the form
+            of values allowed to v.
+        quadratic_energy_ranges (dict): A dict of the form
             {(u, v): (min_, max_), ...} where min_ and max_ are the range
-            of values allowed to (u, v). Default is (-1., 1.) for each
-            edge (u, v).
-        smt_solver_name (str, optional): The name of the smt solver. Must
-            be a solver available to pysmt. Default None, in which case
-            uses the pysmt default.
+            of values allowed to (u, v).
+        smt_solver_name (str/None): The name of the smt solver. Must
+            be a solver available to pysmt. If None, uses the pysmt default.
 
     """
-
-    if linear_energy_ranges is None:
-        linear_energy_ranges = defaultdict(lambda: (-2., 2.))
-    if quadratic_energy_ranges is None:
-        quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
-
-    num_nodes = len(graph)
-    num_variables = len(decision_variables)
-
-    if any(len(config) != num_variables for config in feasible_configurations):
-        raise ValueError('mismatched feasible_configurations and decision_variables lengths')
-
-    # we need to build a table of messages
+    # we need to build a Table. The table encodes all of the information used by the smt solver
     table = Table(graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges)
 
-    for config in itertools.product((-1, 1), repeat=num_variables):
-        # get the exact energy for the configuration
-        assert len(config) == len(decision_variables)
+    # iterate over every possible configuration of the decision variables.
+    for config in itertools.product((-1, 1), repeat=len(decision_variables)):
 
+        # determine the spin associated with each varaible in decision variables.
         spins = dict(zip(decision_variables, config))
 
         if config in feasible_configurations:
-            table.set_energy(spins, 0.0)
+            # if the configuration is feasible, we require that the mininum energy over all
+            # possible aux variable settings be exactly its target energy (given by the value)
+            table.set_energy(spins, feasible_configurations[config])
         else:
+            # if the configuration is infeasible, we simply want its minimum energy over all
+            # possible aux variable settings to be an upper bound on the classical gap.
             table.set_energy_upperbound(spins)
 
+    # now we just need to get a solver
     with Solver(smt_solver_name) as solver:
 
+        # add all of the assertions from the table to the solver
         for assertion in table.assertions:
             solver.add_assertion(assertion)
 
+        # check if the model is feasible at all.
         if solver.solve():
 
+            # we want to increase the gap until we have found the max classical gap
             gmin = 0
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
 
-            # gmax = 6
-            g = 2  # our desired gap
+            # 2 is a good target gap
+            g = 2.
 
             while abs(gmax - gmin) >= .01:
                 solver.push()

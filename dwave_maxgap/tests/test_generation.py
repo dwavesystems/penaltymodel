@@ -1,11 +1,17 @@
 import unittest
 
+from collections import defaultdict
+import itertools
+
 import networkx as nx
 import dwave_networkx as dnx
 
 import dwave_maxgap as maxgap
 
 from pysmt.environment import get_env, reset_env
+
+linear_energy_ranges = defaultdict(lambda: (-2., 2.))
+quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
 
 
 class TestGeneration(unittest.TestCase):
@@ -66,18 +72,18 @@ class TestGeneration(unittest.TestCase):
     def test_basic(self):
         """A typical use case, an AND gate on a chimera tile."""
         graph = dnx.chimera_graph(1, 1, 4)
-        configurations = {(-1, -1, -1),
-                          (-1, +1, -1),
-                          (+1, -1, -1),
-                          (+1, +1, +1)}
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
-        h, J, offset, gap = maxgap.generate_ising(graph, configurations,
-                                                  decision_variables,
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
         self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
@@ -85,18 +91,18 @@ class TestGeneration(unittest.TestCase):
     def test_restricted_energy_ranges(self):
         """Create asymmetric energy ranges and test against that."""
         graph = dnx.chimera_graph(1, 1, 3)
-        configurations = {(-1, -1, -1),
-                          (-1, +1, -1),
-                          (+1, -1, -1),
-                          (+1, +1, +1)}
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
         linear_energy_ranges = {v: (-1., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., .5) for u, v in graph.edges}
 
-        h, J, offset, gap = maxgap.generate_ising(graph, configurations,
-                                                  decision_variables,
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
         self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
@@ -105,39 +111,43 @@ class TestGeneration(unittest.TestCase):
         graph = dnx.chimera_graph(1, 1, 3)
         graph.add_edge(8, 9)
 
-        configurations = {(-1, -1, -1),
-                          (+1, +1, -1)}
+        configurations = {(-1, -1, -1): 0,
+                          (+1, +1, -1): 0}
         decision_variables = (0, 1, 8)
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
-        h, J, offset, gap = maxgap.generate_ising(graph, configurations,
-                                                  decision_variables,
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+        self.check_linear_energy_ranges(h, linear_energy_ranges)
+        self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
         graph = dnx.chimera_graph(1, 1, 3)
         graph.add_edge(8, 9)
 
-        configurations = {(-1, -1, +1, -1),
-                          (+1, +1, -1, -1)}
+        configurations = {(-1, -1, +1, -1): 0,
+                          (+1, +1, -1, -1): 0}
         decision_variables = (0, 1, 3, 8)
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
-        h, J, offset, gap = maxgap.generate_ising(graph, configurations,
-                                                  decision_variables,
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+        self.check_linear_energy_ranges(h, linear_energy_ranges)
+        self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
     def test_basic_no_aux(self):
         graph = nx.complete_graph(4)
 
-        configurations = {(-1, -1, -1, -1), (1, 1, 1, 1)}
+        configurations = {(-1, -1, -1, -1): 0, (1, 1, 1, 1): 0}
         decision_variables = list(graph)
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
@@ -145,13 +155,16 @@ class TestGeneration(unittest.TestCase):
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+        self.check_linear_energy_ranges(h, linear_energy_ranges)
+        self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
     def test_one_aux(self):
         graph = nx.complete_graph(3)
 
-        configurations = {(-1, -1), (1, 1)}
+        configurations = {(-1, -1): 0, (1, 1): 0}
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
@@ -159,8 +172,11 @@ class TestGeneration(unittest.TestCase):
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
-                                                  quadratic_energy_ranges)
+                                                  quadratic_energy_ranges,
+                                                  None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+        self.check_linear_energy_ranges(h, linear_energy_ranges)
+        self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
     def test_specify_msat(self):
         """Test a simple model specifying yices as the smt solver. Combined
@@ -168,11 +184,13 @@ class TestGeneration(unittest.TestCase):
         the smt_solver_name parameter.
         """
         graph = nx.complete_graph(3)
-        configurations = {(-1, -1), (1, 1)}
+        configurations = {(-1, -1): 0, (1, 1): 0}
         decision_variables = [0, 1]
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
-                                                  smt_solver_name='msat')
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  'msat')
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
 
     def test_specify_z3(self):
@@ -181,9 +199,30 @@ class TestGeneration(unittest.TestCase):
         the smt_solver_name parameter.
         """
         graph = nx.complete_graph(3)
-        configurations = {(-1, -1), (1, 1)}
+        configurations = {(-1, -1): 0, (1, 1): 0}
         decision_variables = [0, 1]
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
-                                                  smt_solver_name='z3')
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  'z3')
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+
+    def test_multiplication(self):
+
+        graph = nx.complete_graph(4)
+        configurations = {(x, y, x * y): 0 for x, y in itertools.product((-1, 1), repeat=2)}
+        decision_variables = [0, 1, 2]
+
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  None)
+        self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+        self.check_linear_energy_ranges(h, linear_energy_ranges)
+        self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
