@@ -12,6 +12,53 @@ class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
+    def check_linear_energy_ranges(self, linear, linear_energy_ranges):
+        for v, bias in linear.items():
+            min_, max_ = linear_energy_ranges[v]
+            self.assertGreaterEqual(bias, min_)
+            self.assertLessEqual(bias, max_)
+
+    def check_quadratic_energy_ranges(self, quadratic, quadratic_energy_ranges):
+        for edge, bias in quadratic.items():
+            min_, max_ = quadratic_energy_ranges[edge]
+            self.assertGreaterEqual(bias, min_)
+            self.assertLessEqual(bias, max_)
+
+    def check_generated_ising_model(self, feasible_configurations, decision_variables,
+                                    linear, quadratic, ground_energy, infeasible_gap):
+        """Check that the given Ising model has the correct energy levels"""
+        if not feasible_configurations:
+            return
+
+        from dimod import ExactSolver
+
+        samples = ExactSolver().sample_ising(linear, quadratic)
+
+        # samples are returned in order of energy
+        sample, ground = next(iter(samples.items()))
+        gap = float('inf')
+
+        self.assertIn(tuple(sample[v] for v in decision_variables), feasible_configurations)
+
+        seen_configs = set()
+
+        for sample, energy in samples.items():
+            config = tuple(sample[v] for v in decision_variables)
+
+            # we want the minimum energy for each config of the decisison variables,
+            # so once we've seen it once we can skip
+            if config in seen_configs:
+                continue
+
+            if config in feasible_configurations:
+                self.assertAlmostEqual(energy, ground)
+                seen_configs.add(config)
+            else:
+                gap = min(gap, energy - ground)
+
+        self.assertAlmostEqual(ground_energy, ground)
+        self.assertAlmostEqual(gap, infeasible_gap)
+
     def test_trivial(self):
         # this should test things like empty graphs and empty configs
         pass
@@ -114,50 +161,3 @@ class TestGeneration(unittest.TestCase):
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
-
-    def check_generated_ising_model(self, feasible_configurations, decision_variables,
-                                    linear, quadratic, ground_energy, infeasible_gap):
-        """Check that the given Ising model has the correct energy levels"""
-        if not feasible_configurations:
-            return
-
-        from dimod import ExactSolver
-
-        samples = ExactSolver().sample_ising(linear, quadratic)
-
-        # samples are returned in order of energy
-        sample, ground = next(iter(samples.items()))
-        gap = float('inf')
-
-        self.assertIn(tuple(sample[v] for v in decision_variables), feasible_configurations)
-
-        seen_configs = set()
-
-        for sample, energy in samples.items():
-            config = tuple(sample[v] for v in decision_variables)
-
-            # we want the minimum energy for each config of the decisison variables,
-            # so once we've seen it once we can skip
-            if config in seen_configs:
-                continue
-
-            if config in feasible_configurations:
-                self.assertAlmostEqual(energy, ground)
-                seen_configs.add(config)
-            else:
-                gap = min(gap, energy - ground)
-
-        self.assertAlmostEqual(ground_energy, ground)
-        self.assertAlmostEqual(gap, infeasible_gap)
-
-    def check_linear_energy_ranges(self, linear, linear_energy_ranges):
-        for v, bias in linear.items():
-            min_, max_ = linear_energy_ranges[v]
-            self.assertGreaterEqual(bias, min_)
-            self.assertLessEqual(bias, max_)
-
-    def check_quadratic_energy_ranges(self, quadratic, quadratic_energy_ranges):
-        for edge, bias in quadratic.items():
-            min_, max_ = quadratic_energy_ranges[edge]
-            self.assertGreaterEqual(bias, min_)
-            self.assertLessEqual(bias, max_)
