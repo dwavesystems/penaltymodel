@@ -5,19 +5,19 @@ import logging.config
 import itertools
 from fractions import Fraction
 
-from six import iteritems, itervalues, moves
+from six import iteritems, itervalues
 
 import dwave_networkx as dnx
 
 from pysmt.shortcuts import Symbol, FreshSymbol, Real
-from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not, And
+from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not, And, Equals, GT
 from pysmt.typing import REAL, BOOL
 
 
 # from os import path
 # log_file_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'logging.config')
 # logging.config.fileConfig(log_file_path)
-# smtlog = logging.getLogger('smt')
+smtlog = logging.getLogger('smt')
 
 
 def limitReal(x, max_denominator=1000000):
@@ -28,10 +28,6 @@ def limitReal(x, max_denominator=1000000):
     """
     f = Fraction(x).limit_denominator(max_denominator)
     return Real((f.numerator, f.denominator))
-
-
-def allocate_gap():
-    return Symbol('gap', REAL)
 
 
 def SpinTimes(spin, bias):
@@ -273,9 +269,12 @@ class Table(object):
 
         self.trees, self.ancestors = _elimination_trees(theta, decision_variables)
 
-        self.assertions = theta.assertions
+        self.assertions = assertions = theta.assertions
 
         self.fresh_auxvar = 0  # let's us make fresh aux variables
+
+        self.gap = gap = Symbol('gap', REAL)
+        assertions.add(GT(gap, Real(0)))
 
     def energy_upperbound(self, values):
 
@@ -423,3 +422,15 @@ class Table(object):
             energy_sources.add(m)
 
         return Plus(energy_sources)
+
+    def set_energy(self, spins, target_energy):
+        """TODO"""
+        spin_energy = self.energy(spins)
+        self.assertions.add(Equals(spin_energy, Real(target_energy)))
+
+    def set_energy_upperbound(self, spins):
+        spin_energy = self.energy_upperbound(spins)
+        self.assertions.add(GE(spin_energy, self.gap))
+
+    def gap_bound_assertion(self, gap_lowerbound):
+        return GE(self.gap, limitReal(gap_lowerbound))
