@@ -161,3 +161,29 @@ class TestGeneration(unittest.TestCase):
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+
+    def test_specify_msat(self):
+        """Test a simple model specifying yices as the smt solver. Combined
+        with the other test_specify_... tests, serves as a smoke test for
+        the smt_solver_name parameter.
+        """
+        graph = nx.complete_graph(3)
+        configurations = {(-1, -1), (1, 1)}
+        decision_variables = [0, 1]
+
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
+                                                  smt_solver_name='msat')
+        self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+
+    def test_specify_z3(self):
+        """Test a simple model specifying yices as the smt solver. Combined
+        with the other test_specify_... tests, serves as a smoke test for
+        the smt_solver_name parameter.
+        """
+        graph = nx.complete_graph(3)
+        configurations = {(-1, -1), (1, 1)}
+        decision_variables = [0, 1]
+
+        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
+                                                  smt_solver_name='z3')
+        self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)

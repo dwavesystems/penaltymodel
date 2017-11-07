@@ -10,7 +10,8 @@ __all__ = ['generate_ising']
 
 
 def generate_ising(graph, feasible_configurations, decision_variables,
-                   linear_energy_ranges=None, quadratic_energy_ranges=None):
+                   linear_energy_ranges=None, quadratic_energy_ranges=None,
+                   smt_solver_name=None):
     """Generates the Ising model that induces the given feasible configurations.
 
     Args:
@@ -28,6 +29,9 @@ def generate_ising(graph, feasible_configurations, decision_variables,
             {(u, v): (min_, max_), ...} where min_ and max_ are the range
             of values allowed to (u, v). Default is (-1., 1.) for each
             edge (u, v).
+        smt_solver_name (str, optional): The name of the smt solver. Must
+            be a solver available to pysmt. Default None, in which case
+            uses the pysmt default.
 
     """
 
@@ -56,7 +60,7 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         else:
             table.set_energy_upperbound(spins)
 
-    with Solver() as solver:
+    with Solver(smt_solver_name) as solver:
 
         for assertion in table.assertions:
             solver.add_assertion(assertion)
