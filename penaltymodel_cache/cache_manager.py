@@ -1,47 +1,94 @@
-"""Encodes the logic needed to find the appropriate directory for
-the sqlite database.
+r"""Encodes all of the logic needed for to the database file.
 
-The user_data_dir and _get_win_folder functions are copied
-from the appdirs python package
-https://github.com/ActiveState/appdirs under the following
-license:
-
-# This is the MIT license
-
-Copyright (c) 2010 ActiveState Software Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Database files are by default stored in the system application
+data directory. The application data directory is OS dependent:
+    Mac OS: ~/Library/Application Support/
+    Unix: ~/.local/share/
+    Win 7: C:\Users\<username>\AppData\Local\
 
 """
 import sys
 import os
 
+from penaltymodel_cache import __version__, __author__
+
+__all__ = ['cache_file']
+
 system = sys.platform
 
-__all__ = ['database_directory']
+DATABASENAME = 'cache_%s.db' % __version__
+APPNAME = 'penaltymodel_cache'
 
 
-def database_directory():
+def cache_file(database=None, directory=None):
+    """Open a connection to a sqlite3 database file.
+
+    Args:
+        database (str, optional): The path to the desired database. When
+            no database is provided, a new one is created. A special
+            value ':memory:' can be given to only build the database in
+            memory.
+        directory (str, optional): If specified, database file is built
+            in the given directory. The 'database' parameter takes
+            precedence. If neither a database or directory parameter
+            are provided, then a database is created in system application
+            data directory.
+
+    Returns:
+        str: The path to the database
+
+    """
+    # if the database is specified, we are done
+    if database is None:
+        if directory is None:
+            # if the directory is specified, just point to the correct name
+            database = os.path.join(cache_directory(), DATABASENAME)
+        else:
+            # if nothing is specified, the default location for the database
+            # is in the application data directory, as specified for each OS.
+            database = os.path.join(directory, DATABASENAME)
+
+    return database
+
+
+def cache_directory():
     """Retrieve the default directory for storing the sqlite database."""
-    return user_data_dir('penaltymodel_cache', 'D-Wave Systems')
+    dir_ = user_data_dir(APPNAME, __author__)
 
+    # if the cache directory does not exist, make it
+    if not os.path.isdir(dir_):
+        os.makedirs(dir_)
+
+    return dir_
+
+
+# The following two functions are copied from the
+# from the appdirs python package
+# https://github.com/ActiveState/appdirs under the following
+# license:
+#
+# # This is the MIT license
+#
+# Copyright (c) 2010 ActiveState Software Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 def user_data_dir(appname=None, appauthor=None, version=None, roaming=False):
     r"""Return full path to the user-specific data dir for this application.
