@@ -1,59 +1,37 @@
 import unittest
+import time
+import sqlite3
 
 import networkx as nx
 
 import penaltymodel_cache as pmc
 
 
+def fresh_database():
+    """New, unique database path. Puts it in a temp directory off the current
+    working directory"""
+    dir_ = os.path.join(os.getcwd(), 'tmp')
+    if not os.path.isdir(dir_):
+        os.makedirs(dir_)
+    return os.path.join(dir_, 'tmp-%.6f.db' % time.clock())
+
+
 class TestConnectionAndConfiguration(unittest.TestCase):
     """Test the creation of the database and tables"""
     def test_connection(self):
-        # TODO
-        pass
-
-    def test_connection_specified_file(self):
-        # TODO
-        pass
-
-    def test_connection_specified_directory(self):
-        # TODO
-        pass
-
-    def test_configure_database(self):
-        """configure_database function should add schema to a new database, do nothing to a database
-        built by configure_database under a version of pmc with the same major and minor version
-        and should throw an exception if build under a different version.
-
-        TODO: would be good to directly test the schema, but should be covered by other unittests
-        indirectly
-        """
-        # create a new clean connection
-        conn = pmc.connection(':memory:')
-
-        # run the function
-        pmc.configure_database(conn)
-
-        # now run it again (shouldn't do anything)
-        pmc.configure_database(conn)
-
-        # let's change the version to something new and try that
-        pmc.database_manager.__version__ = '-1.-1.-1'
-        # in this case it should overwrite the database
-        with self.assertRaises(pmc.OutdatedDatabaseException):
-            pmc.configure_database(conn)
-        # reset the version back to the correct version
-        pmc.database_manager.__version__ = pmc.version.__version__
-
-        # close the connection
+        """Connect to the default database. We will not be using the default
+        for many tests."""
+        conn = pmc.cache_connect()
+        self.assertIsInstance(conn, sqlite3.Connection)
         conn.close()
 
 
-class TestManager(unittest.TestCase):
+class TestDatabaseManager(unittest.TestCase):
     """These tests assume that the database has been created or already
     exists correctly"""
     def setUp(self):
         # get a new clean database in memory and instatiate the tables
-        self.clean_conn = clean_conn = pmc.connection(':memory:')
+        self.clean_conn = pmc.cache_connect(':memory:')
 
     def tearDown(self):
         self.clean_conn.close()

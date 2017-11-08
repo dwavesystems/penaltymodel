@@ -3,7 +3,7 @@ database for the cache.
 """
 
 version_table = \
-    """CREATE TABLE version
+    """CREATE TABLE IF NOT EXISTS version
         (
             major INTEGER NOT NULL,
             minor INTEGER NOT NULL,
@@ -13,7 +13,7 @@ version_table = \
 
 graph_table = \
     """
-    CREATE TABLE graph
+    CREATE TABLE IF NOT EXISTS graph
         (
             num_nodes INTEGER NOT NULL,
             num_edges INTEGER NOT NULL,
@@ -22,7 +22,7 @@ graph_table = \
         );
     """
 
-# graph_index = """CREATE INDEX idx_graph ON graphs(
+# graph_index = """CREATE INDEX IF NOT EXISTS idx_graph ON graphs(
 #                     num_nodes,
 #                     num_edges,
 #                     edges,
@@ -31,7 +31,7 @@ graph_table = \
 
 feasible_configurations_table = \
     """
-    CREATE TABLE feasible_configurations
+    CREATE TABLE IF NOT EXISTS feasible_configurations
         (
             num_variables INTEGER NOT NULL,
             num_feasible_configurations INTEGER NOT NULL,
@@ -41,7 +41,7 @@ feasible_configurations_table = \
         );
     """
 
-# configurations_index = """CREATE INDEX idx_configurations ON configurations(
+# configurations_index = """CREATE INDEX IF NOT EXISTS idx_configurations ON configurations(
 #                             num_variables,
 #                             num_configurations,
 #                             configurations,
@@ -50,7 +50,7 @@ feasible_configurations_table = \
 
 model_table = \
     """
-    CREATE TABLE model
+    CREATE TABLE IF NOT EXISTS model
         (
             graph_id INTEGER NOT NULL,
             decision_variables TEXT NOT NULL,
@@ -65,7 +65,7 @@ model_table = \
 
 penalty_model_view = \
     """
-    CREATE VIEW penalty_model AS
+    CREATE VIEW IF NOT EXISTS  penalty_model AS
     SELECT
         num_variables,
         num_feasible_configurations,

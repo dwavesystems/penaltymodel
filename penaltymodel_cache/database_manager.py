@@ -5,108 +5,21 @@ import os
 from penaltymodel.serialization import serialize_graph, serialize_configurations, serialize_decision_variables
 
 from penaltymodel_cache.schema import schema_statements
-from penaltymodel_cache.version import __version__
+from penaltymodel_cache.cache_manager import cache_file
 
 
-class OutdatedDatabaseException(Exception):
-    """Database uses an outdated schema"""
+def cache_connect(database=None, directory=None):
+    """TODO"""
 
+    conn = sqlite3.connect(cache_file(database, directory))
 
-def configure_database(conn):
-    """For a given connection, adds the schema for the penalty model cache.
-
-    If the database has already been configured, does nothing.
-
-    Args:
-        conn (:class:`sqlite3.Connection`): a connection to the database.
-
-    Raises:
-        OutdatedDatabaseException: If the version as stored in the version
-            table in the connected database does not match the major and
-            minor version number of the currently executing code.
-
-    """
-
-    # we want to know if the database has already been configured. That is it has
-    # a matching version number. The schema can only change between major or minor
-    # version increments
-    version = __version__.split('.')
-
-    table_select = "SELECT name FROM sqlite_master WHERE type='table' AND name='version';"
-    version_select = "SELECT revision FROM version WHERE major = ? and minor = ?;"
-    version_insert = "INSERT INTO version(major, minor, revision) VALUES (?, ?, ?);"
-
+    # let us go ahead and populate the database with the tables we need. Each table
+    # is only created if it does not already exist
     with conn as cur:
-        # see if there is a current version number
-        tbl = conn.execute(table_select).fetchone()
-
-        if tbl is not None:
-            # there is a version number stored
-
-            # get the value
-            major, minor, __ = version
-            row = conn.execute(version_select, (major, minor)).fetchone()
-
-            if row is None:
-                # we should wipe the database here
-                raise OutdatedDatabaseException('given database matches old version')
-            else:
-                # we are done! We could check all of the schema but let's just assume that people
-                # have not gone out of their way to mess with the database
-                return
-
-        # we assume that the database has not been set up or has just been wiped
-        # so we can just add the tables
         for statement in schema_statements:
             cur.execute(statement)
 
-        # record the current version
-        conn.execute(version_insert, version)
-
-
-def connection(database=None, directory=None):
-    """Open a connection to a sqlite3 database file.
-
-    Args:
-        database (str, optional): The path to the desired database. When
-            no database is provided, a new one is created. A special
-            value ':memory:' can be given to only build the database in
-            memory.
-        directory (str, optional): If specified, database file is built
-            in the given directory. The 'database' parameter takes
-            precedence. If neither a database or directory parameter
-            are provided, then a database is created in system temporary
-            directory.
-
-    Returns:
-        :class:`sqlite3.Connection`: A connection to the database.
-
-    """
-
-    if database is None:
-        database = _filename(directory)
-
-    conn = sqlite3.connect(database)
-
-    # make sure the database has all of the correct fields
-    configure_database(conn)
-
     return conn
-
-
-def _filename(directory=None):
-    """returns the database file (with path) in the given directory. If no
-    directory is given then puts it in the temp directory.
-    """
-
-    # if there is no specified directory for the database file, assume that it is
-    # in the temporary directory (as is given by tempfile)
-    if directory is None:
-        directory = tempfile.gettempdir()
-
-    filename = 'penaltymodel_cache.db'
-
-    return os.path.join(directory, filename)
 
 
 def graph_id(conn, nodelist, edgelist):
