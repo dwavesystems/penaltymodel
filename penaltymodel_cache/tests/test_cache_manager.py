@@ -1,4 +1,3 @@
-
 """NB: The key features of these tests is that they need to run on all platforms."""
 import unittest
 import sqlite3
@@ -31,3 +30,8 @@ class TestCacheManager(unittest.TestCase):
         filepath = pmc.cache_file(directory=os.path.join(os.getcwd(), 'tmp'))
 
         self.assertEqual(os.path.join(os.getcwd(), 'tmp', pmc.cache_manager.DATABASENAME), filepath)
+
+    def test_special_database_name(self):
+        """For any future changes it is important that :memory: propogate through
+        cache_file properly"""
+        self.assertEqual(':memory:', pmc.cache_file(':memory:'))
