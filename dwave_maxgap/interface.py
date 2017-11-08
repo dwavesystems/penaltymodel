@@ -1,17 +1,23 @@
-from penaltymodel import PenaltyModel, Ising
-from penaltymodel.decorators import entry_point
+from penaltymodel import PenaltyModel, BinaryQuadraticModel
+from penaltymodel.plugins import penaltymodel_factory
 
 from dwave_maxgap.generation import generate_ising
 
 __all__ = ['get_penalty_model']
 
 
-@entry_point(-100)
-def get_penalty_model(graph, decision_variables, constraint, **kwargs):
-    """dummy for testing"""
+@penaltymodel_factory(-100)  # set the priority to low
+def get_penalty_model(specification):
+    """TODO"""
 
-    h, J, offset, gap = generate_ising(graph, constraint, decision_variables)
+    linear, quadratic, ground, gap = generate_ising(specification.graph,
+                                                    specification.feasible_configurations,
+                                                    specification.decision_variables,
+                                                    specification.linear_energy_ranges,
+                                                    specification.quadratic_energy_ranges,
+                                                    None)  # unspecified smt solver
 
-    model = Ising(h, J, offset)
+    # set of the model with 0.0 offset
+    model = BinaryQuadraticModel(linear, quadratic, 0.0, BinaryQuadraticModel.SPIN)
 
-    return PenaltyModel(graph, decision_variables, constraint, model, gap)
+    return PenaltyModel(specification, model, gap, ground)
