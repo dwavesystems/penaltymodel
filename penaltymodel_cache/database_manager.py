@@ -1,8 +1,6 @@
 import sqlite3
-import tempfile
-import os
 
-from penaltymodel.serialization import serialize_graph, serialize_configurations, serialize_decision_variables
+# from penaltymodel.serialization import serialize_graph, serialize_configurations, serialize_decision_variables
 
 from penaltymodel_cache.schema import schema_statements
 from penaltymodel_cache.cache_manager import cache_file
@@ -19,141 +17,192 @@ def cache_connect(database=None, directory=None):
         for statement in schema_statements:
             cur.execute(statement)
 
+        # turn on foreign keys, allows deletes to cascade. That is if the graph
+        # associated with a penaltymodel is removed, the penaltymodel will also
+        # be removed. Also enforces that the graph exist when inserting.
+        cur.execute("PRAGMA foreign_keys = ON;")
+
     return conn
 
 
-def graph_id(conn, nodelist, edgelist):
-    """Get the unique id associated with each graph in the cache.
+def penalty_model_id(conn, penalty_model):
+    """Returns the unique id associated with the given penalty model.
+
+    If the penalty model is not currently in the cache, it is added
+    and a new id is assigned. Thus, this function serves as the loading
+    function for the cache.
 
     Args:
-        conn (:class:`sqlite3.Connection`): a connection to the database.
-        nodelist (list): the nodes in the graph.
-        edgelist (list): the edges in the graph.
+        conn (:obj:`sqlite3.Connection`): A connection to the cache.
+        penalty_model (:obj:`penaltymodel.PenaltyModel`): The penalty
+            model that the user wishes to determine the unique id for.
 
     Returns:
-        int: the unique id associated with the given graph.
-
-    Notes:
-        Inserts the graph into the sqlite3 database if it is not already
-        present. If the graph is not present, the database is locked
-        between query and insert.
+        int: The id associated with `penalty_model`.
 
     """
-    # For a graph G s.t. |G| = N, the nodelist should be the integers [0,..,N-1]
-    # and the edges should be an ordered list of the edges where each edge is itself
-    # ordered. These should be able to be turned off.
-    assert all(idx == v for idx, v in enumerate(nodelist))
-    assert all(isinstance(u, int) and isinstance(v, int) for u, v in edgelist)
-    assert all(u >= 0 and u < len(nodelist) and v >= 0 and v < len(nodelist) for u, v in edgelist)
-    assert edgelist == sorted(tuple(sorted(edge)) for edge in edgelist)
 
-    # serialize the graph. Returns a tuple (num_nodes, num_edges, edges_string)
-    serial_graph = serialize_graph(nodelist, edgelist)
+    penalty_model_dict = penalty_model.serialize()
 
-    select = "SELECT graph_id from graph WHERE num_nodes = ? and num_edges = ? and edges = ?;"
-    insert = "INSERT INTO graph(num_nodes, num_edges, edges) VALUES (?, ?, ?);"
+    select = \
+        """SELECT id from penalty_model_view WHERE
+            num_nodes = :num_nodes AND
+            num_edges = :num_edges AND
+            edges = :edges AND
+            num_variables = :num_variables AND
+            num_feasible_configurations = :num_feasible_configurations AND
+            feasible_configurations = :feasible_configurations AND
+            energies = :energies AND
+            linear_biases = :linear_biases AND
+            quadratic_biases = :quadratic_biases AND
+            offset = :offset AND
+            decision_variables = :decision_variables AND
+            classical_gap = :classical_gap AND
+            ground_energy = :ground_energy
+        ;"""
+    insert = \
+        """INSERT INTO penalty_model(
+            decision_variables,
+            classical_gap,
+            ground_energy,
+            graph_id,
+            feasible_configurations_id,
+            ising_model_id)
+        VALUES(
+            :decision_variables,
+            :classical_gap,
+            :ground_energy,
+            :graph_id,
+            :feasible_configurations_id,
+            :ising_model_id);
+        """
 
     with conn as cur:
-        # get the graph_id
-        row = cur.execute(select, serial_graph).fetchone()
+        row = cur.execute(select, penalty_model_dict).fetchone()
 
-        # if it's not there, insert and re-query
         if row is None:
-            cur.execute(insert, serial_graph)
-            row = cur.execute(select, serial_graph).fetchone()
+            # penalty model not found, so we're doing an insert
 
-    # the row should only have the id in it.
-    graph_id, = row
+            # add the graph_id to penalty_model_dict
+            _graph_id(cur, penalty_model_dict)
 
-    return graph_id
+            # add the feasible_configurations_id to penalty_model_dict
+            _feasible_configurations_id(cur, penalty_model_dict)
+
+            # and finally add the ising_model_id to penalty_model_dict
+            _ising_model_id(cur, penalty_model_dict)
+
+            # alright, all the pieces should be there for an insert on penalty_model
+            cur.execute(insert, penalty_model_dict)
+            row = cur.execute(select, penalty_model_dict).fetchone()
+
+    idx, = row
+    return idx
 
 
-def get_configurations_id(conn, feasible_configurations):
-    """Get the unique id associated with the given configurations.
+def _graph_id(cur, penalty_model_dict):
+    """Get the unique id associated with each graph in the cache. Updates the
+    penalty_model_dict with graph_id field.
 
-    Args:
-        conn (:class:`sqlite3.Connection`): a connection to the database.
-        feasible_configurations (dict/set): The feasible configurations
-            of the decision variables.
-
-    Returns:
-        int: The configuration_id as stored in the database.
-
+    Acts on the cursor. Intended use is to be invoked inside a with statement.
     """
-    # these should be checked already but we'll leave them as asserts for now
-    assert isinstance(feasible_configurations, (set, dict))
-    assert all(len(next(iter(feasible_configurations))) == len(config) for config in feasible_configurations)
-    assert all(isinstance(energy, (int, float)) for energy in feasible_configurations.values()) \
-        if isinstance(feasible_configurations, dict) else True
 
-    serial_config = serialize_configurations(feasible_configurations)
+    select = \
+        """SELECT id from graph WHERE
+            num_nodes = :num_nodes
+            AND num_edges = :num_edges
+            AND edges = :edges;
+        """
+    insert = \
+        """INSERT INTO graph(num_nodes, num_edges, edges) VALUES
+            (
+                :num_nodes,
+                :num_edges,
+                :edges
+            );
+        """
 
-    select = """SELECT feasible_configurations_id FROM feasible_configurations WHERE
-                    num_variables = ? and
-                    num_feasible_configurations = ? and
-                    feasible_configurations = ? and
-                    energies = ?;"""
+    row = cur.execute(select, penalty_model_dict).fetchone()
+
+    # if it's not there, insert and re-query
+    if row is None:
+        cur.execute(insert, penalty_model_dict)
+        row = cur.execute(select, penalty_model_dict).fetchone()
+
+    # None is not iterable so this is self checking
+    penalty_model_dict['graph_id'], = row
+
+
+def _feasible_configurations_id(cur, penalty_model_dict):
+    """Get the unique id associated with the given feasible_configurations.
+    Updates the penalty_model_dict with the feasible_configurations_id field.
+
+    Acts on the cursor. Intended use is to be invoked inside a with statement.
+    """
+
+    select = """SELECT id FROM feasible_configurations WHERE
+                    num_variables = :num_variables and
+                    num_feasible_configurations = :num_feasible_configurations and
+                    feasible_configurations = :feasible_configurations and
+                    energies = :energies;
+             """
     insert = """INSERT INTO feasible_configurations(
                     num_variables,
                     num_feasible_configurations,
                     feasible_configurations,
                     energies)
-                VALUES (?, ?, ?, ?);"""
+                VALUES (:num_variables, :num_feasible_configurations, :feasible_configurations, :energies);"""
 
-    with conn as cur:
+    row = cur.execute(select, penalty_model_dict).fetchone()
 
-        row = cur.execute(select, serial_config).fetchone()
+    if row is None:
+        cur.execute(insert, penalty_model_dict)
+        row = cur.execute(select, penalty_model_dict).fetchone()
 
-        if row is None:
-            cur.execute(insert, serial_config)
-            row = cur.execute(select, serial_config).fetchone()
-
-    return row[0]
+    # None is not iterable so this is self checking
+    penalty_model_dict['feasible_configurations_id'], = row
 
 
-def query_penalty_model(conn, graph, decision_variables, feasible_configurations):
+def _ising_model_id(cur, penalty_model_dict):
+    """Get the unique id associated with the given ising_model.
+    Updates the penalty_model_dict with the ising_model_id field.
 
-    # we need to get a nodelist and an edgelist from graph
-    if all(v in graph for v in range(len(graph))):
-        # in this case the graph has indexlabelled [0, .., n-1]
-        nodelist = list(range(len(graph)))
-        edgelist = sorted(sorted(edge) for edge in graph.edges)
-    else:
-        raise NotImplementedError
-
-    serial_graph = serialize_graph(nodelist, edgelist)
-    serial_feasible_configurations = serialize_configurations(feasible_configurations)
-    serial_decision_variables = serialize_decision_variables(decision_variables)
+    Acts on the cursor. Intended use is to be invoked inside a with statement.
+    """
 
     select = \
         """
-        SELECT
+        SELECT id from ising_model WHERE
+            linear_biases = :linear_biases AND
+            quadratic_biases = :quadratic_biases AND
+            offset = :offset;
+        """
+    insert = \
+        """
+        INSERT INTO ising_model(
             linear_biases,
             quadratic_biases,
             offset,
-            classical_gap,
-            model_id
-        FROM penalty_model
-        WHERE
-            num_variables = ? AND
-            num_feasible_configurations = ? AND
-            feasible_configurations = ? AND
-            energies = ? AND
-            num_nodes = ? AND
-            num_edges = ? AND
-            edges = ? AND
-            decision_variables = ?;
+            max_quadratic_bias,
+            min_quadratic_bias,
+            max_linear_bias,
+            min_linear_bias)
+        VALUES (
+            :linear_biases,
+            :quadratic_biases,
+            :offset,
+            :max_quadratic_bias,
+            :min_quadratic_bias,
+            :max_linear_bias,
+            :min_linear_bias
+            )
         """
 
-    key = serial_graph + serial_feasible_configurations + (serial_decision_variables,)
-    with conn as cur:
-        row = cur.execute(select, key)
+    row = cur.execute(select, penalty_model_dict).fetchone()
 
-        for r in row:
-            yield -1
+    if row is None:
+        cur.execute(insert, penalty_model_dict)
+        row = cur.execute(select, penalty_model_dict).fetchone()
 
-
-def load_penalty_model(conn, graph, decision_variables, feasible_configurations,
-                       linear_biases, quadratic_biases, offset, classical_gap):
-    # NB: we also want to track number of rows
-    raise NotImplementedError
+    # None is not iterable so this is self checking
+    penalty_model_dict['ising_model_id'], = row

@@ -1,8 +1,10 @@
 import unittest
 import time
 import sqlite3
+import os
 
 import networkx as nx
+import penaltymodel as pm
 
 import penaltymodel_cache as pmc
 
@@ -30,59 +32,75 @@ class TestDatabaseManager(unittest.TestCase):
     """These tests assume that the database has been created or already
     exists correctly"""
     def setUp(self):
-        # get a new clean database in memory and instatiate the tables
+        # get a new clean database in memory, only lasts as long as the unittest
         self.clean_conn = pmc.cache_connect(':memory:')
 
     def tearDown(self):
+        # close the memory connection
         self.clean_conn.close()
 
-    def test_get_graph_id(self):
-        # create some graphs we can insert
+    def test_penalty_model_id(self):
+        """Tests for the penalty_model_id function."""
         conn = self.clean_conn
+        # conn = pmc.cache_connect(fresh_database())
 
-        G = nx.complete_graph(5)
+        # set up a penalty model we can use in the test
+        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
+        model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
+        p = pm.PenaltyModel(spec, model, 2, -2)
 
-        nodelist = sorted(G.nodes)
-        edgelist = sorted(tuple(sorted(edge)) for edge in G.edges)
+        pmid = pmc.penalty_model_id(conn, p.serialize())
 
-        gid = pmc.graph_id(conn, nodelist, edgelist)
+        # rerunning should return the same id
+        self.assertEqual(pmid, pmc.penalty_model_id(conn, p.serialize()))
 
-        # the same graph again should give the same id
-        self.assertEqual(gid, pmc.graph_id(conn, nodelist, edgelist))
+    # def test_get_graph_id(self):
+    #     # create some graphs we can insert
+    #     conn = self.clean_conn
 
-        # new graph should have different id
-        H = nx.barbell_graph(5, 6)
-        nodelist = sorted(H.nodes)
-        edgelist = sorted(tuple(sorted(edge)) for edge in H.edges)
-        hid = pmc.graph_id(conn, nodelist, edgelist)
-        self.assertNotEqual(gid, hid)
+    #     G = nx.complete_graph(5)
 
-    def test_get_configurations_id(self):
+    #     nodelist = sorted(G.nodes)
+    #     edgelist = sorted(tuple(sorted(edge)) for edge in G.edges)
 
-        conn = self.clean_conn
+    #     gid = pmc.graph_id(conn, nodelist, edgelist)
 
-        configurations = {(-1, -1, 1), (1, -1, 1)}
+    #     # the same graph again should give the same id
+    #     self.assertEqual(gid, pmc.graph_id(conn, nodelist, edgelist))
 
-        rid = pmc.get_configurations_id(conn, configurations)
+    #     # new graph should have different id
+    #     H = nx.barbell_graph(5, 6)
+    #     nodelist = sorted(H.nodes)
+    #     edgelist = sorted(tuple(sorted(edge)) for edge in H.edges)
+    #     hid = pmc.graph_id(conn, nodelist, edgelist)
+    #     self.assertNotEqual(gid, hid)
 
-        # should stay the same
-        self.assertEqual(rid, pmc.get_configurations_id(conn, configurations))
+    # def test_get_configurations_id(self):
 
-        # differnt config should be differnt
-        configs2 = {(-1, 1, -1)}
-        self.assertNotEqual(rid, pmc.get_configurations_id(conn, configs2))
+    #     conn = self.clean_conn
 
-    def test_query_penalty_model(self):
+    #     configurations = {(-1, -1, 1), (1, -1, 1)}
 
-        conn = self.clean_conn
+    #     rid = pmc.feasible_configurations_id(conn, configurations)
 
-        graph = nx.complete_graph(3)
-        decision_variables = (0, 1)
-        feasible_configurations = {(-1, -1), (-1, 1)}
+    #     # should stay the same
+    #     self.assertEqual(rid, pmc.feasible_configurations_id(conn, configurations))
 
-        # returns penaltymodel as an iterator, so should be empty at this point
-        penalty_models = pmc.query_penalty_model(conn, graph, decision_variables,
-                                                 feasible_configurations)
+    #     # different config should be different
+    #     configs2 = {(-1, 1, -1)}
+    #     self.assertNotEqual(rid, pmc.feasible_configurations_id(conn, configs2))
 
-        with self.assertRaises(StopIteration):
-            next(penalty_models)
+    # def test_query_penalty_model(self):
+
+    #     conn = self.clean_conn
+
+    #     graph = nx.complete_graph(3)
+    #     decision_variables = (0, 1)
+    #     feasible_configurations = {(-1, -1), (-1, 1)}
+
+    #     # returns penaltymodel as an iterator, so should be empty at this point
+    #     penalty_models = pmc.query_penalty_model(conn, graph, decision_variables,
+    #                                              feasible_configurations)
+
+    #     with self.assertRaises(StopIteration):
+    #         next(penalty_models)
