@@ -1,6 +1,9 @@
 import sqlite3
+import json
 
-# from penaltymodel.serialization import serialize_graph, serialize_configurations, serialize_decision_variables
+from six import iteritems
+
+from penaltymodel import PenaltyModel, decode_biases, BinaryQuadraticModel
 
 from penaltymodel_cache.schema import schema_statements
 from penaltymodel_cache.cache_manager import cache_file
@@ -25,6 +28,64 @@ def cache_connect(database=None, directory=None):
     return conn
 
 
+def get_penalty_model_from_specification(conn, specification):
+    """todo"""
+
+    specification_dict = specification.serialize()
+
+    # select the information we need from the database
+    select = \
+        """
+        SELECT
+            linear_biases,
+            quadratic_biases,
+            offset,
+            classical_gap,
+            ground_energy
+        FROM penalty_model_view WHERE
+            num_nodes = :num_nodes AND
+            num_edges = :num_edges AND
+            edges = :edges AND
+            num_variables = :num_variables AND
+            num_feasible_configurations = :num_feasible_configurations AND
+            feasible_configurations = :feasible_configurations AND
+            energies = :energies AND
+            decision_variables = :decision_variables AND
+            max_quadratic_bias <= :max_quadratic_bias AND
+            min_quadratic_bias >= :min_quadratic_bias AND
+            max_linear_bias <= :max_linear_bias AND
+            min_linear_bias >= :min_linear_bias
+        ORDER BY classical_gap DESC;
+        """
+
+    linear_energy_ranges = specification.linear_energy_ranges
+    quadratic_energy_ranges = specification.quadratic_energy_ranges
+
+    with conn as cur:
+        rows = cur.execute(select, specification_dict)
+
+        for linear, quadratic, offset, classical_gap, ground_energy in rows:
+
+            # decode linear and quadratic
+            nodelist = range(specification_dict['num_nodes'])
+            edgelist = [tuple(edge) for edge in json.loads(specification_dict['edges'])]
+            linear, quadratic, offset = decode_biases(linear, quadratic, offset, nodelist, edgelist)
+
+            # check the energy ranges
+            if any(bias < linear_energy_ranges[v][0] or bias > linear_energy_ranges[v][1]
+                   for v, bias in iteritems(linear)):
+                continue
+            if any(bias < quadratic_energy_ranges[edge][0] or bias > quadratic_energy_ranges[edge][1]
+                   for edge, bias in iteritems(quadratic)):
+                continue
+
+            # build the penalty model and return
+            model = BinaryQuadraticModel(linear, quadratic, 0, BinaryQuadraticModel.SPIN)
+            return PenaltyModel(specification, model, classical_gap, ground_energy)
+
+    return None
+
+
 def penalty_model_id(conn, penalty_model):
     """Returns the unique id associated with the given penalty model.
 
@@ -43,6 +104,8 @@ def penalty_model_id(conn, penalty_model):
     """
 
     penalty_model_dict = penalty_model.serialize()
+
+    assert penalty_model_dict['vartype'] == -1, "penalty model must be SPIN valued."
 
     select = \
         """SELECT id from penalty_model_view WHERE
@@ -83,16 +146,15 @@ def penalty_model_id(conn, penalty_model):
         if row is None:
             # penalty model not found, so we're doing an insert
 
-            # add the graph_id to penalty_model_dict
+            # We need the unique indices associated with the graph, feasible configuration
+            # and model added to penalty_model_dict. Each helper function acts on the
+            # dict in place.
             _graph_id(cur, penalty_model_dict)
-
-            # add the feasible_configurations_id to penalty_model_dict
             _feasible_configurations_id(cur, penalty_model_dict)
-
-            # and finally add the ising_model_id to penalty_model_dict
             _ising_model_id(cur, penalty_model_dict)
 
             # alright, all the pieces should be there for an insert on penalty_model
+            # and requery to get the id.
             cur.execute(insert, penalty_model_dict)
             row = cur.execute(select, penalty_model_dict).fetchone()
 
