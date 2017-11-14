@@ -10,7 +10,19 @@ from penaltymodel_cache.cache_manager import cache_file
 
 
 def cache_connect(database=None, directory=None):
-    """TODO"""
+    """Returns a connection object to a sqlite database.
+
+    Args:
+        database (str, optional): The path to the desired sqlite database
+            file. If None, will use the default.
+        directory (str, optional): The directory for the desired sqlite
+            database. If None, will use the system's application data
+            directory.
+
+    Returns:
+        sqlite3.Connection
+
+    """
 
     conn = sqlite3.connect(cache_file(database, directory))
 
@@ -29,7 +41,19 @@ def cache_connect(database=None, directory=None):
 
 
 def get_penalty_model_from_specification(conn, specification):
-    """todo"""
+    """Retrieves a penalty model with the given specification from the cache.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the sqlite database.
+        specification (penaltymodel.Specification): The specification
+            for the desired penalty model.
+
+    Returns:
+        penaltymodel.PenaltyModel/None: The penalty model matching
+            the given specification with the largest classical gap.
+            If no penalty model is found returns None.
+
+    """
 
     specification_dict = specification.serialize()
 
