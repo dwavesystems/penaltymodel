@@ -3,6 +3,8 @@ import time
 import sqlite3
 import os
 
+from collections import defaultdict
+
 import networkx as nx
 import penaltymodel as pm
 
@@ -40,67 +42,65 @@ class TestDatabaseManager(unittest.TestCase):
         self.clean_conn.close()
 
     def test_penalty_model_id(self):
-        """Tests for the penalty_model_id function."""
+        """Typical test for the penalty_model_id function.
+        Running it twice should retreive the same penalty_model_id."""
         conn = self.clean_conn
-        # conn = pmc.cache_connect(fresh_database())
 
         # set up a penalty model we can use in the test
         spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
         model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
         p = pm.PenaltyModel(spec, model, 2, -2)
 
-        pmid = pmc.penalty_model_id(conn, p.serialize())
+        pmid = pmc.penalty_model_id(conn, p)
 
         # rerunning should return the same id
-        self.assertEqual(pmid, pmc.penalty_model_id(conn, p.serialize()))
+        self.assertEqual(pmid, pmc.penalty_model_id(conn, p))
 
-    # def test_get_graph_id(self):
-    #     # create some graphs we can insert
-    #     conn = self.clean_conn
+    def test_get_penalty_model_from_specification(self):
+        """Typical test for the penalty_model_id function.
+        Save and retrieve one penalty model."""
+        conn = self.clean_conn
 
-    #     G = nx.complete_graph(5)
+        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
 
-    #     nodelist = sorted(G.nodes)
-    #     edgelist = sorted(tuple(sorted(edge)) for edge in G.edges)
+        # set up a penalty model we can use put into the database
+        model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
+        penalty_model = pm.PenaltyModel(spec, model, 2, -2)
 
-    #     gid = pmc.graph_id(conn, nodelist, edgelist)
+        # load it into the database
+        pmc.penalty_model_id(conn, penalty_model)
 
-    #     # the same graph again should give the same id
-    #     self.assertEqual(gid, pmc.graph_id(conn, nodelist, edgelist))
+        # now let's try to get it back
+        ret_penalty_model = pmc.get_penalty_model_from_specification(conn, spec)
 
-    #     # new graph should have different id
-    #     H = nx.barbell_graph(5, 6)
-    #     nodelist = sorted(H.nodes)
-    #     edgelist = sorted(tuple(sorted(edge)) for edge in H.edges)
-    #     hid = pmc.graph_id(conn, nodelist, edgelist)
-    #     self.assertNotEqual(gid, hid)
+        # check that everything is the same
+        self.assertEqual(penalty_model, ret_penalty_model)
 
-    # def test_get_configurations_id(self):
+    def test_get_penalty_model_from_specification_multiple_specs(self):
+        """For models with similar specs, should return the correct model"""
+        conn = self.clean_conn
 
-    #     conn = self.clean_conn
+        spec1 = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
 
-    #     configurations = {(-1, -1, 1), (1, -1, 1)}
+        # spec with smaller quadratic energy range
+        spec2 = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)},
+                                 None,
+                                 defaultdict(lambda: (-.5, .5)))
 
-    #     rid = pmc.feasible_configurations_id(conn, configurations)
+        # set up a penalty model we can use put into the database
+        model_1 = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
+        penalty_model_1 = pm.PenaltyModel(spec1, model_1, 2, -2)
+        pmc.penalty_model_id(conn, penalty_model_1)
 
-    #     # should stay the same
-    #     self.assertEqual(rid, pmc.feasible_configurations_id(conn, configurations))
+        # now another penalty model that can come back from the same query
+        model_2 = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -.5}, 0, pm.SPIN)
+        penalty_model_2 = pm.PenaltyModel(spec1, model_2, 2, -2)
+        pmc.penalty_model_id(conn, penalty_model_2)
 
-    #     # different config should be different
-    #     configs2 = {(-1, 1, -1)}
-    #     self.assertNotEqual(rid, pmc.feasible_configurations_id(conn, configs2))
+        # we should get the one with the larger classical gap
+        penalty_model = pmc.get_penalty_model_from_specification(conn, spec1)
+        self.assertEqual(penalty_model, penalty_model_1)
 
-    # def test_query_penalty_model(self):
-
-    #     conn = self.clean_conn
-
-    #     graph = nx.complete_graph(3)
-    #     decision_variables = (0, 1)
-    #     feasible_configurations = {(-1, -1), (-1, 1)}
-
-    #     # returns penaltymodel as an iterator, so should be empty at this point
-    #     penalty_models = pmc.query_penalty_model(conn, graph, decision_variables,
-    #                                              feasible_configurations)
-
-    #     with self.assertRaises(StopIteration):
-    #         next(penalty_models)
+        # smaller classical gap (also a spec that we didn't use)
+        penalty_model = pmc.get_penalty_model_from_specification(conn, spec2)
+        self.assertEqual(penalty_model, penalty_model_2)
