@@ -1,7 +1,5 @@
 from setuptools import setup
 
-from penaltymodel.plugins import FACTORY, CACHE
-
 from penaltymodel_cache import __version__
 
 install_requires = ['penaltymodel',
@@ -17,6 +15,6 @@ setup(
     packages=packages,
     install_requires=install_requires,
     extras_require=extras_require,
-    entry_points={FACTORY: ['maxgap = penaltymodel_cache:get_penalty_model'],
-                  CACHE: ['penaltymodel_cache = penaltymodel_cache:cache_penalty_model']}
+    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel_cache:get_penalty_model'],
+                  'penaltymodel_cache': ['penaltymodel_cache = penaltymodel_cache:cache_penalty_model']}
 )
