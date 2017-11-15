@@ -1,7 +1,6 @@
 """This module has the primary public-facing methods for the project.
 """
-from penaltymodel.plugins import penaltymodel_factory
-from penaltymodel.exceptions import MissingPenaltyModel
+import penaltymodel
 
 from penaltymodel_cache.database_manager import cache_connect, get_penalty_model_from_specification
 from penaltymodel_cache.database_manager import penalty_model_id, iter_penalty_models
@@ -12,7 +11,7 @@ __all__ = ['get_penalty_model',
            'dump_penalty_models']
 
 
-@penaltymodel_factory(100)
+@penaltymodel.plugins.penaltymodel_factory(100)
 def get_penalty_model(specification, database=None):
     """Factory function for penaltymodel_cache.
 
@@ -48,7 +47,7 @@ def get_penalty_model(specification, database=None):
     conn.close()
 
     if model is None:
-        raise MissingPenaltyModel("no penalty model with the given specification found in cache")
+        raise penaltymodel.MissingPenaltyModel("no penalty model with the given specification found in cache")
 
     return model
 

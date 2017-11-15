@@ -4,7 +4,8 @@ from penaltymodel.plugins import FACTORY, CACHE
 
 from penaltymodel_cache import __version__
 
-install_requires = []
+install_requires = ['penaltymodel',
+                    'networkx>=2.0']
 extras_require = {}
 
 packages = ['penaltymodel_cache']

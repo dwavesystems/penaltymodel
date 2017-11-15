@@ -2,9 +2,6 @@
 database directly.
 """
 import sqlite3
-import json
-
-from six import iteritems
 
 import penaltymodel as pm
 import networkx as nx
@@ -107,10 +104,10 @@ def get_penalty_model_from_specification(conn, specification):
 
             # check the energy ranges
             if any(bias < linear_energy_ranges[v][0] or bias > linear_energy_ranges[v][1]
-                   for v, bias in iteritems(linear)):
+                   for v, bias in linear.items()):
                 continue
             if any(bias < quadratic_energy_ranges[edge][0] or bias > quadratic_energy_ranges[edge][1]
-                   for edge, bias in iteritems(quadratic)):
+                   for edge, bias in quadratic.items()):
                 continue
 
             # build the penalty model and return
