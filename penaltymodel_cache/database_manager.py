@@ -1,3 +1,6 @@
+"""This module includes all of the functions that interact with the sqlite
+database directly.
+"""
 import sqlite3
 import json
 

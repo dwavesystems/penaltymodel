@@ -1,3 +1,5 @@
+"""This module has the primary public-facing methods for the project.
+"""
 from penaltymodel.plugins import penaltymodel_factory
 from penaltymodel.exceptions import MissingPenaltyModel
 

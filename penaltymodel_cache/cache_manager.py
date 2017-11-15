@@ -1,4 +1,4 @@
-r"""Encodes all of the logic needed for to the database file.
+r"""Encodes all of the logic needed for to locate the database file.
 
 Database files are by default stored in the system application
 data directory. The application data directory is OS dependent:
