@@ -3,10 +3,16 @@ import json
 
 from six import iteritems
 
-from penaltymodel import PenaltyModel, decode_biases, BinaryQuadraticModel
+import penaltymodel as pm
+import networkx as nx
 
 from penaltymodel_cache.schema import schema_statements
 from penaltymodel_cache.cache_manager import cache_file
+
+__all__ = ["cache_connect",
+           "get_penalty_model_from_specification",
+           "penalty_model_id",
+           "iter_penalty_models"]
 
 
 def cache_connect(database=None, directory=None):
@@ -91,9 +97,10 @@ def get_penalty_model_from_specification(conn, specification):
         for linear, quadratic, offset, classical_gap, ground_energy in rows:
 
             # decode linear and quadratic
-            nodelist = range(specification_dict['num_nodes'])
-            edgelist = [tuple(edge) for edge in json.loads(specification_dict['edges'])]
-            linear, quadratic, offset = decode_biases(linear, quadratic, offset, nodelist, edgelist)
+            nodelist, edgelist = pm.decode_graph(specification_dict['num_nodes'],
+                                                 specification_dict['num_edges'],
+                                                 specification_dict['edges'])
+            linear, quadratic, offset = pm.decode_biases(linear, quadratic, offset, nodelist, edgelist)
 
             # check the energy ranges
             if any(bias < linear_energy_ranges[v][0] or bias > linear_energy_ranges[v][1]
@@ -104,8 +111,8 @@ def get_penalty_model_from_specification(conn, specification):
                 continue
 
             # build the penalty model and return
-            model = BinaryQuadraticModel(linear, quadratic, 0, BinaryQuadraticModel.SPIN)
-            return PenaltyModel(specification, model, classical_gap, ground_energy)
+            model = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.BinaryQuadraticModel.SPIN)
+            return pm.PenaltyModel(specification, model, classical_gap, ground_energy)
 
     return None
 
@@ -165,6 +172,12 @@ def penalty_model_id(conn, penalty_model):
         """
 
     with conn as cur:
+        # to make sure that more than one of the same penalty model is not added,
+        # we need exclusive access to the database from selection through writing
+        # this exclusive access should end when the cursor commits at the end of
+        # the with statement
+        cur.execute("BEGIN EXCLUSIVE;")
+
         row = cur.execute(select, penalty_model_dict).fetchone()
 
         if row is None:
@@ -292,3 +305,57 @@ def _ising_model_id(cur, penalty_model_dict):
 
     # None is not iterable so this is self checking
     penalty_model_dict['ising_model_id'], = row
+
+
+def iter_penalty_models(conn):
+    """An iterator over all of the penalty models in the given database.
+
+    Args:
+        conn (:obj:`sqlite3.Connection`): A connection to the cache.
+
+    Yields:
+        penalty_model (:obj:`penaltymodel.PenaltyModel`)
+
+    """
+    select = \
+        """SELECT
+            num_variables,
+            num_feasible_configurations,
+            feasible_configurations,
+            energies,
+
+            num_nodes,
+            num_edges,
+            edges,
+
+            linear_biases,
+            quadratic_biases,
+            offset,
+
+            decision_variables,
+            classical_gap,
+            ground_energy
+        FROM penalty_model_view;
+        """
+
+    with conn as cur:
+        rows = cur.execute(select)
+
+    # forgive the bad variable names, there are a lot of these things to fit
+    # on one line
+    for nv, nc, fc, en, N, E, edges, h, J, off, dv, classical_gap, ground_energy in rows:
+        # get decoding
+
+        feasible_configurations = pm.decode_configurations(nv, nc, fc, en)
+        nodelist, edgelist = pm.decode_graph(N, E, edges)
+        graph = nx.Graph()
+        graph.add_nodes_from(nodelist)
+        graph.add_edges_from(edgelist)
+
+        linear, quadratic, offset = pm.decode_biases(h, J, off, nodelist, edgelist)
+
+        decision_variables = pm.decode_decision_variables(dv)
+
+        specification = pm.Specification(graph, decision_variables, feasible_configurations)
+        model = pm.BinaryQuadraticModel(linear, quadratic, off, pm.BinaryQuadraticModel.SPIN)
+        yield pm.PenaltyModel(specification, model, classical_gap, ground_energy)

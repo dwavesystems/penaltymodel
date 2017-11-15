@@ -1,6 +1,7 @@
 import unittest
 import os
 import time
+import multiprocessing
 
 import networkx as nx
 import penaltymodel as pm
@@ -40,3 +41,34 @@ class TestInterfaceFunctions(unittest.TestCase):
         # model should come out
         penalty_model_out = pmc.get_penalty_model(spec, database=db)
         self.assertEqual(penalty_model, penalty_model_out)
+
+    def test_many_writes(self):
+        """many simultaneous invocations of cache_penalty_model."""
+
+        # get a penalty model
+        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)},
+                                {v: (-2, 2) for v in range(2)},
+                                {(0, 1): (-1, 1)})
+        model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
+        penalty_model = pm.PenaltyModel(spec, model, 2, -2)
+
+        # we need to do this a large number of times, because it won't always catch
+        for __ in range(100):
+            db = self.clean_database
+
+            def _add_model():
+                pmc.cache_penalty_model(penalty_model, database=db)
+
+            processes = [multiprocessing.Process(target=_add_model)
+                         for __ in range(10)]
+
+            for p in processes:
+                p.start()
+
+            for p in processes:
+                p.join()
+
+            all_models = pmc.dump_penalty_models(db)
+
+            self.assertEqual(len(all_models), 1)
+            self.assertIn(penalty_model, all_models)
