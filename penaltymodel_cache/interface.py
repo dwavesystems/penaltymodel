@@ -1,40 +1,74 @@
-from penaltymodel import PenaltyModel
-from penaltymodel.plugins import entry_point
+from penaltymodel.plugins import penaltymodel_factory
 from penaltymodel.exceptions import MissingPenaltyModel
 
-from penaltymodel_cache.database_manager import load_penalty_model, connection
+from penaltymodel_cache.database_manager import cache_connect, get_penalty_model_from_specification
+from penaltymodel_cache.database_manager import penalty_model_id
 
-__all__ = ['get_penalty_model_from_specification',
+
+__all__ = ['get_penalty_model',
            'cache_penalty_model']
 
 
-@entry_point(100)
-def get_penalty_model_from_specification(specification, database=None):
-    """TODO"""
+@penaltymodel_factory(100)
+def get_penalty_model(specification, database=None):
+    """Factory function for penaltymodel_cache.
 
-    # this cache is only interested in the graph, the feasible_configurations
-    # and the decision_variables
-    graph = specification.graph
-    decision_variables = specification.decision_variables
-    feasible_configurations = specification.feasible_configurations
+    Args:
+        specification (penaltymodel.Specification): The specification
+            for the desired penalty model.
+        database (str, optional): The path to the desired sqlite database
+            file. If None, will use the default.
 
-    penalty_models = query_penalty_model(conn, graph, decision_variables, feasible_configurations)
+    Returns:
+        penaltymodel.PenaltyModel: Penalty model with the given specification.
 
-    for penalty_model in penalty_models:
-        raise NotImplementedError
+    Raises:
+        penaltymodel.MissingPenaltyModel: If the penalty model is not in the
+            cache.
 
-    raise MissingPenaltyModel('no penalty model found in penaltymodel_cache')
+    Parameters:
+        priority (int): 100
 
+    """
+    # only handles index-labelled nodes
+    if not all(isinstance(v, int) for v in specification.graph):
+        raise ValueError('graph variables must be index-labelled')
 
-def cache_penalty_model(penalty_model):
-    """TODO"""
+    # connect to the database
+    conn = cache_connect(database)
 
-    conn = connection()
+    # get the model
+    model = get_penalty_model_from_specification(conn, specification)
 
-    load_penalty_model(conn, graph, decision_variables, feasible_configurations,
-                       linear_biases, quadratic_biases, offset, classical_gap)
-
-
+    # close the connection
     conn.close()
 
-    raise NotImplementedError
+    if model is None:
+        raise MissingPenaltyModel("no penalty model with the given specification found in cache")
+
+    return model
+
+
+def cache_penalty_model(penalty_model, database=None):
+    """Caching function for penaltymodel_cache.
+
+    Args:
+        penalty_model (penaltymodel.PenaltyModel): Penalty model to
+            be cached.
+        database (str, optional): The path to the desired sqlite database
+            file. If None, will use the default.
+
+    """
+
+    # only handles index-labelled nodes
+    if not all(isinstance(v, int) for v in penalty_model.graph):
+        raise ValueError('graph variables must be index-labelled')
+
+    # connect to the database
+    conn = cache_connect(database)
+
+    # load into the database
+    penalty_model_id(conn, penalty_model)
+
+    # close the connection
+    conn.close()

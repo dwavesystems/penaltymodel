@@ -11,15 +11,6 @@ import penaltymodel as pm
 import penaltymodel_cache as pmc
 
 
-def fresh_database():
-    """New, unique database path. Puts it in a temp directory off the current
-    working directory"""
-    dir_ = os.path.join(os.getcwd(), 'tmp')
-    if not os.path.isdir(dir_):
-        os.makedirs(dir_)
-    return os.path.join(dir_, 'tmp-%.6f.db' % time.clock())
-
-
 class TestConnectionAndConfiguration(unittest.TestCase):
     """Test the creation of the database and tables"""
     def test_connection(self):
