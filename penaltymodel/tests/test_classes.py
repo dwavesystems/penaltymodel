@@ -219,6 +219,24 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         self.assertEqual(m, m2)
 
+    def test_relabel(self):
+        linear = {0: .5, 1: 1.3}
+        quadratic = {(0, 1): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        mapping = {0: 'a', 1: 'b'}
+
+        model.relabel_variables(mapping)
+
+        with self.assertRaises(ValueError):
+            model.relabel_variables({'a': .1})
+
+        with self.assertRaises(ValueError):
+            model.relabel_variables({'a': .1, 'b': [1, 2]})
+
 
 class TestSpecification(unittest.TestCase):
     def test_serialize(self):

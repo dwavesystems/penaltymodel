@@ -271,6 +271,30 @@ class BinaryQuadraticModel(object):
 
         return serial
 
+    def relabel_variables(self, mapping):
+        """Relabel the variables according to the given mapping.
+
+        Args:
+            mapping (dict): a dict mapping the current variable labels
+                to new ones.
+
+        Notes:
+            Acts on model in place.
+
+        """
+        try:
+            new_linear = {mapping[v]: bias for v, bias in iteritems(self.linear)}
+            new_quadratic = {(mapping[u], mapping[v]): bias for (u, v), bias in iteritems(self.quadratic)}
+            new_adj = {mapping[u]: {mapping[v] for v in neighbours} for u, neighbours in iteritems(self.adj)}
+        except KeyError as e:
+            raise ValueError("no mapping for variable {}".format(e))
+        except TypeError:
+            raise ValueError("mapping targets must be hashable objects")
+
+        self.linear = new_linear
+        self.quadratic = new_quadratic
+        self.adj = new_adj
+
 
 class Specification(object):
     """Specifies that properties desired of the PenaltyModel.
