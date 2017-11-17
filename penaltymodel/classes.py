@@ -72,7 +72,6 @@ class BinaryQuadraticModel(object):
     VARTYPES = VARTYPES
 
     def __init__(self, linear, quadratic, offset, vartype):
-
         # make sure that we are dealing with a known vartype.
         try:
             if isinstance(vartype, str):
@@ -150,6 +149,7 @@ class BinaryQuadraticModel(object):
             return False
 
     def __len__(self):
+        """The length is number of variables."""
         return len(self.linear)
 
     def as_ising(self):
