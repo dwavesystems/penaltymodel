@@ -1,16 +1,22 @@
+"""
+
+"""
+
 from collections import defaultdict
-from enum import Enum
+import enum
 
 from six import itervalues, iteritems
 import networkx as nx
+
+from penaltymodel.serialization import *
 
 __all__ = ['BinaryQuadraticModel', 'PenaltyModel', 'Specification',
            'VARTYPES', 'SPIN', 'BINARY']
 
 
-class VARTYPES(Enum):
+class VARTYPES(enum.Enum):
     SPIN = -1
-    BINARY = 1
+    BINARY = 0
 SPIN = VARTYPES.SPIN
 BINARY = VARTYPES.BINARY
 
@@ -30,7 +36,8 @@ class BinaryQuadraticModel(object):
             should not have self loops, that is (u, u) is not a valid
             quadratic bias.
         offset: The energy offset associated with the model.
-        vartype (enum): The variable type. `Model.SPIN` or `Model.BINARY`.
+        vartype (enum): The variable type. `BinaryQuadraticModel.SPIN` or
+            `BinaryQuadraticModel.BINARY`.
 
     Parameters:
         linear (dict): The linear biases as a dict. The keys are the
@@ -41,7 +48,8 @@ class BinaryQuadraticModel(object):
             biases associated with each pair of variables.
         offset: The energy offset associated with the model. Same type as given
             on instantiation.
-        vartype (enum): The variable type. `Model.SPIN` or `Model.BINARY`.
+        vartype (enum): The variable type. `BinaryQuadraticModel.SPIN` or
+            `BinaryQuadraticModel.BINARY`.
         adj (dict): The adjacency dict of the model. See examples.
 
     Notes:
@@ -49,10 +57,10 @@ class BinaryQuadraticModel(object):
         preferred.
 
     Examples:
-        >>> model = pm.Model({0: 1, 1: -1, 2: .5},
-        ...                  {(0, 1): .5, (1, 2): 1.5},
-        ...                  1.4,
-        ...                  pm.Model.SPIN)
+        >>> model = pm.BinaryQuadraticModel({0: 1, 1: -1, 2: .5},
+        ...                                 {(0, 1): .5, (1, 2): 1.5},
+        ...                                 1.4,
+        ...                                 pm.BinaryQuadraticModel.SPIN)
         >>> for u, v in model.quadratic:
         ...     assert model.quadratic[(u, v)] == model.adj[u][v]
         ...     assert model.quadratic[(u, v)] == model.adj[v][u]
@@ -65,9 +73,14 @@ class BinaryQuadraticModel(object):
 
     def __init__(self, linear, quadratic, offset, vartype):
 
-        # make sure that we are dealing with a known vartype
-        if vartype not in self.VARTYPES:
-            raise ValueError('unexpected `vartype`. See Model.VARTYPES for known types.')
+        # make sure that we are dealing with a known vartype.
+        try:
+            if isinstance(vartype, str):
+                vartype = VARTYPES[vartype]
+            else:
+                vartype = VARTYPES(vartype)
+        except (ValueError, KeyError):
+            raise TypeError("unexpected `vartype`. See Model.VARTYPES for known types.")
         self.vartype = vartype
 
         # We want the linear terms to be a dict.
@@ -125,14 +138,19 @@ class BinaryQuadraticModel(object):
 
     def __eq__(self, model):
         """Model is equal if linear, quadratic, offset and vartype are all equal."""
+        if not isinstance(model, BinaryQuadraticModel):
+            return False
+
         if self.vartype == model.vartype:
             return all([self.linear == model.linear,
                         self.quadratic == model.quadratic,
                         self.offset == model.offset])
         else:
-            # TODO: It would be good to check for different vartypes. For now we'll just require
-            # equality for all fields.
+            # different vartypes are not equal
             return False
+
+    def __len__(self):
+        return len(self.linear)
 
     def as_ising(self):
         """Converts the model into the (h, J, offset) Ising format.
@@ -161,10 +179,7 @@ class BinaryQuadraticModel(object):
         quadratic = self.quadratic
 
         for u, bias in iteritems(linear):
-            if u in h:
-                h[u] += .5 * bias
-            else:
-                h[u] = .5 * bias
+            h[u] = .5 * bias
             linear_offset += bias
 
         for (u, v), bias in iteritems(quadratic):
@@ -172,15 +187,8 @@ class BinaryQuadraticModel(object):
             if bias != 0.0:
                 J[(u, v)] = .25 * bias
 
-            if u in h:
-                h[u] += .25 * bias
-            else:
-                h[u] = .25 * bias
-
-            if v in h:
-                h[v] += .25 * bias
-            else:
-                h[v] = .25 * bias
+            h[u] += .25 * bias
+            h[v] += .25 * bias
 
             quadratic_offset += bias
 
@@ -195,6 +203,7 @@ class BinaryQuadraticModel(object):
 
         Returns:
             dict: The qubo biases as an edge dict.
+
             The offset.
 
         """
@@ -205,7 +214,7 @@ class BinaryQuadraticModel(object):
                 qubo[(v, v)] = bias
             for edge, bias in iteritems(self.quadratic):
                 qubo[edge] = bias
-            return qubo
+            return qubo, self.offset
 
         if self.vartype != self.SPIN:
             raise RuntimeError('converting from unknown vartype')
@@ -247,6 +256,20 @@ class BinaryQuadraticModel(object):
         en += sum(linear[v] * sample[v] for v in linear)
         en += sum(quadratic[(u, v)] * sample[u] * sample[v] for u, v in quadratic)
         return en
+
+    def serialize(self, nodelist, edgelist):
+        serial = {}
+
+        lin, quad, off = serialize_biases(self.linear, self.quadratic, self.offset, nodelist, edgelist)
+        serial['linear_biases'], serial['quadratic_biases'], serial['offset'] = lin, quad, off
+
+        serial['vartype'] = self.vartype.value
+        serial['min_quadratic_bias'] = min(self.quadratic.values())
+        serial['max_quadratic_bias'] = max(self.quadratic.values())
+        serial['min_linear_bias'] = min(self.linear.values())
+        serial['max_linear_bias'] = max(self.linear.values())
+
+        return serial
 
 
 class Specification(object):
@@ -307,15 +330,53 @@ class Specification(object):
         else:
             self._quadratic_ranges = quadratic_energy_ranges
 
+    def serialize(self, nodelist=None, edgelist=None):
+        """TODO: dump to dict, each object in dict must be serializable."""
+
+        serial = {}
+
+        if nodelist is None or edgelist is None:
+            graph = self.graph
+            if not all(isinstance(v, int) for v in graph):
+                raise NotImplementedError("cannot currently serialize arbitrarily named variables.")
+            nodelist = sorted(graph.nodes)
+            edgelist = sorted(sorted(edge) for edge in graph.edges)
+        serial['num_nodes'], serial['num_edges'], serial['edges'] = serialize_graph(nodelist, edgelist)
+
+        # next config
+        serial['num_variables'], serial['num_feasible_configurations'], serial['feasible_configurations'], serial['energies'] = serialize_configurations(self.feasible_configurations)
+
+        # decision variables
+        serial['decision_variables'] = serialize_decision_variables(self.decision_variables)
+
+        # encode the energy ranges
+        serial['min_quadratic_bias'] = min(self.quadratic_energy_ranges[edge][0] for edge in self.graph.edges)
+        serial['max_quadratic_bias'] = max(self.quadratic_energy_ranges[edge][1] for edge in self.graph.edges)
+        serial['min_linear_bias'] = min(self.linear_energy_ranges[v][0] for v in self.graph)
+        serial['max_linear_bias'] = max(self.linear_energy_ranges[v][1] for v in self.graph)
+
+        return serial
+
+    def __eq__(self, specification):
+        """Implemented equality checking. """
+
+        # for specification, graph is considered equal if it has the same nodes
+        # and edges
+        return (isinstance(specification, Specification) and
+                self.graph.edges == specification.graph.edges and
+                self.graph.nodes == specification.graph.nodes and
+                self.decision_variables == specification.decision_variables and
+                self.feasible_configurations == specification.feasible_configurations)
+
 
 class PenaltyModel(Specification):
-    def __init__(self, specification, model, infeasible_gap, ground_energy):
+    def __init__(self, specification, model, classical_gap, ground_energy):
 
         # there might be a more clever way to do this but this will work
         # for now.
         self.graph = specification.graph
         self.decision_variables = specification.decision_variables
-        self.feasible_configurations = specification.decision_variables
+        self.feasible_configurations = specification.feasible_configurations
         self.linear_energy_ranges = specification.linear_energy_ranges
         self.quadratic_energy_ranges = specification.quadratic_energy_ranges
 
@@ -323,5 +384,32 @@ class PenaltyModel(Specification):
             raise TypeError("expected model to be a Model")
         self.model = model
 
-        self.infeasible_gap = infeasible_gap
+        self.classical_gap = classical_gap
         self.ground_energy = ground_energy
+
+    def serialize(self):
+
+        # graph first
+        graph = self.graph
+        if not all(isinstance(v, int) for v in graph):
+            raise NotImplementedError("cannot currently serialize arbitrarily named variables.")
+        nodelist = sorted(graph.nodes)
+        edgelist = sorted(sorted(edge) for edge in graph.edges)
+
+        serial = Specification.serialize(self, nodelist, edgelist)
+
+        # add the model, this overwrites min_linear_bias, max_quadratic_bias, etc
+        serial.update(self.model.serialize(nodelist, edgelist))
+
+        # finally the gap and ground energy
+        serial['classical_gap'] = self.classical_gap
+        serial['ground_energy'] = self.ground_energy
+
+        return serial
+
+    def __eq__(self, penalty_model):
+
+        # other values are derived
+        return (isinstance(penalty_model, PenaltyModel) and
+                Specification.__eq__(self, penalty_model) and
+                self.model == penalty_model.model)
