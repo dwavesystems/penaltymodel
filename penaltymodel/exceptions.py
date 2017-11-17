@@ -1,10 +1,11 @@
-class NoPenaltyModel(Exception):
+
+class FactoryException(Exception):
+    """General exception for a factory being not able to produce a penalty model."""
+
+
+class ImpossibleSpecification(FactoryException):
     """"""
 
 
-class ImpossibleSpecification(Exception):
-    """"""
-
-
-class MissingPenaltyModel(Exception):
+class MissingPenaltyModel(FactoryException):
     """"""

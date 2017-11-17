@@ -43,7 +43,7 @@ def decode_graph(num_nodes, num_edges, edgelist_string):
         list: a list of edges in the graph
 
     """
-    return list(range(num_nodes)), json.loads(edgelist_string)
+    return list(range(num_nodes)), [tuple(edge) for edge in json.loads(edgelist_string)]
 
 
 def _serialize_config(config):
@@ -257,7 +257,7 @@ def serialize_biases(linear, quadratic, offset, nodelist, edgelist):
     """
     linear_string = _serialize_linear_biases(linear, nodelist)
     quadratic_string = _serialize_quadratic_biases(quadratic, edgelist)
-    offset = base64.b64encode(struct.pack('<d', offset)).decode('utf-8')
+    # offset = base64.b64encode(struct.pack('<d', offset)).decode('utf-8')
 
     # offset is a float and therefor serializable
     return linear_string, quadratic_string, offset
@@ -284,7 +284,7 @@ def decode_biases(linear_string, quadratic_string, offset, nodelist, edgelist):
     """
     linear = _decode_linear_biases(linear_string, nodelist)
     quadratic = _decode_quadratic_biases(quadratic_string, edgelist)
-    offset, = struct.unpack('<d', base64.b64decode(offset))
+    # offset, = struct.unpack('<d', base64.b64decode(offset))
     return linear, quadratic, offset
 
 

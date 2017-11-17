@@ -5,7 +5,23 @@ FACTORY = 'penaltymodel_factory'
 CACHE = 'penaltymodel_cache'
 
 
-def entry_point(priority):
+def penaltymodel_factory(priority):
+    """Assignes a `priority` attribute to the decorated function.
+
+    Args:
+        priority (int): The priority of the factory. Factories are queried
+            in order of decreasing priority.
+
+    Examples:
+        Decorate penalty model factories like:
+
+        >>> @penaltymodel_factory(105)
+        ... def get_penalty_model_from_specification(spec):
+        ...     pass
+        >>> get_penalty_model_from_specification.priority
+        105
+
+    """
     def _entry_point(f):
         f.priority = priority
         return f
@@ -24,5 +40,5 @@ def factories():
 
 def caches():
     """TODO"""
-    # for caches we don't need an order
-    return [entry.load() for entry in iter_entry_points(CACHE)]
+    # for caches we don't need "an order
+    return (entry.load() for entry in iter_entry_points(CACHE))

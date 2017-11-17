@@ -72,9 +72,9 @@ class TestModelSerialization(unittest.TestCase):
         edgelist = list(J.keys())
 
         linear_string, quadratic_string, off = pm.serialize_biases(h, J, offset,
-                                                                    nodelist, edgelist)
+                                                                   nodelist, edgelist)
         hh, JJ, off = pm.decode_biases(linear_string, quadratic_string, off,
-                                        nodelist, edgelist)
+                                       nodelist, edgelist)
 
         self.assertEqual(hh, h)
         self.assertEqual(JJ, J)
