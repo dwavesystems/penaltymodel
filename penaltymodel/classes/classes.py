@@ -3,22 +3,13 @@
 """
 
 from collections import defaultdict
-import enum
 
 from six import itervalues, iteritems
 import networkx as nx
 
 from penaltymodel.serialization import *
 
-__all__ = ['BinaryQuadraticModel', 'PenaltyModel', 'Specification',
-           'VARTYPES', 'SPIN', 'BINARY']
-
-
-class VARTYPES(enum.Enum):
-    SPIN = -1
-    BINARY = 0
-SPIN = VARTYPES.SPIN
-BINARY = VARTYPES.BINARY
+__all__ = ['BinaryQuadraticModel', 'PenaltyModel', 'Specification']
 
 
 class BinaryQuadraticModel(object):
@@ -79,7 +70,7 @@ class BinaryQuadraticModel(object):
             else:
                 vartype = VARTYPES(vartype)
         except (ValueError, KeyError):
-            raise TypeError("unexpected `vartype`. See Model.VARTYPES for known types.")
+            raise TypeError("unexpected `vartype`. See BinaryQuadraticModel.VARTYPES for known types.")
         self.vartype = vartype
 
         # We want the linear terms to be a dict.
