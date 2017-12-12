@@ -1,4 +1,9 @@
-from penaltymodel.classes.vartypes import VARTYPES
+"""
+BinaryQuadraticModel
+--------------------
+"""
+
+from penaltymodel.classes.vartypes import Vartype
 
 __all__ = ['BinaryQuadraticModel']
 
@@ -26,8 +31,20 @@ class BinaryQuadraticModel(object):
             should not have self loops, that is (u, u) is not a valid
             quadratic bias.
         offset: The energy offset associated with the model.
-        vartype (enum): The variable type. `BinaryQuadraticModel.SPIN` or
-            `BinaryQuadraticModel.BINARY`.
+        vartype (:class:`.Vartype`): The variable type.
+
+    Notes:
+        The BinaryQuadraticModel does not specify the type of the biases
+        and offset, but many
+
+    Examples:
+        >>> model = pm.BinaryQuadraticModel({0: 1, 1: -1, 2: .5},
+        ...                                 {(0, 1): .5, (1, 2): 1.5},
+        ...                                 1.4,
+        ...                                 pm.BinaryQuadraticModel.SPIN)
+        >>> for u, v in model.quadratic:
+        ...     assert model.quadratic[(u, v)] == model.adj[u][v]
+        ...     assert model.quadratic[(u, v)] == model.adj[v][u]
 
     Attributes:
         linear (dict): The linear biases as a dict. The keys are the
@@ -41,35 +58,25 @@ class BinaryQuadraticModel(object):
         vartype (enum): The variable type. `BinaryQuadraticModel.SPIN` or
             `BinaryQuadraticModel.BINARY`.
         adj (dict): The adjacency dict of the model. See examples.
-
-    Notes:
-        The biases and offset may be of any type, but for performance float is
-        preferred.
-
-    Examples:
-        >>> model = pm.BinaryQuadraticModel({0: 1, 1: -1, 2: .5},
-        ...                                 {(0, 1): .5, (1, 2): 1.5},
-        ...                                 1.4,
-        ...                                 pm.BinaryQuadraticModel.SPIN)
-        >>> for u, v in model.quadratic:
-        ...     assert model.quadratic[(u, v)] == model.adj[u][v]
-        ...     assert model.quadratic[(u, v)] == model.adj[v][u]
+        Vartype (:class:`.Vartype`): An alias for :class:`.Vartype` for easier access.
+        SPIN (:class:`.Vartype`): An alias for :class:`.SPIN` for easier access.
+        BINARY (:class:`.Vartype`): An alias for :class:`.BINARY` for easier access.
 
     """
 
-    SPIN = VARTYPES.SPIN
-    BINARY = VARTYPES.BINARY
-    VARTYPES = VARTYPES
+    SPIN = Vartype.SPIN
+    BINARY = Vartype.BINARY
+    Vartype = Vartype
 
     def __init__(self, linear, quadratic, offset, vartype):
         # make sure that we are dealing with a known vartype.
         try:
             if isinstance(vartype, str):
-                vartype = VARTYPES[vartype]
+                vartype = Vartype[vartype]
             else:
-                vartype = VARTYPES(vartype)
+                vartype = Vartype(vartype)
         except (ValueError, KeyError):
-            raise TypeError("unexpected `vartype`. See BinaryQuadraticModel.VARTYPES for known types.")
+            raise TypeError("unexpected `vartype`. See BinaryQuadraticModel.Vartype for known types.")
         self.vartype = vartype
 
         # We want the linear terms to be a dict.
