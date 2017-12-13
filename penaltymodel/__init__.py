@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from penaltymodel.classes import *
 import penaltymodel.classes
 

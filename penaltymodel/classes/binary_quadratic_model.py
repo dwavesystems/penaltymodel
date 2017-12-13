@@ -2,18 +2,13 @@
 BinaryQuadraticModel
 --------------------
 """
+from __future__ import absolute_import
+
+from six import itervalues, iteritems
 
 from penaltymodel.classes.vartypes import Vartype
 
 __all__ = ['BinaryQuadraticModel']
-
-
-def iteritems(d):
-    return d.items()
-
-
-def itervalues(d):
-    return d.values()
 
 
 class BinaryQuadraticModel(object):
@@ -55,7 +50,7 @@ class BinaryQuadraticModel(object):
             biases associated with each pair of variables.
         offset: The energy offset associated with the model. Same type as given
             on instantiation.
-        vartype (enum): The variable type. `BinaryQuadraticModel.SPIN` or
+        vartype (:class:`.Vartype`): The variable type. `BinaryQuadraticModel.SPIN` or
             `BinaryQuadraticModel.BINARY`.
         adj (dict): The adjacency dict of the model. See examples.
         Vartype (:class:`.Vartype`): An alias for :class:`.Vartype` for easier access.
