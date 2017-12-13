@@ -110,4 +110,25 @@ class TestSpecification(unittest.TestCase):
 
 
 class TestPenaltyModel(unittest.TestCase):
-    pass
+    def test_construction(self):
+
+        # build a specification
+        graph = nx.complete_graph(10)
+        decision_variables = (0, 4, 5)
+        feasible_configurations = {(0, 0, 0): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        # build a model
+        model = pm.BinaryQuadraticModel({v: 0 for v in graph},
+                                        {edge: 0 for edge in graph.edges},
+                                        0.0,
+                                        vartype=pm.Vartype.BINARY)
+
+        # build a PenaltyModel explicitly
+        pm0 = pm.PenaltyModel(graph, decision_variables, feasible_configurations, model, .1, 0)
+
+        # build from spec
+        pm1 = pm.PenaltyModel.from_specification(spec, model, .1, 0)
+
+        # should result in equality
+        self.assertEqual(pm0, pm1)

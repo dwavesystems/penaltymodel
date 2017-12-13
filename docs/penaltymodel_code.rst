@@ -1,5 +1,5 @@
-penaltymodel classes
-====================
+Included Classes
+================
 
 .. py:currentmodule:: penaltymodel
 

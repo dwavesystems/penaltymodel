@@ -12,6 +12,7 @@ from six import itervalues, iteritems
 import networkx as nx
 
 from penaltymodel.classes.vartypes import Vartype
+from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
 
 
 __all__ = ['Specification', 'PenaltyModel']
@@ -22,7 +23,7 @@ class Specification(object):
 
     Args:
         graph (:class:`networkx.Graph`/iterable[edge]): The graph that
-            defines the relation between variables in the penaltymodel.
+            defines the relation between variables in the penalty model.
             The node labels will be used as the variable labels in the
             binary quadratic model.
         decision_variables (tuple/iterable): Maps the feasible configurations
@@ -54,15 +55,15 @@ class Specification(object):
         <Vartype.SPIN: frozenset([1, -1])>
 
     Attributes:
-        graph (:class:`networkx.Graph`): The graph that defines the relation
-            between variables in the penaltymodel.
-            The node labels will be used as the variable labels in the
-            binary quadratic model.
         decision_variables (tuple): Maps the feasible configurations
             to the graph.
         feasible_configurations (dict[tuple[int], number]):
             The set of feasible configurations. The value is the (relative)
             energy of each of the feasible configurations.
+        graph (:class:`networkx.Graph`): The graph that defines the relation
+            between variables in the penalty model.
+            The node labels will be used as the variable labels in the
+            binary quadratic model.
         linear_energy_ranges (dict[node, (number, number)]):
             Defines the energy ranges available for the linear
             biases of the penalty model.
@@ -189,25 +190,146 @@ class Specification(object):
 
 
 class PenaltyModel(Specification):
-    def __init__(self, specification, model, classical_gap, ground_energy):
+    """Container class for the components that make up a penalty model.
 
-        # there might be a more clever way to do this but this will work
-        # for now.
-        self.graph = specification.graph
-        self.decision_variables = specification.decision_variables
-        self.feasible_configurations = specification.feasible_configurations
-        self.linear_energy_ranges = specification.linear_energy_ranges
-        self.quadratic_energy_ranges = specification.quadratic_energy_ranges
+    A penalty model is a small Ising problem or QUBO that has ground
+    states that match the feasible configurations and excited states
+    that have a classical energy greater than the ground energy by
+    at least the classical gap.
+
+    PenaltyModel is a subclass of :class:`.Specification`.
+
+    Args:
+        graph (:class:`networkx.Graph`/iterable[edge]): The graph that
+            defines the relation between variables in the penalty model.
+            The node labels will be used as the variable labels in the
+            binary quadratic model.
+        decision_variables (tuple/iterable): Maps the feasible configurations
+            to the graph. Must be the same length as each configuration
+            in feasible_configurations. Any iterable will be case to
+            a tuple.
+        feasible_configurations (dict[tuple[int], number]/iterable[tuple[int]]):
+            The set of feasible configurations. Each feasible configuration
+            should be a tuple of variable assignments. See examples.
+        model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+            that has ground states that match the feasible_configurations.
+        classical_gap (numeric): The difference in classical energy between the ground
+            state and the first excited state. Must be positive.
+        ground_energy (numeric): The minimum energy of all possible configurations.
+        linear_energy_ranges (dict[node, (number, number)], optional): If
+            not provided, defaults to {v: (-2, 2), ...} for each variable v.
+            Defines the energy ranges available for the linear
+            biases of the penalty model.
+        quadratic_energy_ranges (dict[edge, (number, number)], optional): If
+            not provided, defaults to {edge: (-1, 1), ...} for each edge in
+            graph. Defines the energy ranges available for the quadratic
+            biases of the penalty model.
+        vartype (:class:`.Vartype`, optional): The variable type. If not
+            provided, tried to infer the vartype from the feasible_configurations.
+            If Specification cannot determine the vartype then set to
+            :class:`.Vartype.UNDEFINED`.
+
+    Examples:
+        The penalty model can be created from its component parts:
+
+        >>> graph = nx.path_graph(3)
+        >>> decision_variables = (0, 2)  # the ends of the path
+        >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree
+        >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+        >>> classical_gap = 2.0
+        >>> ground_energy = -2.0
+        >>> widget = pm.PenaltyModel(graph, decision_variables, feasible_configurations,
+        ...                          model, classical_gap, ground_energy)
+
+        Or it can be created from a specification:
+
+        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        >>> widget = pm.PenaltyModel.from_specification(spec, model, classical_gap, ground_energy)
+
+    Attributes:
+        decision_variables (tuple): Maps the feasible configurations
+            to the graph.
+        classical_gap (numeric): The difference in classical energy between the ground
+            state and the first excited state. Must be positive.
+        feasible_configurations (dict[tuple[int], number]):
+            The set of feasible configurations. The value is the (relative)
+            energy of each of the feasible configurations.
+        graph (:class:`networkx.Graph`): The graph that defines the relation
+            between variables in the penaltymodel.
+            The node labels will be used as the variable labels in the
+            binary quadratic model.
+        ground_energy (numeric): The minimum energy of all possible configurations.
+        linear_energy_ranges (dict[node, (number, number)]):
+            Defines the energy ranges available for the linear
+            biases of the penalty model.
+        model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+            that has ground states that match the feasible_configurations.
+        quadratic_energy_ranges (dict[edge, (number, number)]):
+            Defines the energy ranges available for the quadratic
+            biases of the penalty model.
+        vartype (:class:`.Vartype`): The variable type. If unknown or
+            unspecified will be :class:`.Vartype.UNDEFINED`.
+
+    """
+    def __init__(self, graph, decision_variables, feasible_configurations,
+                 model, classical_gap, ground_energy,
+                 linear_energy_ranges=None, quadratic_energy_ranges=None,
+                 vartype=None):
+
+        if vartype is not None:
+            if vartype != model.vartype:
+                raise ValueError("mismatched vartype")
+        else:
+            vartype = model.vartype
+
+        Specification.__init__(self, graph, decision_variables, feasible_configurations,
+                               linear_energy_ranges, quadratic_energy_ranges, vartype)
 
         if not isinstance(model, BinaryQuadraticModel):
-            raise TypeError("expected model to be a Model")
+            raise TypeError("expected 'model' to be a BinaryQuadraticModel")
         self.model = model
 
+        if not isinstance(classical_gap, Number):
+            raise TypeError("expected classical_gap to be numeric")
+        if classical_gap <= 0.0:
+            raise ValueError("classical_gap must be positive")
         self.classical_gap = classical_gap
+
+        if not isinstance(ground_energy, Number):
+            raise TypeError("expected ground_energy to be numeric")
         self.ground_energy = ground_energy
 
-    def __eq__(self, penalty_model):
+    @classmethod
+    def from_specification(cls, specification, model, classical_gap, ground_energy):
+        """Construct a PenaltyModel from a Specification.
 
+        Args:
+            specification (:class:`.Specification`): A specification that was used
+                to generate the model.
+            model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+                that has ground states that match the feasible_configurations.
+            classical_gap (numeric): The difference in classical energy between the ground
+                state and the first excited state. Must be positive.
+            ground_energy (numeric): The minimum energy of all possible configurations.
+
+        Returns:
+            :class:`.PenaltyModel`
+
+        """
+
+        # Author note: there might be a way that avoids rechecking all of the values without
+        # side-effects or lots of repeated code, but this seems simpler and more explicit
+        return cls(specification.graph,
+                   specification.decision_variables,
+                   specification.feasible_configurations,
+                   model,
+                   classical_gap,
+                   ground_energy,
+                   linear_energy_ranges=specification.linear_energy_ranges,
+                   quadratic_energy_ranges=specification.quadratic_energy_ranges,
+                   vartype=specification.vartype)
+
+    def __eq__(self, penalty_model):
         # other values are derived
         return (isinstance(penalty_model, PenaltyModel) and
                 Specification.__eq__(self, penalty_model) and
