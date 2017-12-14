@@ -1,6 +1,6 @@
 from setuptools import setup
 
-from penaltymodel import __version__
+from penaltymodel.packe_info import __version__
 
 install_requires = ['dimod>=0.3.1',
                     'six']

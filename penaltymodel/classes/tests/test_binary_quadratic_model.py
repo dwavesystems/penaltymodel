@@ -2,23 +2,23 @@ import unittest
 import random
 import itertools
 
-import networkx as nx
-
 import penaltymodel as pm
 
 
 class TestBinaryQuadraticModel(unittest.TestCase):
-    def test_construction_typical(self):
 
+    def test_construction_typical_spin(self):
+        # set up a model
         linear = {0: 1, 1: -1, 2: .5}
         quadratic = {(0, 1): .5, (1, 2): 1.5}
         offset = 1.4
-
-        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
+        vartype = pm.SPIN
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
 
         self.assertEqual(linear, m.linear)
         self.assertEqual(quadratic, m.quadratic)
         self.assertEqual(offset, m.offset)
+        self.assertEqual(vartype, m.vartype)
 
         for (u, v), bias in quadratic.items():
             self.assertIn(u, m.adj)
@@ -34,7 +34,13 @@ class TestBinaryQuadraticModel(unittest.TestCase):
             for v in m.adj[u]:
                 self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
 
-        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.BINARY)
+    def test_construction_typical_binary(self):
+
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = 1.4
+        vartype = pm.BINARY
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
 
         self.assertEqual(linear, m.linear)
         self.assertEqual(quadratic, m.quadratic)
@@ -70,21 +76,9 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         self.assertEqual(pm.BinaryQuadraticModel(linear, quadratic, offset, pm.BINARY).vartype, pm.BINARY)
 
-        self.assertEqual(pm.BinaryQuadraticModel(linear, quadratic, offset, -1).vartype, pm.SPIN)
+        self.assertEqual(pm.BinaryQuadraticModel(linear, quadratic, offset, {-1, 1}).vartype, pm.SPIN)
 
         self.assertEqual(pm.BinaryQuadraticModel(linear, quadratic, offset, 'BINARY').vartype, pm.BINARY)
-
-    def test_input_checking_linear(self):
-        """linear should be a dict."""
-        linear = {v: random.uniform(-2, 2) for v in range(10)}
-        quadratic = {(u, v): random.uniform(-1, 1) for (u, v) in itertools.combinations(linear, 2)}
-        offset = random.random()
-        vartype = pm.SPIN
-
-        self.assertEqual(pm.BinaryQuadraticModel(linear, quadratic, offset, pm.BINARY).linear, linear)
-
-        with self.assertRaises(TypeError):
-            pm.BinaryQuadraticModel(list(linear.values()), quadratic, offset, pm.BINARY)
 
     def test_input_checking_quadratic(self):
         linear = {v: random.uniform(-2, 2) for v in range(11)}
@@ -113,6 +107,20 @@ class TestBinaryQuadraticModel(unittest.TestCase):
         # no self-loops
         with self.assertRaises(ValueError):
             pm.BinaryQuadraticModel(linear, {(0, 0): .5}, offset, pm.BINARY)
+
+    def test__repr__(self):
+        """check that repr works correctly."""
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = 1.4
+
+        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
+
+        # should recreate the model
+        from penaltymodel import BinaryQuadraticModel
+        m2 = eval(m.__repr__())
+
+        self.assertEqual(m, m2)
 
     def test__eq__(self):
         linear = {v: random.uniform(-2, 2) for v in range(11)}
@@ -205,20 +213,6 @@ class TestBinaryQuadraticModel(unittest.TestCase):
             # and the energy of the model
             self.assertAlmostEqual(energy, model.energy(bin_sample))
 
-    def test__repr__(self):
-        """check that repr works correctly."""
-        linear = {0: 1, 1: -1, 2: .5}
-        quadratic = {(0, 1): .5, (1, 2): 1.5}
-        offset = 1.4
-
-        m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
-
-        # should recreate the model
-        from penaltymodel import BinaryQuadraticModel
-        m2 = eval(m.__repr__())
-
-        self.assertEqual(m, m2)
-
     def test_relabel(self):
         linear = {0: .5, 1: 1.3}
         quadratic = {(0, 1): -.435}
@@ -236,17 +230,3 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             model.relabel_variables({'a': .1, 'b': [1, 2]})
-
-
-class TestSpecification(unittest.TestCase):
-    def test_serialize(self):
-        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
-        serial = spec.serialize()
-
-        #
-        # todo
-        #
-
-
-class TestPenaltyModel(unittest.TestCase):
-    pass
