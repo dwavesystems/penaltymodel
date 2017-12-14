@@ -1,9 +1,10 @@
-..  -*- coding: utf-8 -*-
-
-.. _contents:
-
 Overview
 ========
+
+Installing
+----------
+
+$ pip install penaltymodel
 
 penaltymodel
 ------------
@@ -20,28 +21,4 @@ This package does not contain any ability to generate or cache penalty models.
 License
 -------
 
-Released under the Apache License 2.0 (see License).
-
-Documentation
--------------
-
-.. only:: html
-
-    :Release: |version|
-    :Date: |today|
-
-.. toctree::
-   :maxdepth: 1
-
-   penaltymodel_code
-   using_factories
-   license
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-* :ref:`glossary`
+Released under the Apache License 2.0
