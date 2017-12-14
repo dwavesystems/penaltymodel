@@ -1,16 +1,22 @@
 from setuptools import setup
 
-from penaltymodel.packe_info import __version__
+from penaltymodel.package_info import __version__, __author__, __description__, __authoremail__
 
 install_requires = ['dimod>=0.3.1',
-                    'six']
+                    'six',
+                    'networkx>=2.0']
 extras_require = {}
 
-packages = ['penaltymodel']
+packages = ['penaltymodel',
+            'penaltymodel.classes']
 
 setup(
     name='penaltymodel',
     version=__version__,
+    author=__author__,
+    author_email=__authoremail__,
+    description=__description__,
+    url='https://github.com/dwavesystems/penaltymodel',
     license='Apache 2.0',
     packages=packages,
     install_requires=install_requires,
