@@ -1,6 +1,4 @@
-"""The database schema
-"""
-# name conventions from: https://launchbylunch.com/posts/2014/Feb/16/sql-naming-conventions/
+"""The schema used by the sqlite database for storing the penalty models."""
 
 schema = \
     """
@@ -88,5 +86,4 @@ schema = \
         penalty_model.ising_model_id = ising_model.id
         AND feasible_configurations.id = penalty_model.feasible_configurations_id
         AND graph.id = ising_model.graph_id;
-
     """
