@@ -27,7 +27,8 @@ def cache_connect(database=None):
     Args:
         database (str, optional): The path to the database the user wishes
             to connect to. If not specified, a default is chosen using
-            :func:`.cache_file`.
+            :func:`.cache_file`. If the special database name ':memory:'
+            is given, then a temporary database is created in memory.
 
     Returns:
         :class:`sqlite3.Connection`
@@ -56,18 +57,42 @@ def cache_connect(database=None):
 def insert_graph(cur, nodelist, edgelist, encoded_data=None):
     """Insert a graph into the cache.
 
+    A graph is stored by number of nodes, number of edges and a
+    json-encoded list of edges.
+
     Args:
-        nodelist (list): A list of nodes in the graph.
-        edgelist (list): A list of edges in the graph.
-        encoded_data (dict, optional): A dictionary with encoded
-            data. If nodelist or edgelist was previously encoded
-            then it can speed up execution, otherwise the encoding
-            is added to the provided encoded_data dict.
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+        nodelist (list): The nodes in the graph.
+        edgelist (list): The edges in the graph.
+        encoded_data (dict, optional): If a dictionary is provided, it
+            will be populated with the serialized data. This is useful for
+            preventing encoding the same information many times.
 
     Notes:
-        The cache will not recognize different orderings of
-        nodelist or edgelist, so for efficiency it is best
-        to be consistent.
+        This function assumes that the nodes are index-labeled and range
+        from 0 to num_nodes - 1.
+
+        In order to minimize the total size of the cache, it is a good
+        idea to sort the nodelist and edgelist before inserting.
+
+    Examples:
+        >>> nodelist = [0, 1, 2]
+        >>> edgelist = [(0, 1), (1, 2)]
+        >>> with pmc.cache_connect(':memory:') as cur:
+        ...     pmc.insert_graph(cur, nodelist, edgelist)
+
+        >>> nodelist = [0, 1, 2]
+        >>> edgelist = [(0, 1), (1, 2)]
+        >>> encoded_data = {}
+        >>> with pmc.cache_connect(':memory:') as cur:
+        ...     pmc.insert_graph(cur, nodelist, edgelist, encoded_data)
+        >>> encoded_data['num_nodes']
+        3
+        >>> encoded_data['num_edges']
+        2
+        >>> encoded_data['edges']
+        '[[0,1],[1,2]]'
 
     """
     if encoded_data is None:
@@ -92,12 +117,24 @@ def insert_graph(cur, nodelist, edgelist, encoded_data=None):
 def iter_graph(cur):
     """Iterate over all graphs in the cache.
 
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+
     Yields:
         tuple: A 2-tuple containing:
 
-            list: The nodelist for the graph.
+            list: The nodelist for a graph in the cache.
 
-            list: the edgelist for the graph.
+            list: the edgelist for a graph in the cache.
+
+    Examples:
+        >>> nodelist = [0, 1, 2]
+        >>> edgelist = [(0, 1), (1, 2)]
+        >>> with pmc.cache_connect(':memory:') as cur:
+        ...     pmc.insert_graph(cur, nodelist, edgelist)
+        ...     list(pmc.iter_graph(cur))
+        [([0, 1, 2], [[0, 1], [1, 2]])]
 
     """
     select = """SELECT num_nodes, num_edges, edges from graph;"""
@@ -106,7 +143,23 @@ def iter_graph(cur):
 
 
 def insert_feasible_configurations(cur, feasible_configurations, encoded_data=None):
-    """todo
+    """Insert a group of feasible configurations into the cache.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+        feasible_configurations (dict[tuple[int]): The set of feasible
+            configurations. Each key should be a tuple of variable assignments.
+            The values are the relative energies.
+        encoded_data (dict, optional): If a dictionary is provided, it
+            will be populated with the serialized data. This is useful for
+            preventing encoding the same information many times.
+
+    Examples:
+        >>> feasible_configurations = {(-1, -1): 0.0, (+1, +1): 0.0}
+        >>> with pmc.cache_connect(':memory:') as cur:
+        ...     pmc.insert_feasible_configurations(cur, feasible_configurations)
+
     """
     if encoded_data is None:
         encoded_data = {}
@@ -158,7 +211,16 @@ def _serialize_config(config):
 
 
 def iter_feasible_configurations(cur):
-    """todo"""
+    """Iterate over all of the sets of feasible configurations in the cache.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+
+    Yields:
+        dict[tuple(int): number]: The feasible_configurations.
+
+    """
     select = \
         """
         SELECT num_variables, feasible_configurations, energies
@@ -183,7 +245,21 @@ def _decode_config(c, num_variables):
 
 
 def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data=None):
-    """todo"""
+    """Insert an Ising model into the cache.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+        nodelist (list): The nodes in the graph.
+        edgelist (list): The edges in the graph.
+        linear (dict): The linear bias associated with each node in nodelist.
+        quadratic (dict): The quadratic bias associated with teach edge in edgelist.
+        offset (float): The constant offset applied to the ising problem.
+        encoded_data (dict, optional): If a dictionary is provided, it
+            will be populated with the serialized data. This is useful for
+            preventing encoding the same information many times.
+
+    """
     if encoded_data is None:
         encoded_data = {}
 
@@ -285,19 +361,40 @@ def _serialize_quadratic_biases(quadratic, edgelist):
 
 
 def iter_ising_model(cur):
+    """Iterate over all of the Ising models in the cache.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+
+    Yields:
+        tuple: A 5-tuple consisting of:
+
+            list: The nodelist for a graph in the cache.
+
+            list: the edgelist for a graph in the cache.
+
+            dict: The linear biases of an Ising Model in the cache.
+
+            dict: The quadratic biases of an Ising Model in the cache.
+
+            float: The constant offset of an Ising Model in the cache.
+
+    """
     select = \
         """
-        SELECT linear_biases, quadratic_biases, num_nodes, edges
+        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset
         FROM ising_model, graph
         WHERE graph.id = ising_model.graph_id;
         """
 
-    for linear_biases, quadratic_biases, num_nodes, edges in cur.execute(select):
+    for linear_biases, quadratic_biases, num_nodes, edges, offset in cur.execute(select):
         nodelist = list(range(num_nodes))
         edgelist = json.loads(edges)
         yield (nodelist, edgelist,
                _decode_linear_biases(linear_biases, nodelist),
-               _decode_quadratic_biases(quadratic_biases, edgelist))
+               _decode_quadratic_biases(quadratic_biases, edgelist),
+               offset)
 
 
 def _decode_linear_biases(linear_string, nodelist):
@@ -345,14 +442,36 @@ def _decode_quadratic_biases(quadratic_string, edgelist):
             struct.unpack('<' + 'd' * (len(quadratic_bytes) // 8), quadratic_bytes))}
 
 
-def insert_penalty_model(cur, penalty_model, encoded_data=None):
-    """todo"""
-    if encoded_data is None:
-        encoded_data = {}
+def insert_penalty_model(cur, penalty_model):
+    """Insert a penalty model into the database.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+        penalty_model (:class:`penaltymodel.PenaltyModel`): A penalty
+            model to be stored in the database.
+
+    Examples:
+        >>> import networkx as nx
+        >>> import penaltymodel as pm
+        >>> graph = nx.path_graph(3)
+        >>> decision_variables = (0, 2)
+        >>> feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        >>> linear = {v: 0 for v in graph}
+        >>> quadratic = {edge: -1 for edge in graph.edges}
+        >>> model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        >>> widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+        >>> with pmc.cache_connect(':memory:') as cur:
+        ...     pmc.insert_penalty_model(cur, widget)
+
+    """
+    encoded_data = {}
 
     nodelist = sorted(penalty_model.graph)
     edgelist = sorted(sorted(penalty_model.graph.edges))
     linear, quadratic, offset = penalty_model.model.as_ising()
+    assert penalty_model.model.vartype is penalty_model.model.SPIN
 
     insert_graph(cur, nodelist, edgelist, encoded_data)
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
@@ -396,10 +515,21 @@ def insert_penalty_model(cur, penalty_model, encoded_data=None):
     cur.execute(insert, encoded_data)
 
 
-def iter_penalty_model_from_specification(cur, specification, encoded_data=None):
-    """todo"""
-    if encoded_data is None:
-        encoded_data = {}
+def iter_penalty_model_from_specification(cur, specification):
+    """Iterate through all penalty models in the cache matching the
+    given specification.
+
+    Args:
+        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
+            is meant to be run within a :obj:`with` statement.
+        penalty_model (:class:`penaltymodel.Specification`): A specification
+            for a penalty model.
+
+    Yields:
+        :class:`penaltymodel.PenaltyModel`
+
+    """
+    encoded_data = {}
 
     nodelist = sorted(specification.graph)
     edgelist = sorted(sorted(edge) for edge in specification.graph.edges)

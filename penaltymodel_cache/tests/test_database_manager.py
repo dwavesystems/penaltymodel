@@ -118,7 +118,7 @@ class TestDatabaseManager(unittest.TestCase):
 
             # should be only one and it should match
             self.assertEqual(len(ims), 1)
-            (nodelist_, edgelist_, linear_, quadratic_), = ims
+            (nodelist_, edgelist_, linear_, quadratic_, offset_), = ims
             self.assertEqual(nodelist_, nodelist)
             self.assertEqual(edgelist_, edgelist)
             self.assertEqual(linear_, linear)
