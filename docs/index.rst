@@ -27,8 +27,9 @@ Documentation
    :maxdepth: 1
 
    interface
+   database
+   database_schema
    cache
-   cache_schema
    license
 
 

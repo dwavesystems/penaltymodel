@@ -1,11 +1,6 @@
-"""This module includes all of the functions that interact with the sqlite
-database directly.
+"""
+Utilities for access to the sqlite cache.
 
-Encoding
---------
-num_nodes (int): the number of nodes in a graph
-num_edges (int): the number of edges in a graph
-edges (str): The json-encoded list of edges.
 """
 import sqlite3
 import os
@@ -15,7 +10,6 @@ import base64
 
 from six import itervalues
 import penaltymodel as pm
-import networkx as nx
 
 from penaltymodel_cache.schema import schema
 from penaltymodel_cache.cache_manager import cache_file
@@ -27,17 +21,21 @@ __all__ = ["cache_connect",
            "insert_penalty_model", "iter_penalty_model_from_specification"]
 
 
-def cache_connect(database=cache_file()):
+def cache_connect(database=None):
     """Returns a connection object to a sqlite database.
 
     Args:
         database (str, optional): The path to the database the user wishes
-            to connect to. If not specified, a default is chosen.
+            to connect to. If not specified, a default is chosen using
+            :func:`.cache_file`.
 
     Returns:
         :class:`sqlite3.Connection`
 
     """
+    if database is None:
+        database = cache_file()
+
     if os.path.isfile(database):
         # just connect to the database as-is
         conn = sqlite3.connect(database)
