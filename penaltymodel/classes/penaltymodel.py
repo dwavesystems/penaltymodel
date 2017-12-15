@@ -188,6 +188,30 @@ class Specification(object):
                 self.decision_variables == specification.decision_variables and
                 self.feasible_configurations == specification.feasible_configurations)
 
+    def relabel_variables(self, mapping):
+        """Relabel the variables and nodes according to the given mapping.
+
+        Args:
+            mapping (dict): a dict mapping the current variable/node labels
+                to new ones.
+
+        """
+        graph = self.graph
+        linear_energy_ranges = self.linear_energy_ranges
+        quadratic_energy_ranges = self.quadratic_energy_ranges
+
+        new_graph = nx.relabel_nodes(graph, mapping)  # also checks the mapping
+        new_decision_variables = tuple(mapping[v] for v in self.decision_variables)
+        new_linear_energy_ranges = {mapping[v]: linear_energy_ranges[v] for v in graph}
+        new_quadratic_energy_ranges = {(mapping[u], mapping[v]): quadratic_energy_ranges[(u, v)] 
+                                       for u, v in graph.edges}
+
+        # feasible_configurations stay the same
+        self.graph = new_graph
+        self.decision_variables = new_decision_variables
+        self.linear_energy_ranges = new_linear_energy_ranges
+        self.quadratic_energy_ranges = new_quadratic_energy_ranges
+
 
 class PenaltyModel(Specification):
     """Container class for the components that make up a penalty model.
@@ -334,3 +358,15 @@ class PenaltyModel(Specification):
         return (isinstance(penalty_model, PenaltyModel) and
                 Specification.__eq__(self, penalty_model) and
                 self.model == penalty_model.model)
+
+    def relabel_variables(self, mapping):
+        """Relabel the variables and nodes according to the given mapping.
+
+        Args:
+            mapping (dict): a dict mapping the current variable/node labels
+                to new ones.
+
+        """
+        # just use the relabelling of each component
+        Specification.relabel_variables(self, mapping)
+        self.model.relabel_variables(mapping)
