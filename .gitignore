@@ -3,3 +3,7 @@
 *.egg-info/
 
 tmp/
+
+*.coverage
+
+htmlcov/

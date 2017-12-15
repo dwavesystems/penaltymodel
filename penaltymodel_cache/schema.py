@@ -1,82 +1,61 @@
-"""A series of statements that can be executed to build the sqlite
-database for the cache.
+"""The database schema
 """
 # name conventions from: https://launchbylunch.com/posts/2014/Feb/16/sql-naming-conventions/
 
-graph = \
+schema = \
     """
-    CREATE TABLE IF NOT EXISTS graph
-        (
-            num_nodes INTEGER NOT NULL,
-            num_edges INTEGER NOT NULL,
-            edges TEXT NOT NULL,
-            id INTEGER PRIMARY KEY
-        );
-    """
+    CREATE TABLE IF NOT EXISTS graph(
+        num_nodes INTEGER NOT NULL,  -- for integer-labeled graphs, num_nodes encodes all of the nodes
+        num_edges INTEGER NOT NULL,  -- redundant, allows for faster selects
+        edges TEXT NOT NULL,  -- json list of lists, should be sorted (with each edge sorted)
+        id INTEGER PRIMARY KEY,
+        CONSTRAINT graph UNIQUE (
+            num_nodes,
+            edges));
 
-# graph_ix_num_nodes_num_edges_edges_id = """CREATE INDEX IF NOT EXISTS idx_graph ON graphs(
-#                     num_nodes,
-#                     num_edges,
-#                     edges,
-#                     id);
-#               """
+    CREATE TABLE IF NOT EXISTS feasible_configurations(
+        num_variables INTEGER NOT NULL,
+        num_feasible_configurations INTEGER NOT NULL,
+        feasible_configurations TEXT NOT NULL,
+        energies TEXT NOT NULL,
+        id INTEGER PRIMARY KEY,
+        CONSTRAINT feasible_configurations UNIQUE (
+            num_variables,
+            num_feasible_configurations,
+            feasible_configurations,
+            energies));
 
-feasible_configurations = \
-    """
-    CREATE TABLE IF NOT EXISTS feasible_configurations
-        (
-            num_variables INTEGER NOT NULL,
-            num_feasible_configurations INTEGER NOT NULL,
-            feasible_configurations TEXT NOT NULL,
-            energies TEXT,
-            id INTEGER PRIMARY KEY
-        );
-    """
+    CREATE TABLE IF NOT EXISTS ising_model(
+        linear_biases TEXT NOT NULL,
+        quadratic_biases TEXT NOT NULL,
+        offset REAL NOT NULL,
+        max_quadratic_bias REAL NOT NULL,
+        min_quadratic_bias REAL NOT NULL,
+        max_linear_bias REAL NOT NULL,
+        min_linear_bias REAL NOT NULL,
+        graph_id INTEGER NOT NULL,
+        id INTEGER PRIMARY KEY,
+        CONSTRAINT ising_model UNIQUE (
+            linear_biases,
+            quadratic_biases,
+            offset,
+            graph_id),
+        FOREIGN KEY (graph_id) REFERENCES graph(id) ON DELETE CASCADE);
 
-# todo: name
-# configurations_index = """CREATE INDEX IF NOT EXISTS idx_configurations ON configurations(
-#                             num_variables,
-#                             num_configurations,
-#                             configurations,
-#                             energies,
-#                             configurations_id);"""
+    CREATE TABLE IF NOT EXISTS penalty_model(
+        decision_variables TEXT NOT NULL,
+        classical_gap REAL NOT NULL,
+        ground_energy REAL NOT NULL,
+        feasible_configurations_id INT,
+        ising_model_id INT,
+        id INTEGER PRIMARY KEY,
+        FOREIGN KEY (feasible_configurations_id) REFERENCES feasible_configurations(id) ON DELETE CASCADE,
+        FOREIGN KEY (ising_model_id) REFERENCES ising_model(id) ON DELETE CASCADE,
+        CONSTRAINT ising_model UNIQUE (
+            decision_variables,
+            feasible_configurations_id,
+            ising_model_id));
 
-# table that encodes the ising model values. This table does not need an index created because
-# SELECTS are done on id.
-ising_model = \
-    """
-    CREATE TABLE IF NOT EXISTS ising_model
-        (
-            linear_biases TEXT NOT NULL,
-            quadratic_biases TEXT NOT NULL,
-            offset REAL NOT NULL,
-            max_quadratic_bias REAL NOT NULL,
-            min_quadratic_bias REAL NOT NULL,
-            max_linear_bias REAL NOT NULL,
-            min_linear_bias REAL NOT NULL,
-            id INTEGER PRIMARY KEY
-        );
-    """
-
-penalty_model = \
-    """
-    CREATE TABLE IF NOT EXISTS penalty_model
-        (
-            decision_variables TEXT NOT NULL,
-            classical_gap REAL NOT NULL,
-            ground_energy REAL NOT NULL,
-            graph_id INT,
-            feasible_configurations_id INT,
-            ising_model_id INT,
-            id INTEGER PRIMARY KEY,
-                FOREIGN KEY (graph_id) REFERENCES graph(id) ON DELETE CASCADE,
-                FOREIGN KEY (feasible_configurations_id) REFERENCES feasible_configurations(id) ON DELETE CASCADE,
-                FOREIGN KEY (ising_model_id) REFERENCES ising_model(id) ON DELETE CASCADE
-        );
-    """
-
-penalty_model_view = \
-    """
     CREATE VIEW IF NOT EXISTS penalty_model_view AS
     SELECT
         num_variables,
@@ -108,12 +87,6 @@ penalty_model_view = \
     WHERE
         penalty_model.ising_model_id = ising_model.id
         AND feasible_configurations.id = penalty_model.feasible_configurations_id
-        AND graph.id = penalty_model.graph_id;
-    """
+        AND graph.id = ising_model.graph_id;
 
-schema_statements = [graph,
-                     feasible_configurations,
-                     ising_model,
-                     penalty_model,
-                     penalty_model_view
-                     ]
+    """

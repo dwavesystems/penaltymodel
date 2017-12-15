@@ -1,17 +1,16 @@
 """This module has the primary public-facing methods for the project.
 """
-import penaltymodel
+import penaltymodel as pm
 
-from penaltymodel_cache.database_manager import cache_connect, get_penalty_model_from_specification
-from penaltymodel_cache.database_manager import penalty_model_id, iter_penalty_models
+from penaltymodel_cache.database_manager import cache_connect, insert_penalty_model, \
+    iter_penalty_model_from_specification
 
 
 __all__ = ['get_penalty_model',
-           'cache_penalty_model',
-           'dump_penalty_models']
+           'cache_penalty_model']
 
 
-@penaltymodel.plugins.penaltymodel_factory(100)
+@pm.interface.penaltymodel_factory(100)
 def get_penalty_model(specification, database=None):
     """Factory function for penaltymodel_cache.
 
@@ -22,10 +21,10 @@ def get_penalty_model(specification, database=None):
             file. If None, will use the default.
 
     Returns:
-        penaltymodel.PenaltyModel: Penalty model with the given specification.
+        :class:`penaltymodel.PenaltyModel`: Penalty model with the given specification.
 
     Raises:
-        penaltymodel.MissingPenaltyModel: If the penalty model is not in the
+        :class:`penaltymodel.MissingPenaltyModel`: If the penalty model is not in the
             cache.
 
     Parameters:
@@ -38,25 +37,29 @@ def get_penalty_model(specification, database=None):
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
-    conn = cache_connect(database)
+    if database is None:
+        conn = cache_connect
+    else:
+        conn = cache_connect(database)
 
-    # get the model
-    model = get_penalty_model_from_specification(conn, specification)
+    # get the penalty_model
+    with conn as cur:
+        widget = next(iter_penalty_model_from_specification(cur, specification))
 
     # close the connection
     conn.close()
 
-    if model is None:
+    if widget is None:
         raise penaltymodel.MissingPenaltyModel("no penalty model with the given specification found in cache")
 
-    return model
+    return widget
 
 
 def cache_penalty_model(penalty_model, database=None):
     """Caching function for penaltymodel_cache.
 
     Args:
-        penalty_model (penaltymodel.PenaltyModel): Penalty model to
+        penalty_model (:class:`penaltymodel.PenaltyModel`): Penalty model to
             be cached.
         database (str, optional): The path to the desired sqlite database
             file. If None, will use the default.
@@ -69,34 +72,14 @@ def cache_penalty_model(penalty_model, database=None):
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
-    conn = cache_connect(database)
+    if database is None:
+        conn = cache_connect
+    else:
+        conn = cache_connect(database)
 
     # load into the database
-    penalty_model_id(conn, penalty_model)
+    with conn as cur:
+        insert_penalty_model(cur, penalty_model)
 
     # close the connection
     conn.close()
-
-
-def dump_penalty_models(database=None):
-    """Return all penalty models in the database in a list.
-
-    Args:
-        database (str, optional): The path to the desired sqlite database
-            file. If None, will use the default.
-
-    Returns:
-        list: All of the :class:`penaltymodel.PenaltyModel`)s in the database.
-
-    """
-    # connect to the database. Note that once the connection is made it cannot be
-    # broken up between several processes.
-    conn = cache_connect(database)
-
-    # in order to close the connection, we need to dump all of the contents to a list
-    penalty_models = list(iter_penalty_models(conn))
-
-    # close the connection
-    conn.close()
-
-    return penalty_models

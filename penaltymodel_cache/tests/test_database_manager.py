@@ -25,73 +25,134 @@ class TestDatabaseManager(unittest.TestCase):
     """These tests assume that the database has been created or already
     exists correctly"""
     def setUp(self):
-        # get a new clean database in memory, only lasts as long as the unittest
-        self.clean_conn = pmc.cache_connect(':memory:')
+        # new connection for just this test
+        self.clean_connection = pmc.cache_connect(':memory:')
 
     def tearDown(self):
         # close the memory connection
-        self.clean_conn.close()
+        self.clean_connection.close()
 
-    def test_penalty_model_id(self):
-        """Typical test for the penalty_model_id function.
-        Running it twice should retreive the same penalty_model_id."""
-        conn = self.clean_conn
+    def test_graph_insert_retrieve(self):
+        conn = self.clean_connection
 
-        # set up a penalty model we can use in the test
-        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
-        model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
-        p = pm.PenaltyModel(spec, model, 2, -2)
+        graph = nx.barbell_graph(8, 8)
+        nodelist = sorted(graph)
+        edgelist = sorted(sorted(edge) for edge in graph.edges)
 
-        pmid = pmc.penalty_model_id(conn, p)
+        with conn as cur:
+            pmc.insert_graph(cur, nodelist, edgelist)
 
-        # rerunning should return the same id
-        self.assertEqual(pmid, pmc.penalty_model_id(conn, p))
+            # should only be one graph
+            graphs = list(pmc.iter_graph(cur))
+            self.assertEqual(len(graphs), 1)
+            (nodelist_, edgelist_), = graphs
+            self.assertEqual(nodelist, nodelist_)
+            self.assertEqual(edgelist, edgelist_)
 
-    def test_get_penalty_model_from_specification(self):
-        """Typical test for the penalty_model_id function.
-        Save and retrieve one penalty model."""
-        conn = self.clean_conn
+        # trying to reinsert should still result in only one graph
+        with conn as cur:
+            pmc.insert_graph(cur, nodelist, edgelist)
+            graphs = list(pmc.iter_graph(cur))
+            self.assertEqual(len(graphs), 1)
 
-        spec = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
+        # inserting with an empty dict as encoded_data should populate it
+        encoded_data = {}
+        with conn as cur:
+            pmc.insert_graph(cur, nodelist, edgelist, encoded_data)
+        self.assertIn('num_nodes', encoded_data)
+        self.assertIn('num_edges', encoded_data)
+        self.assertIn('edges', encoded_data)
 
-        # set up a penalty model we can use put into the database
-        model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
-        penalty_model = pm.PenaltyModel(spec, model, 2, -2)
+        # now adding another graph should result in two items
+        graph = nx.complete_graph(4)
+        nodelist = sorted(graph)
+        edgelist = sorted(sorted(edge) for edge in graph.edges)
+        with conn as cur:
+            pmc.insert_graph(cur, nodelist, edgelist)
+            graphs = list(pmc.iter_graph(cur))
+            self.assertEqual(len(graphs), 2)
 
-        # load it into the database
-        pmc.penalty_model_id(conn, penalty_model)
+    def test_feasible_configurations_insert_retrieve(self):
+        conn = self.clean_connection
 
-        # now let's try to get it back
-        ret_penalty_model = pmc.get_penalty_model_from_specification(conn, spec)
+        feasible_configurations = {(-1, -1, -1): 0.0, (1, 1, 1): 0.0}
 
-        # check that everything is the same
-        self.assertEqual(penalty_model, ret_penalty_model)
+        with conn as cur:
+            pmc.insert_feasible_configurations(cur, feasible_configurations)
+            fcs = list(pmc.iter_feasible_configurations(cur))
 
-    def test_get_penalty_model_from_specification_multiple_specs(self):
-        """For models with similar specs, should return the correct model"""
-        conn = self.clean_conn
+            # should only be one and it should match
+            self.assertEqual(len(fcs), 1)
+            self.assertEqual([feasible_configurations], fcs)
 
-        spec1 = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)})
+            # reinsert, should not add
+            pmc.insert_feasible_configurations(cur, feasible_configurations)
+            fcs = list(pmc.iter_feasible_configurations(cur))
 
-        # spec with smaller quadratic energy range
-        spec2 = pm.Specification(nx.complete_graph(2), [0], {(1, 1), (-1, -1)},
-                                 None,
-                                 defaultdict(lambda: (-.5, .5)))
+            # should only be one and it should match
+            self.assertEqual(len(fcs), 1)
+            self.assertEqual([feasible_configurations], fcs)
 
-        # set up a penalty model we can use put into the database
-        model_1 = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0, pm.SPIN)
-        penalty_model_1 = pm.PenaltyModel(spec1, model_1, 2, -2)
-        pmc.penalty_model_id(conn, penalty_model_1)
+        feasible_configurations2 = {(-1, -1, -1): 0.0, (1, 1, 1): 0.0, (1, -1, 1): .4}
+        with conn as cur:
+            pmc.insert_feasible_configurations(cur, feasible_configurations2)
+            fcs = list(pmc.iter_feasible_configurations(cur))
 
-        # now another penalty model that can come back from the same query
-        model_2 = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -.5}, 0, pm.SPIN)
-        penalty_model_2 = pm.PenaltyModel(spec1, model_2, 2, -2)
-        pmc.penalty_model_id(conn, penalty_model_2)
+            self.assertIn(feasible_configurations2, fcs)
 
-        # we should get the one with the larger classical gap
-        penalty_model = pmc.get_penalty_model_from_specification(conn, spec1)
-        self.assertEqual(penalty_model, penalty_model_1)
+    def test_ising_model_insert_retrieve(self):
+        conn = self.clean_connection
 
-        # smaller classical gap (also a spec that we didn't use)
-        penalty_model = pmc.get_penalty_model_from_specification(conn, spec2)
-        self.assertEqual(penalty_model, penalty_model_2)
+        graph = nx.path_graph(5)
+        nodelist = sorted(graph)
+        edgelist = sorted(sorted(edge) for edge in graph.edges)
+
+        linear = {v: 0. for v in nodelist}
+        quadratic = {(u, v): -1. for u, v in edgelist}
+        offset = 0.0
+
+        with conn as cur:
+            pmc.insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset)
+
+            ims = list(pmc.iter_ising_model(cur))
+
+            # should be only one and it should match
+            self.assertEqual(len(ims), 1)
+            (nodelist_, edgelist_, linear_, quadratic_), = ims
+            self.assertEqual(nodelist_, nodelist)
+            self.assertEqual(edgelist_, edgelist)
+            self.assertEqual(linear_, linear)
+            self.assertEqual(quadratic_, quadratic)
+
+        with conn as cur:
+            # reinsert
+            pmc.insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset)
+
+            ims = list(pmc.iter_ising_model(cur))
+
+            # should be only one and it should match
+            self.assertEqual(len(ims), 1)
+
+    def test_penalty_model_insert_retrieve(self):
+        conn = self.clean_connection
+
+        graph = nx.path_graph(3)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+
+        widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+        with conn as cur:
+            pmc.insert_penalty_model(cur, widget)
+
+        with conn as cur:
+            pms = list(pmc.iter_penalty_model_from_specification(cur, spec))
+
+            self.assertEqual(len(pms), 1)
+            widget_, = pms
+            self.assertEqual(widget_, widget)
