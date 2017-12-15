@@ -15,27 +15,30 @@ F = lambda x: Fraction(x).limit_denominator()
 
 
 class TestTheta(pysmt.test.TestCase):
-    def test_thetaconstruction(self):
-        """test that when we construct theta from a graph it has
-        the correct structure."""
+
+    def setUp(self):
+        pysmt.test.TestCase.setUp(self)
+        # create a set of graphs to test against
+        graphs = [nx.complete_graph(5), dnx.chimera_graph(1), nx.path_graph(12), nx.Graph(), nx.complete_graph(1)]
 
         disconnect1 = nx.Graph()
         disconnect1.add_nodes_from([0, 1])
+        graphs.append(disconnect1)
+
         disconnect2 = nx.complete_graph(4)
         disconnect2.add_edge(4, 5)
+        graphs.append(disconnect2)
 
-        graphs = [nx.complete_graph(5),
-                  dnx.chimera_graph(1),
-                  nx.path_graph(12),
-                  nx.Graph(),
-                  nx.complete_graph(1),
-                  disconnect1, disconnect2]
+        self.graphs = graphs
+
+    def test_theta_construction(self):
+        """Check that everything in theta as built correctly"""
+
         linear_ranges = defaultdict(lambda: (-2., 2.))
         quadratic_ranges = defaultdict(lambda: (-1., 1.))
 
-        for graph in graphs:
-            theta = Theta()
-            theta.build_from_graph(graph, linear_ranges, quadratic_ranges)
+        for graph in self.graphs:
+            theta = Theta.from_graph(graph, linear_ranges, quadratic_ranges)
 
             # ok, let's check that the set of nodes are the same for graph and theta
             self.assertEqual(set(graph.nodes), set(theta.linear))
@@ -71,24 +74,12 @@ class TestTheta(pysmt.test.TestCase):
                              len(theta.quadratic))
 
     def test_energy_ranges(self):
-
-        disconnect1 = nx.Graph()
-        disconnect1.add_nodes_from([0, 1])
-        disconnect2 = nx.complete_graph(4)
-        disconnect2.add_edge(4, 5)
-
-        graphs = [nx.complete_graph(5),
-                  dnx.chimera_graph(1),
-                  nx.path_graph(12),
-                  nx.Graph(),
-                  nx.complete_graph(1),
-                  disconnect1, disconnect2]
+        """Check that the energy ranges were set the way we expect"""
         linear_ranges = defaultdict(lambda: (-2., 2.))
         quadratic_ranges = defaultdict(lambda: (-1., 1.))
 
-        for graph in graphs:
-            theta = Theta()
-            theta.build_from_graph(graph, linear_ranges, quadratic_ranges)
+        for graph in self.graphs:
+            theta = Theta.from_graph(graph, linear_ranges, quadratic_ranges)
 
             for v, bias in theta.linear.items():
                 min_, max_ = linear_ranges[v]
@@ -102,25 +93,12 @@ class TestTheta(pysmt.test.TestCase):
 
     def test_energy(self):
 
-        disconnect1 = nx.Graph()
-        disconnect1.add_nodes_from([0, 1])
-        disconnect2 = nx.complete_graph(4)
-        disconnect2.add_edge(4, 5)
-
-        graphs = [nx.complete_graph(5),
-                  dnx.chimera_graph(1),
-                  nx.path_graph(12),
-                  nx.Graph(),
-                  nx.complete_graph(1),
-                  disconnect1, disconnect2]
-
         # set the values exactly
         linear_ranges = defaultdict(lambda: (1., 1.))
         quadratic_ranges = defaultdict(lambda: (-1., -1.))
 
-        for graph in graphs:
-            theta = Theta()
-            theta.build_from_graph(graph, linear_ranges, quadratic_ranges)
+        for graph in self.graphs:
+            theta = Theta.from_graph(graph, linear_ranges, quadratic_ranges)
 
             spins = {v: 1 for v in graph}
 

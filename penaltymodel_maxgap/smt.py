@@ -1,5 +1,5 @@
-"""module abstracts setting up the smt problem.
-"""
+"""All functions relating to defining the SMT problem."""
+
 import itertools
 from fractions import Fraction
 
@@ -15,8 +15,14 @@ from pysmt.typing import REAL, BOOL
 def limitReal(x, max_denominator=1000000):
     """Creates an pysmt Real constant from x.
 
-    Casts x to the nearest fraction that has denominator at most
-    max_denominator.
+    Args:
+        x (number): A number to be cast to a pysmt constant.
+        max_denominator (int, optional): The maximum size of the denominator.
+            Default 1000000.
+
+    Returns:
+        A Real constant with the given value and the denominator limited.
+
     """
     f = Fraction(x).limit_denominator(max_denominator)
     return Real((f.numerator, f.denominator))
@@ -28,7 +34,7 @@ def SpinTimes(spin, bias):
 
     Args:
         spin (int): -1 or 1
-        bias (pysmt.shortcuts.Symbol): The bias
+        bias (:class:`pysmt.shortcuts.Symbol`): The bias
 
     Returns:
         spins * bias
@@ -37,7 +43,7 @@ def SpinTimes(spin, bias):
     if not isinstance(spin, int):
         raise TypeError('spin must be an int')
     if spin == -1:
-        return Times(Real((-1, 1)), bias)
+        return Times(Real((-1, 1)), bias)  # -1 / 1
     elif spin == 1:
         # identity
         return bias
@@ -47,6 +53,8 @@ def SpinTimes(spin, bias):
 
 class Theta(object):
     """Encodes the smt variables.
+
+    todo
 
     Args:
         graph
@@ -61,22 +69,50 @@ class Theta(object):
         assertions
 
     """
-    def __init__(self):
-        self.assertions = set()
-        self.offset = limitReal(0)
-        self.linear = {}
-        self.quadratic = {}
-        self.adj = {}
+    def __init__(self, linear, quadratic, offset, assertions=None):
 
-    def build_from_graph(self, graph, linear_energy_ranges, quadratic_energy_ranges):
-        # we need to track all of the range assertions in one place
-        # so set up the appropriate file
-        assertions = self.assertions
+        # set offset to 0 for some reason =limitReal(0)
+        if assertions is None:
+            assertions = set()
+        elif not isinstance(assertions, set):
+            raise TypeError("expected input 'assertions' to be a set")
+        self.assertions = assertions
 
+        self.offset = offset
+        self.linear = linear
+        self.quadratic = quadratic
+
+        # build adj from quadratic
+        self.adj = adj = {v: dict() for v in linear}
+        for (u, v), bias in iteritems(quadratic):
+            adj[u][v] = bias
+            adj[v][u] = bias
+
+    @classmethod
+    def from_graph(cls, graph, linear_energy_ranges, quadratic_energy_ranges):
+        """Derives Theta from a graph.
+
+        Args:
+            graph (:class:`networkx.Graph`): A graph.
+            linear_energy_ranges (dict): The linear energy range for each
+                linear bias.
+            quadratic_energy_ranges (dict): The quadratic energy range for each
+                quadratic bias.
+
+        Returns:
+            :class:`.Theta`
+
+        """
+        assertions = set()
+
+        #
         # there is a real-valued offset
-        self.offset = Symbol('offset', REAL)
+        #
+        offset = Symbol('offset', REAL)
 
-        # next we need a variable for each of the linear biases
+        #
+        # linear
+        #
         def linear_bias(v):
             bias = Symbol('h_{}'.format(v), REAL)
 
@@ -84,16 +120,14 @@ class Theta(object):
 
             assertions.add(LE(bias, limitReal(max_)))
             assertions.add(GE(bias, limitReal(min_)))
-            smtlog.debug('{} <= {} <= {}'.format(min_, bias, max_))
 
             return bias
 
-        self.linear = {v: linear_bias(v) for v in graph}
+        linear = {v: linear_bias(v) for v in graph}
 
-        # finally we want the quadratic biases both in an edge
-        # and adjacency form
-        self.adj = adj = {v: {} for v in graph}
-
+        #
+        # quadratic
+        #
         def quadratic_bias(u, v):
             bias = Symbol('J_{},{}'.format(u, v), REAL)
 
@@ -104,51 +138,56 @@ class Theta(object):
 
             assertions.add(LE(bias, limitReal(max_)))
             assertions.add(GE(bias, limitReal(min_)))
-            smtlog.debug('{} <= {} <= {}'.format(min_, bias, max_))
-
-            adj[u][v] = bias
-            adj[v][u] = bias
 
             return bias
 
-        self.quadratic = {(u, v): quadratic_bias(u, v) for u, v in graph.edges()}
+        quadratic = {(u, v): quadratic_bias(u, v) for u, v in graph.edges}
+
+        return cls(linear, quadratic, offset, assertions)
 
     def fix_variables(self, spins):
-        """TODO"""
-        # build a new theta from an empty graph
-        subtheta = Theta()
+        """Create a new theta for which some spins are fixed.
+
+        Args:
+            spins (dict[hash, int])
+
+        Returns:
+            :class:`.Theta`: Another Theta that has some spins fixed.
+
+        """
+        if not isinstance(spins, dict):
+            raise TypeError("expected input 'spins' to be a dict")
+        # spins type-checking is handled by SpinTimes
 
         # offset is initially the same
-        subtheta.offset = self.offset
+        offset = self.offset
 
-        # now, for each variable in self, if it is spins then its bias
-        # gets added to the offset, otherwise it gets added to subtheta
+        # linear
+        linear = {}
         for v, bias in iteritems(self.linear):
             if v in spins:
-                subtheta.offset = Plus(subtheta.offset, Times(limitReal(spins[v]), bias))
+                # fixed linear biases get added to offset
+                offset = Plus(offset, Times(limitReal(spins[v]), bias))
             else:
-                subtheta.linear[v] = bias
+                linear[v] = bias
 
-        # and now the quadratic biases get allocated.
+        # quadratic
+        quadratic = {}
         for (u, v), bias in iteritems(self.quadratic):
             if u in spins and v in spins:
-                subtheta.offset = Plus(subtheta.offset, SpinTimes(spins[v] * spins[u], bias))
+                # when we know both values for a quadratic bias, it becomes an offset
+                offset = Plus(offset, SpinTimes(spins[v] * spins[u], bias))
             elif u in spins:
-                subtheta.linear[v] = Plus(subtheta.linear[v], SpinTimes(spins[u], bias))
+                # when we know one value of a quadratic bias, it becomes linear
+                linear[v] = Plus(linear[v], SpinTimes(spins[u], bias))
             elif v in spins:
-                subtheta.linear[u] = Plus(subtheta.linear[u], SpinTimes(spins[v], bias))
+                # when we know one value of a quadratic bias, it becomes linear
+                linear[u] = Plus(linear[u], SpinTimes(spins[v], bias))
             else:
-                subtheta.quadratic[(u, v)] = bias
+                # nothing has changed
+                quadratic[(u, v)] = bias
 
-        # finally build subtheta's adjacency
-        adj = subtheta.adj
-        for v in subtheta.linear:
-            adj[v] = {}
-        for (u, v), bias in iteritems(subtheta.quadratic):
-            adj[u][v] = bias
-            adj[v][u] = bias
-
-        return subtheta
+        return Theta(linear, quadratic, offset, self.assertions)
 
     def energy(self, spins):
         """The formula that calculates the energy of theta.
@@ -160,51 +199,12 @@ class Theta(object):
         Returns:
             The formula for the energy of theta given spins.
 
-        Raises:
-            KeyError: If and v in theta is not in spins.
-            ValueError: If any spin is not -1.0 or 1.0.
-
         """
         # get the energy of theta with every variable set in spins
         linear_energy = (SpinTimes(spins[v], bias) for v, bias in iteritems(self.linear))
         quadratic_energy = (SpinTimes(spins[v] * spins[u], bias)
                             for (u, v), bias in iteritems(self.quadratic))
         return Plus(itertools.chain(linear_energy, quadratic_energy, [self.offset]))
-
-
-# def _determine_elimination(graph, decision_variables):
-#     """get the elimination order and the induced elimination sets
-#     for the auxiliary subgraph.
-#     """
-#     # auxiliary variables are any variables that are not decision
-#     auxiliary_variables = set(n for n in graph if n not in decision_variables)
-
-#     # get the adjacency of the auxiliary subgraph
-#     adj = {v: {u for u in graph[v] if u in auxiliary_variables}
-#            for v in graph if v in auxiliary_variables}
-
-#     # get the elimination order that minimizes treewidth
-#     tw, order = dnx.treewidth_branch_and_bound(adj)
-
-#     # we need the elimination set, that is the set of variables that determine
-#     # the spin of v for each v in order
-#     elimination_sets = {}
-#     for n in order:
-#         elimination_sets[n] = tuple(adj[n])
-
-#         # now make v simplicial by making its neighborhood a clique, then
-#         # continue
-#         neighbors = adj[n]
-#         for u, v in itertools.combinations(neighbors, 2):
-#             adj[u].add(v)
-#             adj[v].add(u)
-#         for v in neighbors:
-#             adj[v].discard(n)
-#         del adj[n]
-
-#     assert tw == max(len(es) for es in elimination_sets.values())
-
-#     return order, elimination_sets
 
 
 def _elimination_trees(theta, decision_variables):
@@ -254,10 +254,7 @@ class Table(object):
     def __init__(self, graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges):
         # self.order, self.elimination_sets = _determine_elimination(graph, decision_variables)
 
-        smtlog.debug(';;; NEW TABLE')
-
-        self.theta = theta = Theta()
-        theta.build_from_graph(graph, linear_energy_ranges, quadratic_energy_ranges)
+        self.theta = theta = Theta.from_graph(graph, linear_energy_ranges, quadratic_energy_ranges)
 
         self.trees, self.ancestors = _elimination_trees(theta, decision_variables)
 
@@ -270,8 +267,6 @@ class Table(object):
 
     def energy_upperbound(self, values):
 
-        smtlog.debug(';;; determining energy upper bound for {}'.format(values))
-
         subtheta = self.theta.fix_variables(values)
 
         # ok, let's start eliminating variables
@@ -279,7 +274,6 @@ class Table(object):
 
         if trees:
             energy = Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
-            smtlog.debug(';;; energy <= %s', energy)
             return energy
         else:
             # if there are no variables to eliminate, then the offset of
@@ -290,8 +284,6 @@ class Table(object):
     def energy(self, values, break_aux_symmetry=True):
         # NB: only break aux symmetry with symmetric energy ranges
 
-        smtlog.debug(';;; determining energy for {}'.format(values))
-
         subtheta = self.theta.fix_variables(values)
 
         # we need aux variables
@@ -301,8 +293,6 @@ class Table(object):
             # without loss of generatlity, we can assume that the aux variables are all
             # spin-up for one configuration
             self.assertions.update(set(itervalues(auxvars)))
-            for bias in itervalues(auxvars):
-                smtlog.debug('%s', bias)
 
         self.fresh_auxvar += 1
 
@@ -310,13 +300,11 @@ class Table(object):
 
         if trees:
             energy = Plus(self.message(trees, {}, subtheta, auxvars), subtheta.offset)
-            smtlog.debug(';;; energy == %s', energy)
             return energy
         else:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
             assert not subtheta.linear and not subtheta.quadratic
-            smtlog.debug(';;; energy == %s', subtheta.offset)
             return subtheta.offset
 
     def message(self, tree, spins, subtheta, auxvars):
@@ -363,11 +351,6 @@ class Table(object):
                                     Implies(plus_aux, GE(m, plus_energy)),
                                     Implies(minus_aux, GE(m, minus_energy))
                                     })
-            smtlog.debug(';;; v={}, message={}, fixed={}'.format(v, m, spins))
-            smtlog.debug('%s <= %s', m, plus_energy)
-            smtlog.debug('%s <= %s', m, minus_energy)
-            smtlog.debug('%s implies %s >= %s', plus_aux, m, plus_energy)
-            smtlog.debug('%s implies %s >= %s', minus_aux, m, minus_energy)
 
             energy_sources.add(m)
 
@@ -408,8 +391,6 @@ class Table(object):
 
             self.assertions.update({LE(m, Plus(energy, plus)),
                                     LE(m, Plus(Times(energy, limitReal(-1.)), minus))})
-            smtlog.debug('%s <= %s', m, Plus(energy, plus))
-            smtlog.debug('%s <= %s', m, Plus(Times(energy, limitReal(-1.)), minus))
 
             energy_sources.add(m)
 
