@@ -1,6 +1,6 @@
 from setuptools import setup
 
-from penaltymodel_cache.package_info import __version__
+from penaltymodel.package_info import __version__, __author__, __description__, __authoremail__
 
 install_requires = ['penaltymodel>=0.9.1',
                     'six',
@@ -12,6 +12,10 @@ packages = ['penaltymodel_cache']
 setup(
     name='penaltymodel_cache',
     version=__version__,
+    author=__author__,
+    author_email=__authoremail__,
+    description=__description__,
+    url='https://github.com/dwavesystems/penaltymodel_cache',
     license='Apache 2.0',
     packages=packages,
     install_requires=install_requires,
