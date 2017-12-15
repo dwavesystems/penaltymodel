@@ -2,18 +2,7 @@
 
 .. _contents:
 
-Overview
-========
-
-Penalty Model Cache
-===================
-
-todo
-
-License
--------
-
-Released under the Apache License 2.0 (see License).
+.. include:: ../README.rst
 
 Documentation
 -------------
