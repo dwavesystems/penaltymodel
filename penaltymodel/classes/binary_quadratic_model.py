@@ -269,6 +269,9 @@ class BinaryQuadraticModel(object):
         except TypeError:
             raise ValueError("mapping targets must be hashable objects")
 
+        if len(new_linear) != len(self.linear):
+            raise ValueError("mapping does not contain unique keys")
+
         self.linear = new_linear
         self.quadratic = new_quadratic
         self.adj = new_adj

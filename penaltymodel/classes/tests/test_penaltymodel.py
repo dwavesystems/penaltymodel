@@ -108,6 +108,22 @@ class TestSpecification(unittest.TestCase):
         spec = pm.Specification(graph, decision_variables, feasible_configurations)
         self.assertIs(spec.vartype, pm.SPIN)
 
+    def test_relabel(self):
+        graph = nx.circular_ladder_graph(12)
+        decision_variables = (0, 2, 5)
+        feasible_configurations = {(1, 1, 1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
+
+        spec.relabel_variables(mapping)
+
+        for v in graph:
+            self.assertIn(mapping[v], spec.graph)
+
+        for (u, v) in spec.graph.edges:
+            self.assertTrue((u, v) in spec.quadratic_energy_ranges or (v, u) in spec.quadratic_energy_ranges)
+
 
 class TestPenaltyModel(unittest.TestCase):
     def test_construction(self):
@@ -132,3 +148,17 @@ class TestPenaltyModel(unittest.TestCase):
 
         # should result in equality
         self.assertEqual(pm0, pm1)
+
+    def test_relabel(self):
+        graph = nx.path_graph(3)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+        widget.relabel_variables({0: 'a', 1: 'b', 2: 'c'})
+
+        self.assertEqual(set(widget.graph.nodes), set(['a', 'b', 'c']))
