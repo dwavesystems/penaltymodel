@@ -4,7 +4,8 @@ from penaltymodel.package_info import __version__, __author__, __description__, 
 
 install_requires = ['dimod>=0.3.1',
                     'six',
-                    'networkx>=2.0']
+                    'networkx>=2.0',
+                    'enum34>=1.1.6']
 extras_require = {}
 
 packages = ['penaltymodel',

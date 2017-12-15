@@ -1,0 +1,4 @@
+dimod>=0.3.1
+six
+networkx>=2.0
+enum34>=1.1.6
