@@ -1,6 +1,16 @@
 Overview
 ========
 
+.. image:: https://travis-ci.org/arcondello/penaltymodel.svg?branch=master
+    :target: https://travis-ci.org/arcondello/penaltymodel
+
+.. image:: https://coveralls.io/repos/github/arcondello/penaltymodel/badge.svg
+    :target: https://coveralls.io/github/arcondello/penaltymodel
+
+.. image:: https://readthedocs.org/projects/penaltymodel/badge/?version=latest
+    :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 Installing
 ----------
 
