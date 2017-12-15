@@ -1,9 +1,10 @@
 from setuptools import setup
 
-from penaltymodel_cache import __version__
+from penaltymodel_cache.package_info import __version__
 
-install_requires = ['penaltymodel',
-                    'networkx>=2.0']
+install_requires = ['penaltymodel>=0.9.1',
+                    'six',
+                    'homebase>=1.0.0']
 extras_require = {}
 
 packages = ['penaltymodel_cache']
