@@ -2,14 +2,12 @@
 
 # virtual environment
 venv/
+venv_test3/
+venv_test2/
 
 # sublime support
 *.sublime-project
 *.sublime-workspace
-
-# smt files
-*.smt2
-*.log
 
 # python build stuff
 build

@@ -1,7 +1,5 @@
 """module abstracts setting up the smt problem.
 """
-import logging
-import logging.config
 import itertools
 from fractions import Fraction
 
@@ -12,12 +10,6 @@ import dwave_networkx as dnx
 from pysmt.shortcuts import Symbol, FreshSymbol, Real
 from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not, And, Equals, GT
 from pysmt.typing import REAL, BOOL
-
-
-# from os import path
-# log_file_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'logging.config')
-# logging.config.fileConfig(log_file_path)
-smtlog = logging.getLogger('smt')
 
 
 def limitReal(x, max_denominator=1000000):

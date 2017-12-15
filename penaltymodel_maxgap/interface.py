@@ -1,12 +1,12 @@
 from penaltymodel import PenaltyModel, BinaryQuadraticModel
-from penaltymodel.plugins import penaltymodel_factory
+# from penaltymodel.plugins import penaltymodel_factory
 
-from dwave_maxgap.generation import generate_ising
+from penaltymodel_maxgap.generation import generate_ising
 
 __all__ = ['get_penalty_model']
 
 
-@penaltymodel_factory(-100)  # set the priority to low
+# @penaltymodel_factory(-100)  # set the priority to low
 def get_penalty_model(specification):
     """TODO"""
 

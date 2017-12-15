@@ -1,2 +1,4 @@
-dwave_networkx>=0.5.2
 six
+dwave_networkx>=0.6.0
+pysmt
+penaltymodel

@@ -4,7 +4,7 @@ import networkx as nx
 
 from penaltymodel import Specification
 
-import dwave_maxgap as maxgap
+import penaltymodel_maxgap as maxgap
 
 
 class TestInterface(unittest.TestCase):

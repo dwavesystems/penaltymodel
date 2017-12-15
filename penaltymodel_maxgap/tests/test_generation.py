@@ -6,12 +6,12 @@ import itertools
 import networkx as nx
 import dwave_networkx as dnx
 
-import dwave_maxgap as maxgap
+import penaltymodel_maxgap as maxgap
 
 from pysmt.environment import get_env, reset_env
 
-linear_energy_ranges = defaultdict(lambda: (-2., 2.))
-quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
+# linear_energy_ranges = defaultdict(lambda: (-2., 2.))
+# quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
 
 
 class TestGeneration(unittest.TestCase):

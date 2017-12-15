@@ -2,14 +2,13 @@ from collections import defaultdict
 import itertools
 from fractions import Fraction
 
-
 import pysmt.test
 from pysmt.shortcuts import GT, LT, And, Equals, GE, LE, Not
 
 import networkx as nx
 import dwave_networkx as dnx
 
-from dwave_maxgap.smt import Theta, Table, limitReal
+from penaltymodel_maxgap.smt import Theta, Table, limitReal
 
 
 F = lambda x: Fraction(x).limit_denominator()

@@ -4,7 +4,7 @@ from collections import defaultdict
 from six import iteritems
 from pysmt.shortcuts import Solver
 
-from dwave_maxgap.smt import Theta, Table, limitReal
+from penaltymodel_maxgap.smt import Theta, Table, limitReal
 
 __all__ = ['generate_ising']
 
