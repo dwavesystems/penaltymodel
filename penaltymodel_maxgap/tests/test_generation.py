@@ -5,18 +5,32 @@ import itertools
 
 import networkx as nx
 import dwave_networkx as dnx
+import penaltymodel as pm
 
 import penaltymodel_maxgap as maxgap
 
 from pysmt.environment import get_env, reset_env
 
-# linear_energy_ranges = defaultdict(lambda: (-2., 2.))
-# quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
-
 
 class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
+
+    def test_impossible_model(self):
+        graph = nx.path_graph(3)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
+        decision_variables = (0, 1, 2)
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+
+        with self.assertRaises(pm.ImpossiblePenaltyModel):
+            maxgap.generate_ising(graph, configurations, decision_variables,
+                                  linear_energy_ranges,
+                                  quadratic_energy_ranges,
+                                  None)
 
     def check_linear_energy_ranges(self, linear, linear_energy_ranges):
         for v, bias in linear.items():
@@ -183,6 +197,9 @@ class TestGeneration(unittest.TestCase):
         with the other test_specify_... tests, serves as a smoke test for
         the smt_solver_name parameter.
         """
+        linear_energy_ranges = defaultdict(lambda: (-2., 2.))
+        quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
+
         graph = nx.complete_graph(3)
         configurations = {(-1, -1): 0, (1, 1): 0}
         decision_variables = [0, 1]

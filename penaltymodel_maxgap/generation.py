@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from six import iteritems
 from pysmt.shortcuts import Solver
+import penaltymodel as pm
 
 from penaltymodel_maxgap.smt import Table
 
@@ -15,10 +16,10 @@ def generate_ising(graph, feasible_configurations, decision_variables,
     """Generates the Ising model that induces the given feasible configurations.
 
     Args:
-        graph (nx.Graph): The target graph on which the Ising model is build.
+        graph (nx.Graph): The target graph on which the Ising model is to be built.
         feasible_configurations (dict): The set of feasible configurations
             of the decision variables. The key is a feasible configuration
-            as a tuple of spins, the values are the associated energy
+            as a tuple of spins, the values are the associated energy.
         decision_variables (list/tuple): Which variables in the graph are
             assigned as decision variables.
         linear_energy_ranges (dict, optional): A dict of the form
@@ -29,6 +30,22 @@ def generate_ising(graph, feasible_configurations, decision_variables,
             of values allowed to (u, v).
         smt_solver_name (str/None): The name of the smt solver. Must
             be a solver available to pysmt. If None, uses the pysmt default.
+
+    Returns:
+        tuple: A 4-tuple contiaing:
+
+            dict: The linear biases of the Ising problem.
+
+            quadratic: The quadratic biases of the Ising problem.
+
+            ground_energy: The ground energy of the Ising problem.
+
+            classical_gap: The classical energy gap between ground and the first
+                excited state.
+
+    Raises:
+        ImpossiblePenaltyModel: If the penalty model cannot be built. Normally due
+            to a non-zero infeasible gap.
 
     """
     # we need to build a Table. The table encodes all of the information used by the smt solver
@@ -84,7 +101,7 @@ def generate_ising(graph, feasible_configurations, decision_variables,
                 g = min(gmin + .1, (gmax + gmin) / 2)
 
         else:
-            raise NotImplementedError('no model found')
+            raise pm.ImpossiblePenaltyModel("Model cannot be built")
 
     # finally we need to convert our values back into python floats.
     # we use limit_denominator to deal with some of the rounding
