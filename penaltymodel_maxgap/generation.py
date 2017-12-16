@@ -1,3 +1,12 @@
+"""
+.. [DO] Bian et al., "Discrete optimization using quantum annealing on sparse Ising models",
+        https://www.frontiersin.org/articles/10.3389/fphy.2014.00056/full
+
+.. [MC] Z. Bian, F. Chudak, R. Israel, B. Lackey, W. G. Macready, and A. Roy
+        "Mapping constrained optimization problems to quantum annealing with application to fault diagnosis"
+        https://arxiv.org/pdf/1603.03111.pdf
+"""
+
 import itertools
 from collections import defaultdict
 
@@ -23,10 +32,10 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         decision_variables (list/tuple): Which variables in the graph are
             assigned as decision variables.
         linear_energy_ranges (dict, optional): A dict of the form
-            {v: (min_, max_), ...} where min_ and max_ are the range
+            {v: (min, max, ...} where min and max are the range
             of values allowed to v.
         quadratic_energy_ranges (dict): A dict of the form
-            {(u, v): (min_, max_), ...} where min_ and max_ are the range
+            {(u, v): (min, max), ...} where min and max are the range
             of values allowed to (u, v).
         smt_solver_name (str/None): The name of the smt solver. Must
             be a solver available to pysmt. If None, uses the pysmt default.
@@ -36,12 +45,12 @@ def generate_ising(graph, feasible_configurations, decision_variables,
 
             dict: The linear biases of the Ising problem.
 
-            quadratic: The quadratic biases of the Ising problem.
+            dict: The quadratic biases of the Ising problem.
 
-            ground_energy: The ground energy of the Ising problem.
+            float: The ground energy of the Ising problem.
 
-            classical_gap: The classical energy gap between ground and the first
-                excited state.
+            float: The classical energy gap between ground and the first
+            excited state.
 
     Raises:
         ImpossiblePenaltyModel: If the penalty model cannot be built. Normally due

@@ -13,3 +13,6 @@ venv_test2/
 build
 dist
 *.egg-info
+
+htmlcov/
+.coverage
