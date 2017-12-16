@@ -1,4 +1,7 @@
-"""All functions relating to defining the SMT problem."""
+"""All functions relating to defining the SMT problem.
+
+All calls to pysmt live in this sub module.
+"""
 
 import itertools
 from fractions import Fraction
@@ -52,26 +55,27 @@ def SpinTimes(spin, bias):
 
 
 class Theta(object):
-    """Encodes the smt variables.
+    """Represents the Binary Quadratic Model with smt Symbols.
 
-    todo
+    Theta is the collection of linear and quadratic biases and the offset that together
+    define a binary quadratic program.
 
     Args:
-        graph
-        linear_energy_ranges
-        quadratic_energy_ranges
+        linear (dict[variable, Symbol]): A dict mapping variables to their
+            associated linear bias represented by a Symbol.
+        quadratic (dict[edge, Symbol]): A dict mapping pairs of variables
+            (called an edge here) to their associated quadratic bias represented
+            as a Symbol.
+        adj (dict[variable, dict[variable, Symbol]]): The adjacency dict for Theta.
+        offset (Symbol): The offset for theta represented by a Symbol.
+        assertions (set, optional): The set of smt assertions over the set of all
+            Symbols associated with theta.
 
-    Attributes:
-        linear
-        quadratic
-        adj
-        offset
-        assertions
+    Notes:
+        No input checking is applied to linear, quadratic, offset or assertions.
 
     """
     def __init__(self, linear, quadratic, offset, assertions=None):
-
-        # set offset to 0 for some reason =limitReal(0)
         if assertions is None:
             assertions = set()
         elif not isinstance(assertions, set):
@@ -208,6 +212,9 @@ class Theta(object):
 
 
 def _elimination_trees(theta, decision_variables):
+    """From Theta and the decision variables, determine the elimination order and the induced
+    trees.
+    """
     # auxiliary variables are any variables that are not decision
     auxiliary_variables = set(n for n in theta.linear if n not in decision_variables)
 
@@ -250,71 +257,116 @@ def _elimination_trees(theta, decision_variables):
 
 
 class Table(object):
-    """TODO"""
-    def __init__(self, graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges):
-        # self.order, self.elimination_sets = _determine_elimination(graph, decision_variables)
+    """Table of energy relations.
 
+    Args:
+        graph (:class:`networkx.Graph`): The graph defining the structure
+            of the desired Ising model.
+        decision_variables (tuple): The set of nodes in the graph that
+            represent decision variables in the desired Ising model.
+        linear_energy_ranges (dict[node, (min, max)]): Maps each node to the
+            range of the linear bias associated with the variable.
+        quadratic_energy_ranges (dict[edge, (min, max)]): Maps each edge to
+            the range of the quadratic bias associated with the edge.
+
+    Attributes:
+        assertions (set): The set of all smt assertions accumulated by the Table.
+        theta (:class:`.Theta`): The linear biases, quadratic biases and the offset.
+        gap (Symbol): The smt Symbol representing the classical gap.
+
+
+    """
+    def __init__(self, graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges):
         self.theta = theta = Theta.from_graph(graph, linear_energy_ranges, quadratic_energy_ranges)
 
-        self.trees, self.ancestors = _elimination_trees(theta, decision_variables)
+        self._trees, self._ancestors = _elimination_trees(theta, decision_variables)
 
         self.assertions = assertions = theta.assertions
 
-        self.fresh_auxvar = 0  # let's us make fresh aux variables
+        self._auxvar_counter = itertools.count()  # let's us make fresh aux variables
 
         self.gap = gap = Symbol('gap', REAL)
         assertions.add(GT(gap, Real(0)))
 
-    def energy_upperbound(self, values):
+    def energy_upperbound(self, spins):
+        """A formula for an upper bound on the energy of Theta with spins fixed.
 
-        subtheta = self.theta.fix_variables(values)
+        Args:
+            spins (dict): Spin values for a subset of the variables in Theta.
+
+        Returns:
+            Formula that upper bounds the energy with spins fixed.
+
+        """
+        subtheta = self.theta.fix_variables(spins)
 
         # ok, let's start eliminating variables
-        trees = self.trees
+        trees = self._trees
 
-        if trees:
-            energy = Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
-            return energy
-        else:
+        if not trees:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
             assert not subtheta.linear and not subtheta.quadratic
             return subtheta.offset
 
-    def energy(self, values, break_aux_symmetry=True):
-        # NB: only break aux symmetry with symmetric energy ranges
+        energy = Plus(self.message_upperbound(trees, {}, subtheta), subtheta.offset)
 
-        subtheta = self.theta.fix_variables(values)
+        return energy
+
+    def energy(self, spins, break_aux_symmetry=True):
+        """A formula for the exact energy of Theta with spins fixed.
+
+        Args:
+            spins (dict): Spin values for a subset of the variables in Theta.
+            break_aux_symmetry (bool, optional): Default True. If True, break
+                the aux variable symmetry by setting all aux variable to 1
+                for one of the feasible configurations. If the energy ranges
+                are not symmetric then this can make finding models impossible.
+
+        Returns:
+            Formula for the exact energy of Theta with spins fixed.
+
+        """
+        subtheta = self.theta.fix_variables(spins)
 
         # we need aux variables
-        av = self.fresh_auxvar
+        av = next(self._auxvar_counter)
         auxvars = {v: Symbol('aux{}_{}'.format(av, v), BOOL) for v in subtheta.linear}
         if break_aux_symmetry and av == 0:
-            # without loss of generatlity, we can assume that the aux variables are all
+            # without loss of generality, we can assume that the aux variables are all
             # spin-up for one configuration
             self.assertions.update(set(itervalues(auxvars)))
 
-        self.fresh_auxvar += 1
+        trees = self._trees
 
-        trees = self.trees
-
-        if trees:
-            energy = Plus(self.message(trees, {}, subtheta, auxvars), subtheta.offset)
-            return energy
-        else:
+        if not trees:
             # if there are no variables to eliminate, then the offset of
             # subtheta is the exact value and we can just return it
             assert not subtheta.linear and not subtheta.quadratic
             return subtheta.offset
 
-    def message(self, tree, spins, subtheta, auxvars):
-        # given the current tree, determine the energy
+        energy = Plus(self.message(trees, {}, subtheta, auxvars), subtheta.offset)
 
+        return energy
+
+    def message(self, tree, spins, subtheta, auxvars):
+        """Determine the energy of the elimination tree.
+
+        Args:
+            tree (dict): The current elimination tree
+            spins (dict): The current fixed spins
+            subtheta (dict): Theta with spins fixed.
+            auxvars (dict): The auxiliary variables for the given spins.
+
+        Returns:
+            The formula for the energy of the tree.
+
+        """
         energy_sources = set()
         for v, children in iteritems(tree):
             aux = auxvars[v]
 
-            assert all(u in spins for u in self.ancestors[v])
+            assert all(u in spins for u in self._ancestors[v])
 
             # build an iterable over all of the energies contributions
             # that we can exactly determine given v and our known spins
@@ -342,7 +394,7 @@ class Table(object):
             m = FreshSymbol(REAL)
 
             ancestor_aux = {auxvars[u] if spins[u] > 0 else Not(auxvars[u])
-                            for u in self.ancestors[v]}
+                            for u in self._ancestors[v]}
             plus_aux = And({aux}.union(ancestor_aux))
             minus_aux = And({Not(aux)}.union(ancestor_aux))
 
@@ -357,11 +409,21 @@ class Table(object):
         return Plus(energy_sources)
 
     def message_upperbound(self, tree, spins, subtheta):
+        """Determine an upper bound on the energy of the elimination tree.
 
+        Args:
+            tree (dict): The current elimination tree
+            spins (dict): The current fixed spins
+            subtheta (dict): Theta with spins fixed.
+
+        Returns:
+            The formula for the energy of the tree.
+
+        """
         energy_sources = set()
         for v, subtree in iteritems(tree):
 
-            assert all(u in spins for u in self.ancestors[v])
+            assert all(u in spins for u in self._ancestors[v])
 
             # build an iterable over all of the energies contributions
             # that we can exactly determine given v and our known spins
@@ -397,13 +459,39 @@ class Table(object):
         return Plus(energy_sources)
 
     def set_energy(self, spins, target_energy):
-        """TODO"""
+        """Set the energy of Theta with spins fixed to taget_energy.
+
+        Args:
+            spins (dict): Spin values for a subset of the variables in Theta.
+            target_energy (float): The desired energy for Theta with spins fixed.
+
+        Notes:
+            Add equality constraint to assertions.
+
+        """
         spin_energy = self.energy(spins)
-        self.assertions.add(Equals(spin_energy, Real(target_energy)))
+        self.assertions.add(Equals(spin_energy, limitReal(target_energy)))
 
     def set_energy_upperbound(self, spins):
+        """Upper bound the energy of Theta with spins fixed to be greater than gap.
+
+        Args:
+            spins (dict): Spin values for a subset of the variables in Theta.
+            target_energy (float): The desired energy for Theta with spins fixed.
+
+        Notes:
+            Add equality constraint to assertions.
+
+        """
         spin_energy = self.energy_upperbound(spins)
         self.assertions.add(GE(spin_energy, self.gap))
 
     def gap_bound_assertion(self, gap_lowerbound):
+        """The formula that lower bounds the gap.
+
+        Args:
+            gap_lowerbound (float): Return the formula that sets a lower
+                bound on the gap.
+
+        """
         return GE(self.gap, limitReal(gap_lowerbound))
