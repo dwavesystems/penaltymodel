@@ -13,8 +13,24 @@ penaltymodel. It will be used automatically by any project that uses penaltymode
 Installing
 ----------
 
-todo - pysmt install instructions
+To install:
 
+.. code-block:: bash
+
+    pip install penaltymodel_maxgap
+
+To build from source:
+
+.. code-block:: bash
+
+    git clone https://github.com/dwavesystems/penaltymodel_maxgap.git
+    cd penaltymodel_maxgap
+    pip install -r requirements.txt
+    python setup.py install
+
+Note that this library will not function without smt solvers installed.
+The solvers are accessed through the pysmt_ package. See the accompanying
+pysmt documentation for installing smt solvers.
 
 License
 -------
@@ -22,3 +38,4 @@ License
 Released under the Apache License 2.0. See LICENSE
 
 .. _penaltymodel: https://github.com/dwavesystems/penaltymodel
+.. _pysmt: https://github.com/pysmt/pysmt
