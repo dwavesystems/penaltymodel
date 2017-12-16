@@ -12,10 +12,7 @@ class TestInterface(unittest.TestCase):
     Test that the interface gives a penalty model corresponding to the specification"""
     def test_typical(self):
         graph = nx.complete_graph(3)
-        spec = Specification(graph,
-                             {(-1, -1): 0,
-                              (+1, +1): 0},
-                             [0, 1])
+        spec = Specification(graph, [0, 1], {(-1, -1): 0, (+1, +1): 0})
 
         pm = maxgap.get_penalty_model(spec)
 
