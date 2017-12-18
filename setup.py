@@ -1,6 +1,6 @@
 from setuptools import setup
 
-from penaltymodel.package_info import __version__, __author__, __description__, __authoremail__
+from penaltymodel_cache.package_info import __version__, __author__, __description__, __authoremail__
 
 install_requires = ['penaltymodel>=0.9.1',
                     'six',
