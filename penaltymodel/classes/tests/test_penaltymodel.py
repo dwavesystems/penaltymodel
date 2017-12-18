@@ -16,19 +16,19 @@ class TestSpecification(unittest.TestCase):
         # in this case should identify as being binary
         graph = nx.complete_graph(10)
         decision_variables = (0, 4, 5)
-        feasible_configurations = {(0, 0, 0): 0.}
+        feasible_configurations = {(-1, -1, -1): 0.}
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations)
 
         self.assertEqual(spec.graph, graph)  # literally the same object
         self.assertEqual(spec.decision_variables, decision_variables)
         self.assertEqual(spec.feasible_configurations, feasible_configurations)
-        self.assertIs(spec.vartype, pm.BINARY)
+        self.assertIs(spec.vartype, pm.SPIN)
 
     def test_construction_from_edgelist(self):
         graph = nx.barbell_graph(10, 7)
         decision_variables = (0, 4, 3)
-        feasible_configurations = {(0, 0, 0): 0.}
+        feasible_configurations = {(-1, -1, -1): 0.}
 
         # specification from edges
         spec0 = pm.Specification(graph.edges, decision_variables, feasible_configurations)
@@ -43,7 +43,7 @@ class TestSpecification(unittest.TestCase):
         decision_variables = (0, 4, 3)
         feasible_configurations = {(0, 0, 0): 0.}
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
 
         # check default energy ranges
         for v in graph:
@@ -58,7 +58,8 @@ class TestSpecification(unittest.TestCase):
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations,
                                 linear_energy_ranges={v: (-2, 2) for v in graph},
-                                quadratic_energy_ranges={edge: (-1, 1) for edge in graph.edges})
+                                quadratic_energy_ranges={edge: (-1, 1) for edge in graph.edges},
+                                vartype=pm.BINARY)
 
         # check default energy ranges
         for v in graph:
@@ -89,21 +90,10 @@ class TestSpecification(unittest.TestCase):
         with self.assertRaises(ValueError):
             spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
 
-        # finally when given UNDEFINED, should infer that it is spin
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.UNDEFINED)
-        self.assertIs(spec.vartype, pm.SPIN)
-
     def test_vartype_default(self):
         graph = nx.complete_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-
-        spec = pm.Specification(graph, decision_variables, feasible_configurations)
-        self.assertIs(spec.vartype, pm.UNDEFINED)
-
-        graph = nx.complete_graph(12)
-        decision_variables = (0, 2, 5)
-        feasible_configurations = {(-1, -1, -1): 0.}
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations)
         self.assertIs(spec.vartype, pm.SPIN)
@@ -131,14 +121,14 @@ class TestPenaltyModel(unittest.TestCase):
         # build a specification
         graph = nx.complete_graph(10)
         decision_variables = (0, 4, 5)
-        feasible_configurations = {(0, 0, 0): 0.}
+        feasible_configurations = {(-1, -1, -1): 0.}
         spec = pm.Specification(graph, decision_variables, feasible_configurations)
 
         # build a model
         model = pm.BinaryQuadraticModel({v: 0 for v in graph},
                                         {edge: 0 for edge in graph.edges},
                                         0.0,
-                                        vartype=pm.Vartype.BINARY)
+                                        vartype=pm.Vartype.SPIN)
 
         # build a PenaltyModel explicitly
         pm0 = pm.PenaltyModel(graph, decision_variables, feasible_configurations, model, .1, 0)

@@ -33,6 +33,10 @@ class Specification(object):
         feasible_configurations (dict[tuple[int], number]/iterable[tuple[int]]):
             The set of feasible configurations. Each feasible configuration
             should be a tuple of variable assignments. See examples.
+        vartype (:class:`.Vartype`/str/set, optional): Default :class:`.Vartype.SPIN`.
+            The variable type desired for the penalty model. Accepted input values:
+            :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
+            :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
         linear_energy_ranges (dict[node, (number, number)], optional): If
             not provided, defaults to {v: (-2, 2), ...} for each variable v.
             Defines the energy ranges available for the linear
@@ -41,10 +45,6 @@ class Specification(object):
             not provided, defaults to {edge: (-1, 1), ...} for each edge in
             graph. Defines the energy ranges available for the quadratic
             biases of the penalty model.
-        vartype (:class:`.Vartype`, optional): The variable type. If not
-            provided, tried to infer the vartype from the feasible_configurations.
-            If Specification cannot determine the vartype then set to
-            :class:`.Vartype.UNDEFINED`.
 
     Examples:
         >>> graph = nx.path_graph(5)
@@ -74,9 +74,8 @@ class Specification(object):
             unspecified will be :class:`.Vartype.UNDEFINED`.
 
     """
-    def __init__(self, graph, decision_variables, feasible_configurations,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None,
-                 vartype=None):
+    def __init__(self, graph, decision_variables, feasible_configurations, vartype=Vartype.SPIN,
+                 linear_energy_ranges=None, quadratic_energy_ranges=None):
 
         #
         # graph
@@ -137,41 +136,23 @@ class Specification(object):
         #
         # vartype
         #
-
-        # see what we can determine from the feasible_configurations
-        seen_variable_types = set().union(*feasible_configurations)
-        if vartype is None or vartype is Vartype.UNDEFINED:
-            # the vartype is not provided or is undefined, so see if we can determine from
-            # the feasible_configurations input
-            if len(seen_variable_types) >= 2:
-                try:
-                    vartype = Vartype(seen_variable_types)
-                except ValueError:
-                    vartype = Vartype.UNDEFINED
-            elif not seen_variable_types:
-                vartype = Vartype.UNDEFINED
+        try:
+            if isinstance(vartype, str):
+                vartype = Vartype[vartype]
             else:
-                candidate_vartypes = [vt for vt in Vartype if vt.value is not None and seen_variable_types.issubset(vt.value)]
-                if len(candidate_vartypes) == 1:
-                    vartype, = candidate_vartypes
-                else:
-                    vartype = Vartype.UNDEFINED
-
-        else:
-            # the vartype has been specified, so check that it matches the given inputs
-            if not isinstance(vartype, Vartype):
-                # try to cast to vartype
-                try:
-                    if isinstance(vartype, str):
-                        vartype = Vartype[vartype]
-                    else:
-                        vartype = Vartype(vartype)
-                except (ValueError, KeyError):
-                    raise TypeError("unexpected `vartype`. See BinaryQuadraticModel.Vartype for known types.")
-            # check the values
-            if not seen_variable_types.issubset(vartype.value):
-                            raise ValueError(("the variable types in feasible_configurations ({}) "
-                                              "are not of type {}").format(feasible_configurations, vartype))
+                vartype = Vartype(vartype)
+            if not (vartype is Vartype.SPIN or vartype is Vartype.BINARY):
+                raise ValueError
+        except (ValueError, KeyError):
+            raise TypeError(("expected input vartype to be one of: "
+                             "Vartype.SPIN, 'SPIN', {-1, 1}, "
+                             "Vartype.BINARY, 'BINARY', or {0, 1}."))
+        # check that our feasible configurations match
+        seen_variable_types = set().union(*feasible_configurations)
+        if not seen_variable_types.issubset(vartype.value):
+            raise ValueError(("feasible_configurations type must match vartype. "
+                              "feasible_configurations have values {}, "
+                              "values permitted by vartype are {}.").format(seen_variable_types, vartype.value))
         self.vartype = vartype
 
     def __len__(self):
@@ -203,7 +184,7 @@ class Specification(object):
         new_graph = nx.relabel_nodes(graph, mapping)  # also checks the mapping
         new_decision_variables = tuple(mapping[v] for v in self.decision_variables)
         new_linear_energy_ranges = {mapping[v]: linear_energy_ranges[v] for v in graph}
-        new_quadratic_energy_ranges = {(mapping[u], mapping[v]): quadratic_energy_ranges[(u, v)] 
+        new_quadratic_energy_ranges = {(mapping[u], mapping[v]): quadratic_energy_ranges[(u, v)]
                                        for u, v in graph.edges}
 
         # feasible_configurations stay the same
@@ -297,17 +278,16 @@ class PenaltyModel(Specification):
     """
     def __init__(self, graph, decision_variables, feasible_configurations,
                  model, classical_gap, ground_energy,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None,
-                 vartype=None):
-
-        if vartype is not None:
-            if vartype != model.vartype:
-                raise ValueError("mismatched vartype")
-        else:
-            vartype = model.vartype
+                 vartype=Vartype.SPIN,
+                 linear_energy_ranges=None, quadratic_energy_ranges=None):
 
         Specification.__init__(self, graph, decision_variables, feasible_configurations,
-                               linear_energy_ranges, quadratic_energy_ranges, vartype)
+                               vartype=vartype,
+                               linear_energy_ranges=linear_energy_ranges,
+                               quadratic_energy_ranges=quadratic_energy_ranges)
+
+        if self.vartype != model.vartype:
+            model = model.change_vartype(self.vartype)
 
         if not isinstance(model, BinaryQuadraticModel):
             raise TypeError("expected 'model' to be a BinaryQuadraticModel")
