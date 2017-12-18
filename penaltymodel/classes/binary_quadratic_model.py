@@ -347,3 +347,37 @@ class BinaryQuadraticModel(object):
         offset = self.offset + .5 * linear_offset + .25 * quadratic_offset
 
         return h, J, offset
+
+    def to_networkx_graph(self, node_attribute_name='bias', edge_attribute_name='bias'):
+        """Return the BinaryQuadraticModel as a NetworkX graph.
+
+        Args:
+            node_attribute_name (hashable): The attribute name for the
+                linear biases.
+            edge_attribute_name (hashable): The attribute name for the
+                quadratic biases.
+
+        Returns:
+            :class:`networkx.Graph`: A NetworkX with the biases stored as
+                node/edge attributes.
+
+        Examples:
+            >>> import networkx as nx
+            >>>
+
+        """
+        import networkx as nx
+
+        BQM = nx.Graph()
+
+        # add the linear biases
+        BQM.add_nodes_from(((v, {node_attribute_name: bias, 'vartype': self.vartype})
+                            for v, bias in iteritems(self.linear)))
+
+        # add the quadratic biases
+        BQM.add_edges_from(((u, v, {edge_attribute_name: bias}) for (u, v), bias in iteritems(self.quadratic)))
+
+        # set the offset
+        BQM.offset = self.offset
+
+        return BQM
