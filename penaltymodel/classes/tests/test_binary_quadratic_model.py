@@ -2,6 +2,8 @@ import unittest
 import random
 import itertools
 
+import networkx as nx
+
 import penaltymodel as pm
 
 
@@ -302,3 +304,22 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
             self.assertAlmostEqual(model.energy(spin_sample),
                                    new_model.energy(binary_sample))
+
+    def test_to_networkx_graph(self):
+        graph = nx.barbell_graph(7, 6)
+
+        # build a BQM
+        model = pm.BinaryQuadraticModel({v: -.1 for v in graph},
+                                        {edge: -.4 for edge in graph.edges},
+                                        1.3,
+                                        vartype=pm.SPIN)
+
+        # get the graph
+        BQM = model.to_networkx_graph()
+
+        self.assertEqual(set(graph), set(BQM))
+        for u, v in graph.edges:
+            self.assertIn(u, BQM[v])
+
+        for v, bias in model.linear.items():
+            self.assertEqual(bias, BQM.nodes[v]['bias'])
