@@ -26,7 +26,10 @@ class BinaryQuadraticModel(object):
             should not have self loops, that is (u, u) is not a valid
             quadratic bias.
         offset: The energy offset associated with the model.
-        vartype (:class:`.Vartype`): The variable type.
+        vartype (:class:`.Vartype`/str/set, optional): Default :class:`.Vartype.SPIN`.
+            The variable type desired for the penalty model. Accepted input values:
+            :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
+            :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
 
     Notes:
         The BinaryQuadraticModel does not specify the type of the biases
@@ -70,8 +73,12 @@ class BinaryQuadraticModel(object):
                 vartype = Vartype[vartype]
             else:
                 vartype = Vartype(vartype)
+            if not (vartype is Vartype.SPIN or vartype is Vartype.BINARY):
+                raise ValueError
         except (ValueError, KeyError):
-            raise TypeError("unexpected `vartype`. See BinaryQuadraticModel.Vartype for known types.")
+            raise TypeError(("expected input vartype to be one of: "
+                             "Vartype.SPIN, 'SPIN', {-1, 1}, "
+                             "Vartype.BINARY, 'BINARY', or {0, 1}."))
         self.vartype = vartype
 
         # We want the linear terms to be a dict.
@@ -162,31 +169,7 @@ class BinaryQuadraticModel(object):
         if self.vartype != self.BINARY:
             raise RuntimeError('converting from unknown vartype')
 
-        h = {}
-        J = {}
-        linear_offset = 0.0
-        quadratic_offset = 0.0
-
-        linear = self.linear
-        quadratic = self.quadratic
-
-        for u, bias in iteritems(linear):
-            h[u] = .5 * bias
-            linear_offset += bias
-
-        for (u, v), bias in iteritems(quadratic):
-
-            if bias != 0.0:
-                J[(u, v)] = .25 * bias
-
-            h[u] += .25 * bias
-            h[v] += .25 * bias
-
-            quadratic_offset += bias
-
-        offset = self.offset + .5 * linear_offset + .25 * quadratic_offset
-
-        return h, J, offset
+        return self._binary_to_spin()
 
     def as_qubo(self):
         """Converts the model into the (Q, offset) QUBO format.
@@ -211,24 +194,11 @@ class BinaryQuadraticModel(object):
         if self.vartype != self.SPIN:
             raise RuntimeError('converting from unknown vartype')
 
-        linear = self.linear
-        quadratic = self.quadratic
+        linear, quadratic, offset = self._spin_to_binary()
 
-        # the linear biases are the easiest
-        qubo = {(v, v): 2. * bias for v, bias in iteritems(linear)}
+        quadratic.update({(v, v): bias for v, bias in iteritems(linear)})
 
-        # next the quadratic biases
-        for (u, v), bias in iteritems(quadratic):
-            if bias == 0.0:
-                continue
-            qubo[(u, v)] = 4. * bias
-            qubo[(u, u)] -= 2. * bias
-            qubo[(v, v)] -= 2. * bias
-
-        # finally calculate the offset
-        offset = self.offset + sum(itervalues(quadratic)) - sum(itervalues(linear))
-
-        return qubo, offset
+        return quadratic, offset
 
     def energy(self, sample):
         """Determines the energy of the given sample.
@@ -275,3 +245,105 @@ class BinaryQuadraticModel(object):
         self.linear = new_linear
         self.quadratic = new_quadratic
         self.adj = new_adj
+
+    def copy(self):
+        """Create a copy of the BinaryQuadraticModel.
+
+        Returns:
+            :class:`.BinaryQuadraticModel`
+
+        """
+        return BinaryQuadraticModel(self.linear.copy(), self.quadratic.copy(), self.offset, vartype=self.vartype)
+
+    def change_vartype(self, vartype):
+        """Creates a new BinaryQuadraticModel with the given vartype.
+
+        Args:
+            vartype (:class:`.Vartype`/str/set, optional): Default :class:`.Vartype.SPIN`.
+                The variable type desired for the penalty model. Accepted input values:
+                :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
+                :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
+
+        Returns:
+            :class:`.BinaryQuadraticModel`. A new BinaryQuadraticModel with
+                vartype matching input 'vartype'.
+
+        """
+        try:
+            if isinstance(vartype, str):
+                vartype = Vartype[vartype]
+            else:
+                vartype = Vartype(vartype)
+            if not (vartype is Vartype.SPIN or vartype is Vartype.BINARY):
+                raise ValueError
+        except (ValueError, KeyError):
+            raise TypeError(("expected input vartype to be one of: "
+                             "Vartype.SPIN, 'SPIN', {-1, 1}, "
+                             "Vartype.BINARY, 'BINARY', or {0, 1}."))
+
+        # vartype matches so we are done
+        if vartype is self.vartype:
+            return self.copy()
+
+        if self.vartype is Vartype.SPIN and vartype is Vartype.BINARY:
+            linear, quadratic, offset = self._spin_to_binary()
+            return BinaryQuadraticModel(linear, quadratic, offset, vartype=Vartype.BINARY)
+        elif self.vartype is Vartype.BINARY and vartype is Vartype.SPIN:
+            linear, quadratic, offset = self._binary_to_spin()
+            return BinaryQuadraticModel(linear, quadratic, offset, vartype=Vartype.SPIN)
+        else:
+            raise RuntimeError("something has gone wrong. unknown vartype conversion.")  # pragma: no cover
+
+    def _spin_to_binary(self):
+        """convert linear, quadratic, and offset from spin to binary.
+        Does no checking of vartype. Copies all of the values into new objects.
+        """
+        linear = self.linear
+        quadratic = self.quadratic
+
+        # the linear biases are the easiest
+        new_linear = {v: 2. * bias for v, bias in iteritems(linear)}
+
+        # next the quadratic biases
+        new_quadratic = {}
+        for (u, v), bias in iteritems(quadratic):
+            if bias == 0.0:
+                continue
+            new_quadratic[(u, v)] = 4. * bias
+            new_linear[u] -= 2. * bias
+            new_linear[v] -= 2. * bias
+
+        # finally calculate the offset
+        offset = self.offset + sum(itervalues(quadratic)) - sum(itervalues(linear))
+
+        return new_linear, new_quadratic, offset
+
+    def _binary_to_spin(self):
+        """convert linear, quadratic and offset from binary to spin.
+        Does no checking of vartype. Copies all of the values into new objects.
+        """
+        h = {}
+        J = {}
+        linear_offset = 0.0
+        quadratic_offset = 0.0
+
+        linear = self.linear
+        quadratic = self.quadratic
+
+        for u, bias in iteritems(linear):
+            h[u] = .5 * bias
+            linear_offset += bias
+
+        for (u, v), bias in iteritems(quadratic):
+
+            if bias != 0.0:
+                J[(u, v)] = .25 * bias
+
+            h[u] += .25 * bias
+            h[v] += .25 * bias
+
+            quadratic_offset += bias
+
+        offset = self.offset + .5 * linear_offset + .25 * quadratic_offset
+
+        return h, J, offset

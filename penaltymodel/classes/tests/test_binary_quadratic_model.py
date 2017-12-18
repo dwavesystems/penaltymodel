@@ -230,3 +230,75 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             model.relabel_variables({'a': .1, 'b': [1, 2]})
+
+    def test_copy(self):
+        linear = {0: .5, 1: 1.3}
+        quadratic = {(0, 1): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        new_model = model.copy()
+
+        # everything should have a new id
+        self.assertNotEqual(id(model.linear), id(new_model.linear))
+        self.assertNotEqual(id(model.quadratic), id(new_model.quadratic))
+        self.assertNotEqual(id(model.adj), id(new_model.adj))
+
+        for v in model.linear:
+            self.assertNotEqual(id(model.adj[v]), id(new_model.adj[v]))
+
+        # values should all be equal
+        self.assertEqual(model.linear, new_model.linear)
+        self.assertEqual(model.quadratic, new_model.quadratic)
+        self.assertEqual(model.adj, new_model.adj)
+
+        for v in model.linear:
+            self.assertEqual(model.adj[v], new_model.adj[v])
+
+        self.assertEqual(model, new_model)
+
+    def test_change_vartype(self):
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = 1.4
+        vartype = pm.BINARY
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        # should not change
+        new_model = model.change_vartype(pm.BINARY)
+        self.assertEqual(model, new_model)
+        self.assertNotEqual(id(model), id(new_model))
+
+        # change vartype
+        new_model = model.change_vartype(pm.SPIN)
+
+        # check all of the energies
+        for spins in itertools.product((-1, 1), repeat=len(linear)):
+            spin_sample = {v: spins[v] for v in linear}
+            binary_sample = {v: (spins[v] + 1) // 2 for v in linear}
+
+            self.assertAlmostEqual(model.energy(binary_sample),
+                                   new_model.energy(spin_sample))
+
+        linear = {0: 1, 1: -1, 2: .5}
+        quadratic = {(0, 1): .5, (1, 2): 1.5}
+        offset = -1.4
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        # should not change
+        new_model = model.change_vartype(pm.SPIN)
+        self.assertEqual(model, new_model)
+        self.assertNotEqual(id(model), id(new_model))
+
+        # change vartype
+        new_model = model.change_vartype(pm.BINARY)
+
+        # check all of the energies
+        for spins in itertools.product((-1, 1), repeat=len(linear)):
+            spin_sample = {v: spins[v] for v in linear}
+            binary_sample = {v: (spins[v] + 1) // 2 for v in linear}
+
+            self.assertAlmostEqual(model.energy(spin_sample),
+                                   new_model.energy(binary_sample))
