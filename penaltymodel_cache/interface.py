@@ -38,7 +38,7 @@ def get_penalty_model(specification, database=None):
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
     if database is None:
-        conn = cache_connect
+        conn = cache_connect()
     else:
         conn = cache_connect(database)
 
@@ -73,7 +73,7 @@ def cache_penalty_model(penalty_model, database=None):
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
     if database is None:
-        conn = cache_connect
+        conn = cache_connect()
     else:
         conn = cache_connect(database)
 
