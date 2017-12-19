@@ -293,6 +293,41 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         self.assertEqual(model.adj, testmodel.adj)
 
+    def test_relabel_with_overlap(self):
+        linear = {v: .1 * v for v in range(-5, 4)}
+        quadratic = {(u, v): .1 * u * v for u, v in itertools.combinations(linear, 2)}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        partial_overlap_mapping = {v: -v for v in linear}  # has variables mapped to other old labels
+
+        # construct a test model by using copy
+        testmodel = model.relabel_variables(partial_overlap_mapping, copy=True)
+
+        # now apply in place
+        model.relabel_variables(partial_overlap_mapping, copy=False)
+
+        # should have stayed the same
+        self.assertEqual(testmodel, model)
+        self.assertEqual(testmodel.adj, model.adj)
+
+    def test_relabel_with_identity(self):
+        linear = {v: .1 * v for v in range(-5, 4)}
+        quadratic = {(u, v): .1 * u * v for u, v in itertools.combinations(linear, 2)}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+        old_model = model.copy()
+
+        identity_mapping = {v: v for v in linear}
+
+        model.relabel_variables(identity_mapping, copy=False)
+
+        # should have stayed the same
+        self.assertEqual(old_model, model)
+        self.assertEqual(old_model.adj, model.adj)
+
     def test_partial_relabel_copy(self):
         linear = {v: .1 * v for v in range(-5, 5)}
         quadratic = {(u, v): .1 * u * v for u, v in itertools.combinations(linear, 2)}

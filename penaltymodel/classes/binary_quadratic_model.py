@@ -4,6 +4,8 @@ BinaryQuadraticModel
 """
 from __future__ import absolute_import
 
+import itertools
+
 from six import itervalues, iteritems
 
 from penaltymodel.classes.vartypes import Vartype
@@ -240,8 +242,23 @@ class BinaryQuadraticModel(object):
                 to new ones. If an incomplete mapping is provided,
                 variables will keep their labels
             copy (bool, default): If True, return a copy of BinaryQuadraticModel
-                with the variables relabelled, otherwise apply the relabelling in
+                with the variables relabeled, otherwise apply the relabeling in
                 place.
+
+        Returns:
+            :class:`.BinaryQuadraticModel`: A BinaryQuadraticModel with the
+            variables relabelled. If copy=False, returns itself.
+
+        Examples:
+            >>> model = pm.BinaryQuadraticModel({0: 0., 1: 1.}, {(0, 1): -1}, 0.0, vartype=pm.SPIN)
+            >>> new_model = model.relabel_variables({0: 'a'})
+            >>> new_model.quadratic
+            {('a', 1): -1}
+            >>> new_model = model.relabel_variables({0: 'a', 1: 'b'}, copy=False)
+            >>> model.quadratic
+            {('a', 'b'): -1}
+            >>> new_model is model
+            True
 
         """
         try:
@@ -256,15 +273,48 @@ class BinaryQuadraticModel(object):
                                          for (u, v), bias in iteritems(self.quadratic)},
                                         self.offset, self.vartype)
         else:
-            if old_labels & new_labels:
-                raise ValueError(("new and old labels cannot overlap for in-place relabelling, use copy=True "
-                                  "instead. Note that nodes not explicitly referenced in mapping are mapped "
-                                  "to themselves"))
+            shared = old_labels & new_labels
+            if shared:
+                # in this case relabel to a new intermediate labeling, then map from the intermediate
+                # labeling to the desired labeling
+
+                # counter will be used to generate the intermediate labels, as an easy optimization
+                # we start the counter with a high number because often variables are labeled by
+                # integers starting from 0
+                counter = itertools.count(2 * len(self))
+
+                old_to_intermediate = {}
+                intermediate_to_new = {}
+
+                for old, new in iteritems(mapping):
+                    if old == new:
+                        # we can remove self-labels
+                        continue
+
+                    if old in new_labels or new in old_labels:
+
+                        # try to get a new unique label
+                        lbl = next(counter)
+                        while lbl in new_labels or lbl in old_labels:
+                            lbl = next(counter)
+
+                        # add it to the mapping
+                        old_to_intermediate[old] = lbl
+                        intermediate_to_new[lbl] = new
+
+                    else:
+                        old_to_intermediate[old] = new
+                        # don't need to add it to intermediate_to_new because it is a self-label
+
+                self.relabel_variables(old_to_intermediate, copy=False)
+                self.relabel_variables(intermediate_to_new, copy=False)
+                return self
 
             linear = self.linear
             quadratic = self.quadratic
             adj = self.adj
 
+            # rebuild linear and adj with the new labels
             for old in list(linear):
                 if old not in mapping:
                     continue
