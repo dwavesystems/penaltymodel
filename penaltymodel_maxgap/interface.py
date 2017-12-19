@@ -1,3 +1,4 @@
+from six import iteritems
 import penaltymodel as pm
 
 from penaltymodel_maxgap.generation import generate_ising
@@ -24,8 +25,14 @@ def get_penalty_model(specification):
 
     """
 
+    # check that the feasible_configurations are spin
+    feasible_configurations = specification.feasible_configurations
+    if specification.vartype is pm.BINARY:
+        feasible_configurations = {tuple(2 * v - 1 for v in config): en
+                                   for config, en in iteritems(feasible_configurations)}
+
     linear, quadratic, ground, gap = generate_ising(specification.graph,
-                                                    specification.feasible_configurations,
+                                                    feasible_configurations,
                                                     specification.decision_variables,
                                                     specification.linear_energy_ranges,
                                                     specification.quadratic_energy_ranges,
