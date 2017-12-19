@@ -4,6 +4,8 @@ BinaryQuadraticModel
 """
 from __future__ import absolute_import
 
+import itertools
+
 from six import itervalues, iteritems
 
 from penaltymodel.classes.vartypes import Vartype
@@ -141,11 +143,24 @@ class BinaryQuadraticModel(object):
 
         if self.vartype == model.vartype:
             return all([self.linear == model.linear,
-                        self.quadratic == model.quadratic,
+                        self._quadratic_equality(self.quadratic, self.quadratic),
                         self.offset == model.offset])
         else:
             # different vartypes are not equal
             return False
+
+    @staticmethod
+    def _quadratic_equality(quadratic0, quadratic1):
+        for (u, v), bias in iteritems(quadratic0):
+            if (u, v) in quadratic1:
+                if quadratic1[(u, v)] != bias:
+                    return False
+            elif (v, u) in quadratic1:
+                if quadratic1[(u, v)] != bias:
+                    return False
+            else:
+                return False
+        return True
 
     def __len__(self):
         """The length is number of variables."""
@@ -219,32 +234,127 @@ class BinaryQuadraticModel(object):
         en += sum(quadratic[(u, v)] * sample[u] * sample[v] for u, v in quadratic)
         return en
 
-    def relabel_variables(self, mapping):
+    def relabel_variables(self, mapping, copy=True):
         """Relabel the variables according to the given mapping.
 
         Args:
             mapping (dict): a dict mapping the current variable labels
-                to new ones.
+                to new ones. If an incomplete mapping is provided,
+                variables will keep their labels
+            copy (bool, default): If True, return a copy of BinaryQuadraticModel
+                with the variables relabeled, otherwise apply the relabeling in
+                place.
 
-        Notes:
-            Acts on model in place.
+        Returns:
+            :class:`.BinaryQuadraticModel`: A BinaryQuadraticModel with the
+            variables relabelled. If copy=False, returns itself.
+
+        Examples:
+            >>> model = pm.BinaryQuadraticModel({0: 0., 1: 1.}, {(0, 1): -1}, 0.0, vartype=pm.SPIN)
+            >>> new_model = model.relabel_variables({0: 'a'})
+            >>> new_model.quadratic
+            {('a', 1): -1}
+            >>> new_model = model.relabel_variables({0: 'a', 1: 'b'}, copy=False)
+            >>> model.quadratic
+            {('a', 'b'): -1}
+            >>> new_model is model
+            True
 
         """
         try:
-            new_linear = {mapping[v]: bias for v, bias in iteritems(self.linear)}
-            new_quadratic = {(mapping[u], mapping[v]): bias for (u, v), bias in iteritems(self.quadratic)}
-            new_adj = {mapping[u]: {mapping[v] for v in neighbours} for u, neighbours in iteritems(self.adj)}
-        except KeyError as e:
-            raise ValueError("no mapping for variable {}".format(e))
+            old_labels = set(mapping.keys())
+            new_labels = set(mapping.values())
         except TypeError:
             raise ValueError("mapping targets must be hashable objects")
 
-        if len(new_linear) != len(self.linear):
-            raise ValueError("mapping does not contain unique keys")
+        if copy:
+            return BinaryQuadraticModel({mapping.get(v, v): bias for v, bias in iteritems(self.linear)},
+                                        {(mapping.get(u, u), mapping.get(v, v)): bias
+                                         for (u, v), bias in iteritems(self.quadratic)},
+                                        self.offset, self.vartype)
+        else:
+            shared = old_labels & new_labels
+            if shared:
+                # in this case relabel to a new intermediate labeling, then map from the intermediate
+                # labeling to the desired labeling
 
-        self.linear = new_linear
-        self.quadratic = new_quadratic
-        self.adj = new_adj
+                # counter will be used to generate the intermediate labels, as an easy optimization
+                # we start the counter with a high number because often variables are labeled by
+                # integers starting from 0
+                counter = itertools.count(2 * len(self))
+
+                old_to_intermediate = {}
+                intermediate_to_new = {}
+
+                for old, new in iteritems(mapping):
+                    if old == new:
+                        # we can remove self-labels
+                        continue
+
+                    if old in new_labels or new in old_labels:
+
+                        # try to get a new unique label
+                        lbl = next(counter)
+                        while lbl in new_labels or lbl in old_labels:
+                            lbl = next(counter)
+
+                        # add it to the mapping
+                        old_to_intermediate[old] = lbl
+                        intermediate_to_new[lbl] = new
+
+                    else:
+                        old_to_intermediate[old] = new
+                        # don't need to add it to intermediate_to_new because it is a self-label
+
+                self.relabel_variables(old_to_intermediate, copy=False)
+                self.relabel_variables(intermediate_to_new, copy=False)
+                return self
+
+            linear = self.linear
+            quadratic = self.quadratic
+            adj = self.adj
+
+            # rebuild linear and adj with the new labels
+            for old in list(linear):
+                if old not in mapping:
+                    continue
+
+                new = mapping[old]
+
+                # acting on all of these in-place
+                linear[new] = linear[old]
+                adj[new] = adj[old]
+                for u in adj[old]:
+                    adj[u][new] = adj[u][old]
+                    del adj[u][old]
+
+                del linear[old]
+                del adj[old]
+
+            # now rebuild quadratic
+            for old_u, old_v in list(quadratic):
+                if old_u not in mapping:
+                    if old_v not in mapping:
+                        # no remap needed
+                        continue
+                    new_u = old_u
+                else:
+                    new_u = mapping[old_u]
+                if old_v not in mapping:
+                    new_v = old_v
+                else:
+                    new_v = mapping[old_v]
+
+                if (old_v, old_u) in quadratic:
+                    quadratic[(new_v, new_u)] = quadratic[(old_v, old_u)]
+                    del quadratic[(old_v, old_u)]
+                elif (old_u, old_v) in quadratic:
+                    quadratic[(new_u, new_v)] = quadratic[(old_u, old_v)]
+                    del quadratic[(old_u, old_v)]
+                else:
+                    raise RuntimeError("something went wrong in relabel")
+
+            return self
 
     def copy(self):
         """Create a copy of the BinaryQuadraticModel.

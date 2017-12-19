@@ -98,7 +98,7 @@ class TestSpecification(unittest.TestCase):
         spec = pm.Specification(graph, decision_variables, feasible_configurations)
         self.assertIs(spec.vartype, pm.SPIN)
 
-    def test_relabel(self):
+    def test_relabel_typical(self):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
@@ -106,13 +106,71 @@ class TestSpecification(unittest.TestCase):
 
         mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
 
-        spec.relabel_variables(mapping)
+        new_spec = spec.relabel_variables(mapping)
 
-        for v in graph:
-            self.assertIn(mapping[v], spec.graph)
+        # create a test spec
+        graph = nx.relabel_nodes(graph, mapping)
+        decision_variables = (mapping[v] for v in decision_variables)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations)
 
-        for (u, v) in spec.graph.edges:
-            self.assertTrue((u, v) in spec.quadratic_energy_ranges or (v, u) in spec.quadratic_energy_ranges)
+        self.assertEqual(new_spec, test_spec)
+
+    def test_relabel_copy(self):
+        graph = nx.circular_ladder_graph(12)
+        decision_variables = (0, 2, 5)
+        feasible_configurations = {(1, 1, 1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
+
+        new_spec = spec.relabel_variables(mapping, copy=True)
+
+        # create a test spec
+        graph = nx.relabel_nodes(graph, mapping)
+        decision_variables = (mapping[v] for v in decision_variables)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        self.assertEqual(new_spec, test_spec)
+
+    def test_relabel_inplace(self):
+        graph = nx.circular_ladder_graph(12)
+        decision_variables = (0, 2, 5)
+        feasible_configurations = {(1, 1, 1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        mapping = {i: v for i, v in enumerate('abcdefghijklmnopqrstuvwxyz') if i in graph}
+
+        new_spec = spec.relabel_variables(mapping, copy=False)
+
+        self.assertIs(new_spec, spec)  # should be the same object
+        self.assertIs(new_spec.graph, spec.graph)
+
+        # create a test spec
+        graph = nx.relabel_nodes(graph, mapping)
+        decision_variables = (mapping[v] for v in decision_variables)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        self.assertEqual(new_spec, test_spec)
+
+    def test_relabel_inplace_identity(self):
+        graph = nx.circular_ladder_graph(12)
+        decision_variables = (0, 2, 5)
+        feasible_configurations = {(1, 1, 1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        mapping = {v: v for v in graph}
+
+        new_spec = spec.relabel_variables(mapping, copy=False)
+
+    def test_relabel_inplace_overlap(self):
+        graph = nx.circular_ladder_graph(12)
+        decision_variables = (0, 2, 5)
+        feasible_configurations = {(1, 1, 1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+
+        mapping = {v: v + 5 for v in graph}
+
+        new_spec = spec.relabel_variables(mapping, copy=False)
 
 
 class TestPenaltyModel(unittest.TestCase):
@@ -149,6 +207,6 @@ class TestPenaltyModel(unittest.TestCase):
         model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
-        widget.relabel_variables({0: 'a', 1: 'b', 2: 'c'})
+        widget.relabel_variables({0: 'a', 1: 'b', 2: 'c'}, copy=False)
 
         self.assertEqual(set(widget.graph.nodes), set(['a', 'b', 'c']))

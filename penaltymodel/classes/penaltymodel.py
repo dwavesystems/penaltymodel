@@ -6,7 +6,7 @@ Specification and PenaltyModel
 from __future__ import absolute_import
 
 from numbers import Number
-from collections import defaultdict
+import itertools
 
 from six import itervalues, iteritems
 import networkx as nx
@@ -121,17 +121,29 @@ class Specification(object):
         # energy ranges
         #
         if linear_energy_ranges is None:
-            self.linear_energy_ranges = defaultdict(lambda: (-2., 2.))
+            self.linear_energy_ranges = {v: (-2, 2) for v in graph}
         elif not isinstance(linear_energy_ranges, dict):
             raise TypeError("linear_energy_ranges should be a dict")
         else:
             self.linear_energy_ranges = linear_energy_ranges
+
         if quadratic_energy_ranges is None:
-            self.quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
+            quadratic_energy_ranges = {edge: (-1, 1) for edge in graph.edges}
         elif not isinstance(quadratic_energy_ranges, dict):
             raise TypeError("quadratic_energy_ranges should be a dict")
-        else:
-            self.quadratic_energy_ranges = quadratic_energy_ranges
+        self.quadratic_energy_ranges = quadratic_energy_ranges
+
+        # we also want quadratic energy ranges to be bi-directional
+        other_direction = {}
+        for (u, v), range_ in iteritems(quadratic_energy_ranges):
+            if (v, u) in quadratic_energy_ranges:
+                if quadratic_energy_ranges[(v, u)] == range_:
+                    pass
+                else:
+                    raise ValueError("conflicting energy ranges for {}, {}".format((v, u), (u, v)))
+            else:
+                other_direction[(v, u)] = range_
+        quadratic_energy_ranges.update(other_direction)
 
         #
         # vartype
@@ -169,29 +181,92 @@ class Specification(object):
                 self.decision_variables == specification.decision_variables and
                 self.feasible_configurations == specification.feasible_configurations)
 
-    def relabel_variables(self, mapping):
+    def relabel_variables(self, mapping, copy=True):
         """Relabel the variables and nodes according to the given mapping.
 
         Args:
             mapping (dict): a dict mapping the current variable/node labels
                 to new ones.
+            copy (bool, default): If True, return a copy of Specification
+                with the variables relabeled, otherwise apply the relabeling in
+                place.
+
+        Returns:
+            :class:`.Specification`: A Specification with the variables
+            relabeled according to mapping. If copy=False returns itself,
+            if copy=True returns a new Specification.
 
         """
         graph = self.graph
         linear_energy_ranges = self.linear_energy_ranges
         quadratic_energy_ranges = self.quadratic_energy_ranges
 
-        new_graph = nx.relabel_nodes(graph, mapping)  # also checks the mapping
-        new_decision_variables = tuple(mapping[v] for v in self.decision_variables)
-        new_linear_energy_ranges = {mapping[v]: linear_energy_ranges[v] for v in graph}
-        new_quadratic_energy_ranges = {(mapping[u], mapping[v]): quadratic_energy_ranges[(u, v)]
-                                       for u, v in graph.edges}
+        if copy:
+            return Specification(nx.relabel_nodes(graph, mapping, copy=True),  # also checks the mapping
+                                 tuple(mapping.get(v, v) for v in self.decision_variables),
+                                 self.feasible_configurations,  # does not change
+                                 vartype=self.vartype,  # does not change
+                                 linear_energy_ranges={mapping.get(v, v): linear_energy_ranges[v] for v in graph},
+                                 quadratic_energy_ranges={(mapping.get(u, u), mapping.get(v, v)):
+                                                          quadratic_energy_ranges[(u, v)]
+                                                          for u, v in graph.edges})
+        else:
+            # now we need the linear_energy_ranges and quadratic_energy_ranges
+            old_labels = set(mapping.keys())
+            new_labels = set(mapping.values())
+            shared = old_labels & new_labels
 
-        # feasible_configurations stay the same
-        self.graph = new_graph
-        self.decision_variables = new_decision_variables
-        self.linear_energy_ranges = new_linear_energy_ranges
-        self.quadratic_energy_ranges = new_quadratic_energy_ranges
+            if shared:
+                # in this case we need to transform to an intermediate state
+                # counter will be used to generate the intermediate labels, as an easy optimization
+                # we start the counter with a high number because often variables are labeled by
+                # integers starting from 0
+                counter = itertools.count(2 * len(self))
+
+                old_to_intermediate = {}
+                intermediate_to_new = {}
+
+                for old, new in iteritems(mapping):
+                    if old == new:
+                        # we can remove self-labels
+                        continue
+
+                    if old in new_labels or new in old_labels:
+
+                        # try to get a new unique label
+                        lbl = next(counter)
+                        while lbl in new_labels or lbl in old_labels:
+                            lbl = next(counter)
+
+                        # add it to the mapping
+                        old_to_intermediate[old] = lbl
+                        intermediate_to_new[lbl] = new
+
+                    else:
+                        old_to_intermediate[old] = new
+                        # don't need to add it to intermediate_to_new because it is a self-label
+
+                self.relabel_variables(old_to_intermediate, copy=False)
+                self.relabel_variables(intermediate_to_new, copy=False)
+                return self
+
+            # modifies graph in place
+            nx.relabel_nodes(self.graph, mapping, copy=False)
+
+            # this is always a new object
+            self.decision_variables = tuple(mapping.get(v, v) for v in self.decision_variables)
+
+            # we can just relabel in-place without worrying about conflict
+            for v in old_labels:
+                linear_energy_ranges[mapping.get(v, v)] = linear_energy_ranges[v]
+                del linear_energy_ranges[v]
+
+            for u, v in list(quadratic_energy_ranges):
+                new_edge = (mapping.get(u, u), mapping.get(v, v))
+                quadratic_energy_ranges[new_edge] = quadratic_energy_ranges[(u, v)]
+                del quadratic_energy_ranges[(u, v)]
+
+            return self
 
 
 class PenaltyModel(Specification):
@@ -339,14 +414,22 @@ class PenaltyModel(Specification):
                 Specification.__eq__(self, penalty_model) and
                 self.model == penalty_model.model)
 
-    def relabel_variables(self, mapping):
+    def relabel_variables(self, mapping, copy=True):
         """Relabel the variables and nodes according to the given mapping.
 
         Args:
             mapping (dict): a dict mapping the current variable/node labels
                 to new ones.
+            copy (bool, default): If True, return a copy of PenaltyModel
+                with the variables relabeled, otherwise apply the relabeling in
+                place.
+
+        Returns:
+            :class:`.PenaltyModel`: A PenaltyModel with the variables
+            relabeled according to mapping. If copy=False returns itself,
+            if copy=True returns a new PenaltyModel.
 
         """
-        # just use the relabelling of each component
-        Specification.relabel_variables(self, mapping)
-        self.model.relabel_variables(mapping)
+        # just use the relabeling of each component
+        Specification.relabel_variables(self, mapping, copy=copy)
+        self.model.relabel_variables(mapping, copy=copy)
