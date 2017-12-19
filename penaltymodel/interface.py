@@ -64,7 +64,7 @@ def get_penalty_model(specification):
 
         # if penalty model was found, broadcast to all of the caches. This could be done
         # asynchronously
-        for cache in caches():
+        for cache in iter_caches():
             cache(pm)
 
         return pm
