@@ -139,6 +139,20 @@ class TestBinaryQuadraticModel(unittest.TestCase):
         self.assertNotEqual(pm.BinaryQuadraticModel({}, {}, 0.0, pm.SPIN),
                             pm.BinaryQuadraticModel({}, {}, 0.0, pm.BINARY))
 
+    def test__eq__quadratic_ordering(self):
+        linear = {v: random.uniform(-2, 2) for v in range(11)}
+        quadratic = {(u, v): random.uniform(-1, 1) for (u, v) in itertools.combinations(linear, 2)}
+        offset = random.random()
+        vartype = pm.SPIN
+
+        model0 = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        reversed_quadratic = {(v, u): bias for (u, v), bias in quadratic.items()}
+
+        model1 = pm.BinaryQuadraticModel(linear, reversed_quadratic, offset, vartype)
+
+        self.assertEqual(model1, model0)
+
     def test_as_qubo_binary_to_qubo(self):
         """Binary model's as_qubo method"""
         linear = {0: 0, 1: 0}
@@ -215,23 +229,105 @@ class TestBinaryQuadraticModel(unittest.TestCase):
             # and the energy of the model
             self.assertAlmostEqual(energy, model.energy(bin_sample))
 
-    def test_relabel(self):
+    def test_relabel_typical(self):
         linear = {0: .5, 1: 1.3}
         quadratic = {(0, 1): -.435}
         offset = 1.2
         vartype = pm.SPIN
-
         model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
 
         mapping = {0: 'a', 1: 'b'}
+        newmodel = model.relabel_variables(mapping)
 
-        model.relabel_variables(mapping)
+        # check that new model is the same as old model
+        linear = {'a': .5, 'b': 1.3}
+        quadratic = {('a', 'b'): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        testmodel = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
 
-        with self.assertRaises(ValueError):
-            model.relabel_variables({'a': .1})
+        self.assertEqual(newmodel, testmodel)
 
-        with self.assertRaises(ValueError):
-            model.relabel_variables({'a': .1, 'b': [1, 2]})
+    def test_relabel_typical_copy(self):
+        linear = {0: .5, 1: 1.3}
+        quadratic = {(0, 1): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        mapping = {0: 'a', 1: 'b'}
+        newmodel = model.relabel_variables(mapping, copy=True)
+        self.assertNotEqual(id(model), id(newmodel))
+        self.assertNotEqual(id(model.linear), id(newmodel.linear))
+        self.assertNotEqual(id(model.quadratic), id(newmodel.quadratic))
+
+        # check that new model is the same as old model
+        linear = {'a': .5, 'b': 1.3}
+        quadratic = {('a', 'b'): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        testmodel = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        self.assertEqual(newmodel, testmodel)
+
+    def test_relabel_typical_inplace(self):
+        linear = {0: .5, 1: 1.3}
+        quadratic = {(0, 1): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        mapping = {0: 'a', 1: 'b'}
+        newmodel = model.relabel_variables(mapping, copy=False)
+        self.assertEqual(id(model), id(newmodel))
+        self.assertEqual(id(model.linear), id(newmodel.linear))
+        self.assertEqual(id(model.quadratic), id(newmodel.quadratic))
+
+        # check that model is the same as old model
+        linear = {'a': .5, 'b': 1.3}
+        quadratic = {('a', 'b'): -.435}
+        offset = 1.2
+        vartype = pm.SPIN
+        testmodel = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+        self.assertEqual(model, testmodel)
+
+        self.assertEqual(model.adj, testmodel.adj)
+
+    def test_partial_relabel_copy(self):
+        linear = {v: .1 * v for v in range(-5, 5)}
+        quadratic = {(u, v): .1 * u * v for u, v in itertools.combinations(linear, 2)}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        mapping = {0: 'a', 1: 'b'}  # partial mapping
+        newmodel = model.relabel_variables(mapping, copy=True)
+
+        newlinear = linear.copy()
+        newlinear['a'] = newlinear[0]
+        newlinear['b'] = newlinear[1]
+        del newlinear[0]
+        del newlinear[1]
+
+        self.assertEqual(newlinear, newmodel.linear)
+
+    def test_partial_relabel_inplace(self):
+        linear = {v: .1 * v for v in range(-5, 5)}
+        quadratic = {(u, v): .1 * u * v for u, v in itertools.combinations(linear, 2)}
+        offset = 1.2
+        vartype = pm.SPIN
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype)
+
+        newlinear = linear.copy()
+        newlinear['a'] = newlinear[0]
+        newlinear['b'] = newlinear[1]
+        del newlinear[0]
+        del newlinear[1]
+
+        mapping = {0: 'a', 1: 'b'}  # partial mapping
+        model.relabel_variables(mapping, copy=False)
+
+        self.assertEqual(newlinear, model.linear)
 
     def test_copy(self):
         linear = {0: .5, 1: 1.3}
