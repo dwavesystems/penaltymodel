@@ -1,6 +1,6 @@
 from setuptools import setup
 
-from penaltymodel_maxgap.packge_info import __version__, __author__, __description__, __authoremail__
+from penaltymodel_maxgap.package_info import __version__, __author__, __description__, __authoremail__
 
 install_requires = ['six', 'dwave_networkx>=0.6.0', 'pysmt', 'penaltymodel>=0.9.1']
 extras_require = {}
