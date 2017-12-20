@@ -418,16 +418,31 @@ class PenaltyModel(Specification):
         """Relabel the variables and nodes according to the given mapping.
 
         Args:
-            mapping (dict): a dict mapping the current variable/node labels
-                to new ones.
-            copy (bool, default): If True, return a copy of PenaltyModel
-                with the variables relabeled, otherwise apply the relabeling in
-                place.
+            mapping (dict[hashable, hashable]): A dict with the current
+                variable labels as keys and new labels as values. A
+                partial mapping is allowed.
+            copy (bool, optional, default=True): If True, return a copy
+                with the variables relabeled. If False, relabel the nodes
+                in-place.
 
         Returns:
             :class:`.PenaltyModel`: A PenaltyModel with the variables
-            relabeled according to mapping. If copy=False returns itself,
-            if copy=True returns a new PenaltyModel.
+            relabeled according to mapping.
+
+        Examples:
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)})
+            >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+            >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
+            >>> relabeled_penalty_model = penalty_model.relabel_variables({0: 'a'})
+            >>> relabeled_penalty_model.decision_variables
+            ('a', 2)
+
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)})
+            >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+            >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
+            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)
+            >>> penalty_model.decision_variables
+            ('a', 2)
 
         """
         # just use the relabeling of each component
