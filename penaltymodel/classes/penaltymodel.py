@@ -431,5 +431,11 @@ class PenaltyModel(Specification):
 
         """
         # just use the relabeling of each component
-        Specification.relabel_variables(self, mapping, copy=copy)
-        self.model.relabel_variables(mapping, copy=copy)
+        if copy:
+            spec = Specification.relabel_variables(self, mapping, copy=True)
+            model = self.model.relabel_variables(mapping, copy=True)
+            return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
+        else:
+            Specification.relabel_variables(self, mapping, copy=False)
+            self.model.relabel_variables(mapping, copy=False)
+            return self

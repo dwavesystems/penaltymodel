@@ -207,6 +207,20 @@ class TestPenaltyModel(unittest.TestCase):
         model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
-        widget.relabel_variables({0: 'a', 1: 'b', 2: 'c'}, copy=False)
+        # now set up the same widget with 0 relabelled to 'a'
+        graph = nx.path_graph(3)
+        graph = nx.relabel_nodes(graph, {0: 'a'})
+        decision_variables = ('a', 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        test_widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
-        self.assertEqual(set(widget.graph.nodes), set(['a', 'b', 'c']))
+        # without copy
+        new_widget = widget.relabel_variables({0: 'a'}, copy=True)
+        self.assertEqual(test_widget, new_widget)
+
+        widget.relabel_variables({0: 'a'}, copy=False)
+        self.assertEqual(widget, test_widget)
