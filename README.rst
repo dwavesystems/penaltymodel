@@ -1,5 +1,5 @@
-Overview
-========
+D-Wave Penalty Model
+====================
 
 .. image:: https://travis-ci.org/dwavesystems/penaltymodel.svg?branch=master
     :target: https://travis-ci.org/dwavesystems/penaltymodel
@@ -13,22 +13,27 @@ Overview
     :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. inclusion-marker-do-not-remove
+
+One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipedia.org/wiki/Constraint_satisfaction_problem>`_) using an `Ising model <https://en.wikipedia.org/wiki/Ising_model>`_ or a `QUBO <https://en.wikipedia.org/wiki/Quadratic_unconstrained_binary_optimization>`_, is to map each individual constraint in the CSP to a 'small' Ising model or QUBO. This mapping is called a *penalty model*.
+
+This project defines a PenaltyModel class that can be used to represent a penalty model in Python.
+
 Installing
 ----------
 
-$ pip install penaltymodel
+To install:
 
-penaltymodel
-------------
+.. code-block:: bash
 
-penaltymodel provides utility code for using penalty models. A penalty model is an Ising problem
-or QUBO that has ground states corresponding to a set of feasible configurations. In this way
-constraint satisfaction problems can be solved using an Binary Quadratic Model Sampler.
+    pip install penaltymodel
 
-This package contains classes to use penalty models in python, as well as utilities that allow
-for the creation of factories and caches for penalty models.
+To build from souce:
 
-This package does not contain any ability to generate or cache penalty models.
+.. code-block:: bash
+    
+    pip install -r requirements.txt
+    python setup.py install
 
 License
 -------
