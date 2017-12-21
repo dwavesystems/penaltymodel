@@ -53,7 +53,7 @@ Next, we need to determine the feasible configurations that we wish to target. B
    :name: tbl_ANDgate
  
    ====================  ====================  ==================
-   :math:`\mathbf{x_1}`  :math:`\mathbf{x_2}`  :math:`\mathbf{z}`
+   :math:`x_1`           :math:`x_2`           :math:`z`
    ====================  ====================  ==================
    0                     0                     0        
    0                     1                     0           
