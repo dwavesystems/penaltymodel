@@ -151,28 +151,22 @@ class BinaryQuadraticModel(object):
 
         # Build the adjacency. For each (u, v), bias in quadratic, we want:
         #    adj[u][v] == adj[v][u] == bias
-        self.adj = adj = {}
+        self.adj = adj = {v: {} for v in linear}
         for (u, v), bias in iteritems(quadratic):
             if u == v:
                 raise ValueError("bias ({}, {}) in `quadratic` is a linear bias".format(u, v))
 
-            if u in adj:
-                if v in adj[u]:
-                    raise ValueError(("`quadratic` must be upper triangular. "
-                                      "That is if (u, v) in `quadratic`, (v, u) not in quadratic"))
-                else:
-                    adj[u][v] = bias
+            if v in adj[u]:
+                raise ValueError(("`quadratic` must be upper triangular. "
+                                  "That is if (u, v) in `quadratic`, (v, u) not in quadratic"))
             else:
-                adj[u] = {v: bias}
+                adj[u][v] = bias
 
-            if v in adj:
-                if u in adj[v]:
-                    raise ValueError(("`quadratic` must be upper triangular. "
-                                      "That is if (u, v) in `quadratic`, (v, u) not in quadratic"))
-                else:
-                    adj[v][u] = bias
+            if u in adj[v]:
+                raise ValueError(("`quadratic` must be upper triangular. "
+                                  "That is if (u, v) in `quadratic`, (v, u) not in quadratic"))
             else:
-                adj[v] = {u: bias}
+                adj[v][u] = bias
 
         # we will also be agnostic to the offset type, the user can determine what makes sense
         self.offset = offset
@@ -284,7 +278,7 @@ class BinaryQuadraticModel(object):
 
             :code:`model.quadratic[(u, v)]` as :math:`J_{u,v}`
 
-            :code:`model.offset` as :math:`c` 
+            :code:`model.offset` as :math:`c`
 
         then,
 
@@ -397,7 +391,11 @@ class BinaryQuadraticModel(object):
 
                 # acting on all of these in-place
                 linear[new] = linear[old]
-                adj[new] = adj[old]
+                try:
+                    adj[new] = adj[old]
+                except:
+                    print(new, old)
+                    raise
                 for u in adj[old]:
                     adj[u][new] = adj[u][old]
                     del adj[u][old]

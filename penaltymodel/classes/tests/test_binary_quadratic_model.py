@@ -454,3 +454,28 @@ class TestBinaryQuadraticModel(unittest.TestCase):
 
         for v, bias in model.linear.items():
             self.assertEqual(bias, BQM.nodes[v]['bias'])
+
+    def test_adj_construction_partial_quadratic(self):
+        """bug was detected, test shows the exploration of causes and confirms that it was fixed"""
+        linear = {0: 2.0, 1: 0.0, 2: 0.0, 3: 2.0, 4: 0.0, 5: 0.0, 6: 0.0, 7: 0.0}
+        quadratic = {(0, 3): -4.0}
+
+        model = pm.BinaryQuadraticModel(linear, quadratic, -1.0, pm.Vartype.BINARY)
+
+        # test that the model adj was created the way we expected
+        for v in linear:
+            self.assertIn(v, model.adj)
+
+        for (u, v), bias in quadratic.items():
+            self.assertIn(u, model.adj)
+            self.assertIn(v, model.adj[u])
+            self.assertEqual(model.adj[u][v], bias)
+
+            v, u = u, v
+            self.assertIn(u, model.adj)
+            self.assertIn(v, model.adj[u])
+            self.assertEqual(model.adj[u][v], bias)
+
+        for u in model.adj:
+            for v in model.adj[u]:
+                self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
