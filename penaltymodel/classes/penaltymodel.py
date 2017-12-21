@@ -141,6 +141,22 @@ class PenaltyModel(Specification):
         if self.vartype != model.vartype:
             model = model.change_vartype(self.vartype)
 
+        # check the energy ranges
+        ising_linear_ranges = self.ising_linear_ranges
+        ising_quadratic_ranges = self.ising_quadratic_ranges
+        if self.vartype is Vartype.SPIN:
+            # check the ising energy ranges
+            for v, bias in iteritems(model.linear):
+                min_, max_ = ising_linear_ranges[v]
+                if bias < min_ or bias > max_:
+                    raise ValueError(("variable {} has bias {} outside of the specified range [{}, {}]"
+                                     ).format(v, bias, min_, max_))
+            for (u, v), bias in iteritems(model.quadratic):
+                min_, max_ = ising_quadratic_ranges[u][v]
+                if bias < min_ or bias > max_:
+                    raise ValueError(("interaction {}, {} has bias {} outside of the specified range [{}, {}]"
+                                     ).format(u, v, bias, min_, max_))
+
         if not isinstance(model, BinaryQuadraticModel):
             raise TypeError("expected 'model' to be a BinaryQuadraticModel")
         self.model = model
