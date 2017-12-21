@@ -1,9 +1,7 @@
 *.pyc
 
 # virtual environment
-venv/
-venv_test3/
-venv_test2/
+venv*/
 
 # sublime support
 *.sublime-project
