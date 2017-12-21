@@ -1,13 +1,19 @@
 from __future__ import absolute_import
 
+import sys
 from setuptools import setup
+
+_PY2 = sys.version_info.major == 2
 
 # add __version__, __author__, __authoremail__, __description__ to this namespace
 # equivalent to:
 # from penaltymodel_cache.packaing_info import *
-execfile('penaltymodel_cache/package_info.py')
+if _PY2:
+    execfile("./penaltymodel_cache/package_info.py")
+else:
+    exec(open("./penaltymodel_cache/package_info.py").read())
 
-install_requires = ['penaltymodel==1.0.0.dev2',
+install_requires = ['penaltymodel==1.0.0.dev3',
                     'six',
                     'homebase>=1.0.0']
 
