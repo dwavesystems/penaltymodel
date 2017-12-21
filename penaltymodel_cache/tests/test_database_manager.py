@@ -139,7 +139,7 @@ class TestDatabaseManager(unittest.TestCase):
         graph = nx.path_graph(3)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}

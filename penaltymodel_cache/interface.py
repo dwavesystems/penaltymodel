@@ -1,5 +1,7 @@
 """This module has the primary public-facing methods for the project.
 """
+from six import iteritems
+
 import penaltymodel as pm
 
 from penaltymodel_cache.database_manager import cache_connect, insert_penalty_model, \
@@ -33,7 +35,11 @@ def get_penalty_model(specification, database=None):
     """
     # only handles index-labelled nodes
     if not all(isinstance(v, int) for v in specification.graph):
-        raise ValueError('graph variables must be index-labelled')
+        relabel_applied = True
+        mapping, inverse_mapping = _graph_canonicalization(specification.graph)
+        specification = specification.relabel_variables(mapping)
+    else:
+        relabel_applied = False
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
@@ -44,13 +50,20 @@ def get_penalty_model(specification, database=None):
 
     # get the penalty_model
     with conn as cur:
-        widget = next(iter_penalty_model_from_specification(cur, specification))
+        try:
+            widget = next(iter_penalty_model_from_specification(cur, specification))
+        except StopIteration:
+            widget = None
 
     # close the connection
     conn.close()
 
     if widget is None:
-        raise penaltymodel.MissingPenaltyModel("no penalty model with the given specification found in cache")
+        raise pm.MissingPenaltyModel("no penalty model with the given specification found in cache")
+
+    if relabel_applied:
+        # relabel the widget in-place
+        widget.relabel_variables(inverse_mapping, copy=False)
 
     return widget
 
@@ -68,7 +81,8 @@ def cache_penalty_model(penalty_model, database=None):
 
     # only handles index-labelled nodes
     if not all(isinstance(v, int) for v in penalty_model.graph):
-        raise ValueError('graph variables must be index-labelled')
+        mapping, inverse_mapping = _graph_canonicalization(penalty_model.graph)
+        penalty_model = penalty_model.relabel_variables(mapping)
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
@@ -83,3 +97,9 @@ def cache_penalty_model(penalty_model, database=None):
 
     # close the connection
     conn.close()
+
+
+def _graph_canonicalization(graph):
+    inverse_mapping = dict(enumerate(graph))
+    mapping = {idx: v for v, idx in iteritems(inverse_mapping)}
+    return mapping, inverse_mapping

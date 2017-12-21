@@ -468,10 +468,9 @@ def insert_penalty_model(cur, penalty_model):
     """
     encoded_data = {}
 
-    nodelist = sorted(penalty_model.graph)
-    edgelist = sorted(sorted(penalty_model.graph.edges))
     linear, quadratic, offset = penalty_model.model.as_ising()
-    assert penalty_model.model.vartype is penalty_model.model.SPIN
+    nodelist = sorted(linear)
+    edgelist = sorted(sorted(quadratic))
 
     insert_graph(cur, nodelist, edgelist, encoded_data)
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
@@ -578,6 +577,6 @@ def iter_penalty_model_from_specification(cur, specification):
         linear = _decode_linear_biases(row['linear_biases'], nodelist)
         quadratic = _decode_quadratic_biases(row['quadratic_biases'], edgelist)
 
-        model = pm.BinaryQuadraticModel(linear, quadratic, row['offset'], pm.SPIN)
+        model = pm.BinaryQuadraticModel(linear, quadratic, row['offset'], pm.SPIN)  # always spin
 
         yield pm.PenaltyModel.from_specification(specification, model, row['classical_gap'], row['ground_energy'])
