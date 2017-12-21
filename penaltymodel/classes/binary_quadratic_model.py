@@ -16,57 +16,102 @@ __all__ = ['BinaryQuadraticModel']
 class BinaryQuadraticModel(object):
     """Encodes a binary quadratic model.
 
+    Binary quadratic models are the superclass that contains Ising models
+    and QUBOs.
+
+    The energy of a binary quadratic model is given by:
+
     Args:
-        linear (dict): The linear biases as a dict. The keys should be the
+        linear (dict):
+            The linear biases as a dict. The keys should be the
             variables of the binary quadratic model. The values should be
             the linear bias associated with each variable.
-        quadratic (dict): The quadratic biases as a dict. The keys should
+
+        quadratic (dict):
+            The quadratic biases as a dict. The keys should
             be 2-tuples of variables. The values should be the quadratic
-            bias associated with each pair of variables. `quadratic`
-            should be upper triangular, that is if (u, v) in `quadratic`
-            then (v, u) should not be in `quadratic`. `quadratic` also
-            should not have self loops, that is (u, u) is not a valid
-            quadratic bias.
-        offset: The energy offset associated with the model.
-        vartype (:class:`.Vartype`/str/set, optional): Default :class:`.Vartype.SPIN`.
-            The variable type desired for the penalty model. Accepted input values:
+            bias associated with interaction of variables.
+            Each interaction in quadratic should be unique - that is if
+            `(u, v)` is a key in quadratic, then `(v, u)` should
+            not be.
+
+        offset (number):
+            The energy offset associated with the model. Any type input
+            is allowed, but many applications that use BinaryQuadraticModel
+            will assume that offset is a number.
+            See :meth:`.BinaryQuadraticModel.energy`
+
+        vartype (:class:`.Vartype`/str/set):
+            The variable type desired for the penalty model.
+            Accepted input values:
             :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
             :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
 
     Notes:
-        The BinaryQuadraticModel does not specify the type of the biases
-        and offset, but many
+        The BinaryQuadraticModel does not enforce types on the biases
+        and the offset, but most applications that use BinaryQuadraticModel
+        will assume that they are numeric.
 
     Examples:
         >>> model = pm.BinaryQuadraticModel({0: 1, 1: -1, 2: .5},
         ...                                 {(0, 1): .5, (1, 2): 1.5},
         ...                                 1.4,
-        ...                                 pm.BinaryQuadraticModel.SPIN)
-        >>> for u, v in model.quadratic:
-        ...     assert model.quadratic[(u, v)] == model.adj[u][v]
-        ...     assert model.quadratic[(u, v)] == model.adj[v][u]
+        ...                                 pm.SPIN)
 
     Attributes:
-        linear (dict): The linear biases as a dict. The keys are the
+        linear (dict):
+            The linear biases as a dict. The keys are the
             variables of the binary quadratic model. The values are
             the linear biases associated with each variable.
-        quadratic (dict): The quadratic biases as a dict. The keys are
-            2-tuples of variables. The values are the quadratic
-            biases associated with each pair of variables.
-        offset: The energy offset associated with the model. Same type as given
+
+        quadratic (dict):
+            The quadratic biases as a dict. The keys are 2-tuples of variables.
+            Each 2-tuple represents an interaction between two variables in the
+            model. The values are the quadratic biases associated with each
+            interaction.
+
+        offset (number):
+            The energy offset associated with the model. Same type as given
             on instantiation.
-        vartype (:class:`.Vartype`): The variable type. `BinaryQuadraticModel.SPIN` or
-            `BinaryQuadraticModel.BINARY`.
-        adj (dict): The adjacency dict of the model. See examples.
-        Vartype (:class:`.Vartype`): An alias for :class:`.Vartype` for easier access.
-        SPIN (:class:`.Vartype`): An alias for :class:`.SPIN` for easier access.
-        BINARY (:class:`.Vartype`): An alias for :class:`.BINARY` for easier access.
+
+        vartype (:class:`.Vartype`):
+            The model's type. One of :class:`.Vartype.SPIN` or :class:`.Vartype.BINARY`.
+
+        adj (dict):
+            Encodes the interactions of the model in nested dicts. The keys of adj
+            are the variables of the model and the values are neighbor-dicts.
+            For a node `v`, the keys of the neighbor-dict associated with `v` are
+            the neighbors of `v` and for each `u` in the neighbor-dict the value
+            associated with `u` is the quadratic bias associated with `u, v`.
+
+            Examples:
+                If we create a BinaryQuadraticModel with a single interaction
+
+                >>> model = pm.BinaryQuadraticModel({'a': 0, 'b': 0}, {('a', 'b'): -1}, 0.0, pm.SPIN)
+
+                Then we can see the neighbors of each variable
+
+                >>> model.adj['a']
+                {'b': -1}
+                >>> model.adj['b']
+                {'a': -1}
+
+                In this way if we know that there is an interaction between :code:`'a', 'b'`
+                we can easily find the quadratic bias
+
+                >>> model['a']['b']
+                -1
+                >>> model['b']['a']
+                -1
+
+        SPIN (:class:`.Vartype`): An alias for :class:`.Vartype.SPIN` for easier access.
+
+        BINARY (:class:`.Vartype`): An alias for :class:`.Vartype.BINARY` for easier access.
 
     """
 
     SPIN = Vartype.SPIN
     BINARY = Vartype.BINARY
-    Vartype = Vartype
 
     def __init__(self, linear, quadratic, offset, vartype):
         # make sure that we are dealing with a known vartype.
@@ -133,8 +178,7 @@ class BinaryQuadraticModel(object):
         self.offset = offset
 
     def __repr__(self):
-        return 'BinaryQuadraticModel({}, {}, {}, BinaryQuadraticModel.{})'.format(self.linear, self.quadratic,
-                                                                                  self.offset, self.vartype)
+        return 'BinaryQuadraticModel({}, {}, {}, {})'.format(self.linear, self.quadratic, self.offset, self.vartype)
 
     def __eq__(self, model):
         """Model is equal if linear, quadratic, offset and vartype are all equal."""
@@ -172,9 +216,13 @@ class BinaryQuadraticModel(object):
         If the model type is not spin, it is converted.
 
         Returns:
-            dict: The linear biases.
-            dict: The quadratic biases.
-            The offset.
+            tuple: A 3-tuple:
+
+                dict: The linear biases.
+
+                dict: The quadratic biases.
+
+                number: The offset.
 
         """
         if self.vartype == self.SPIN:
@@ -192,9 +240,11 @@ class BinaryQuadraticModel(object):
         If the model type is not binary, it is converted.
 
         Returns:
-            dict: The qubo biases as an edge dict.
+            tuple: A 2-tuple:
 
-            The offset.
+                dict: The qubo biases.
+
+                number: The offset.
 
         """
         if self.vartype == self.BINARY:
@@ -217,6 +267,30 @@ class BinaryQuadraticModel(object):
 
     def energy(self, sample):
         """Determines the energy of the given sample.
+
+        The energy is calculated:
+
+        >>> energy = model.offset
+        >>> for v in model:
+        ...     energy += model.linear[v] * sample[v]
+        >>> for u, v in model.quadratic:
+        ...     energy += model.quadratic[(u, v)] * sample[u] * sample[v]
+
+        Or equivalently, let us define:
+
+            :code:`sample[v]` as :math:`s_v`
+
+            :code:`model.linear[v]` as :math:`h_v`
+
+            :code:`model.quadratic[(u, v)]` as :math:`J_{u,v}`
+
+            :code:`model.offset` as :math:`c` 
+
+        then,
+
+        .. math::
+
+            E(\mathbf{s}) = \sum_v h_v s_v + \sum_{u,v} J_{u,v} s_u s_v + c
 
         Args:
             sample (dict): The sample. The keys should be the variables and
@@ -369,14 +443,14 @@ class BinaryQuadraticModel(object):
         """Creates a new BinaryQuadraticModel with the given vartype.
 
         Args:
-            vartype (:class:`.Vartype`/str/set, optional): Default :class:`.Vartype.SPIN`.
+            vartype (:class:`.Vartype`/str/set, optional):
                 The variable type desired for the penalty model. Accepted input values:
                 :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
                 :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
 
         Returns:
             :class:`.BinaryQuadraticModel`. A new BinaryQuadraticModel with
-                vartype matching input 'vartype'.
+            vartype matching input 'vartype'.
 
         """
         try:
@@ -469,11 +543,18 @@ class BinaryQuadraticModel(object):
 
         Returns:
             :class:`networkx.Graph`: A NetworkX with the biases stored as
-                node/edge attributes.
+            node/edge attributes.
 
         Examples:
             >>> import networkx as nx
-            >>>
+            >>> model = pm.BinaryQuadraticModel({0: 1, 1: -1, 2: .5},
+            ...                                 {(0, 1): .5, (1, 2): 1.5},
+            ...                                 1.4,
+            ...                                 pm.SPIN)
+            >>> BQM = model.to_networkx_graph()
+            >>> BQM[0][1]['bias']
+            .5
+
 
         """
         import networkx as nx

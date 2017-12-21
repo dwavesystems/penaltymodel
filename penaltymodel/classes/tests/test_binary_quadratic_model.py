@@ -119,7 +119,7 @@ class TestBinaryQuadraticModel(unittest.TestCase):
         m = pm.BinaryQuadraticModel(linear, quadratic, offset, pm.SPIN)
 
         # should recreate the model
-        from penaltymodel import BinaryQuadraticModel
+        from penaltymodel import BinaryQuadraticModel, Vartype
         m2 = eval(m.__repr__())
 
         self.assertEqual(m, m2)
