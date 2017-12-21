@@ -8,6 +8,6 @@ tmp/
 
 htmlcov/
 
-venv_test/
+venv*/
 
 build/
