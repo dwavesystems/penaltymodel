@@ -58,3 +58,22 @@ class TestPenaltyModel(unittest.TestCase):
 
         widget.relabel_variables({0: 'a'}, copy=False)
         self.assertEqual(widget, test_widget)
+
+    def test_bad_energy_range(self):
+        graph = nx.path_graph(3)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+
+
+        linear = {v: -3 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        with self.assertRaises(ValueError):
+            widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: 5 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        with self.assertRaises(ValueError):
+            widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
