@@ -1,3 +1,0 @@
-penaltymodel>=0.9.1
-six
-homebase>=1.0.0

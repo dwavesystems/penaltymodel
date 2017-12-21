@@ -1,10 +1,16 @@
+from __future__ import absolute_import
+
 from setuptools import setup
 
-from penaltymodel_cache.package_info import __version__, __author__, __description__, __authoremail__
+# add __version__, __author__, __authoremail__, __description__ to this namespace
+# equivalent to:
+# from penaltymodel_cache.packaing_info import *
+execfile('penaltymodel_cache/package_info.py')
 
-install_requires = ['penaltymodel>=0.9.1',
+install_requires = ['penaltymodel==1.0.0.dev2',
                     'six',
                     'homebase>=1.0.0']
+
 extras_require = {}
 
 packages = ['penaltymodel_cache']
