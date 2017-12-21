@@ -26,7 +26,6 @@ To build from source:
 
     git clone https://github.com/dwavesystems/penaltymodel_cache.git
     cd penaltymodel_cache
-    pip install -r requirements.txt
     python setup.py install
 
 Cache Location
