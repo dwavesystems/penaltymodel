@@ -25,7 +25,6 @@ To build from source:
 
     git clone https://github.com/dwavesystems/penaltymodel_maxgap.git
     cd penaltymodel_maxgap
-    pip install -r requirements.txt
     python setup.py install
 
 Note that this library will not function without smt solvers installed.
