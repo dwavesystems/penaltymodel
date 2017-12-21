@@ -11,7 +11,7 @@ Examples:
     >>> graph = nx.path_graph(5)
     >>> decision_variables = (0, 4)  # the ends of the path
     >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree
-    >>> spec = pm.Specification(graph, decision_variables, feasible_configurations)
+    >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
     >>> widget = pm.get_penalty_model(spec)
 
 Functions and Utilities

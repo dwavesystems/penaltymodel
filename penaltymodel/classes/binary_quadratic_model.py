@@ -99,9 +99,9 @@ class BinaryQuadraticModel(object):
                 In this way if we know that there is an interaction between :code:`'a', 'b'`
                 we can easily find the quadratic bias
 
-                >>> model['a']['b']
+                >>> model.adj['a']['b']
                 -1
-                >>> model['b']['a']
+                >>> model.adj['b']['a']
                 -1
 
         SPIN (:class:`.Vartype`): An alias for :class:`.Vartype.SPIN` for easier access.
@@ -270,10 +270,10 @@ class BinaryQuadraticModel(object):
 
         The energy is calculated:
 
-        >>> energy = model.offset
-        >>> for v in model:
+        >>> energy = model.offset  # doctest: +SKIP
+        >>> for v in model:  # doctest: +SKIP
         ...     energy += model.linear[v] * sample[v]
-        >>> for u, v in model.quadratic:
+        >>> for u, v in model.quadratic:  # doctest: +SKIP
         ...     energy += model.quadratic[(u, v)] * sample[u] * sample[v]
 
         Or equivalently, let us define:
@@ -553,7 +553,7 @@ class BinaryQuadraticModel(object):
             ...                                 pm.SPIN)
             >>> BQM = model.to_networkx_graph()
             >>> BQM[0][1]['bias']
-            .5
+            0.5
 
 
         """
