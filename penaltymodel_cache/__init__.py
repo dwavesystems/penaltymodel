@@ -10,3 +10,5 @@ import penaltymodel_cache.cache_manager
 
 from penaltymodel_cache.interface import *
 import penaltymodel_cache.interface
+
+from penaltymodel_cache.package_info import *
