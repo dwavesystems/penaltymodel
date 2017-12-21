@@ -96,12 +96,12 @@ class PenaltyModel(Specification):
         >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
         >>> classical_gap = 2.0
         >>> ground_energy = -2.0
-        >>> widget = pm.PenaltyModel(graph, decision_variables, feasible_configurations,
+        >>> widget = pm.PenaltyModel(graph, decision_variables, feasible_configurations, pm.SPIN,
         ...                          model, classical_gap, ground_energy)
 
         Or it can be created from a specification:
 
-        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations)
+        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
         >>> widget = pm.PenaltyModel.from_specification(spec, model, classical_gap, ground_energy)
 
     Attributes:
@@ -207,18 +207,18 @@ class PenaltyModel(Specification):
             relabeled according to mapping.
 
         Examples:
-            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)})
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, pm.SPIN)
             >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
             >>> relabeled_penalty_model = penalty_model.relabel_variables({0: 'a'})
             >>> relabeled_penalty_model.decision_variables
             ('a', 2)
 
-            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)})
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, pm.SPIN)
             >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
-            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)
-            >>> penalty_model.decision_variables
+            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)  # doctest: +SKIP 
+            >>> penalty_model.decision_variables  # doctest: +SKIP 
             ('a', 2)
 
         """

@@ -23,7 +23,7 @@ class TestInterfaceWithCache(unittest.TestCase):
     def test_retrieval(self):
         # put some stuff in the database
 
-        spec = pm.Specification(nx.path_graph(2), (0, 1), {(-1, -1), (1, 1)})
+        spec = pm.Specification(nx.path_graph(2), (0, 1), {(-1, -1), (1, 1)}, vartype=pm.SPIN)
         model = pm.BinaryQuadraticModel({0: 0, 1: 0}, {(0, 1): -1}, 0.0, vartype=pm.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2, -1)
 
@@ -39,7 +39,7 @@ class TestInterfaceWithCache(unittest.TestCase):
 @unittest.skipUnless(_maxgap, "penaltymodel_maxgap is not installed")
 class TestInterfaceWithMaxGap(unittest.TestCase):
     def test_retrieval(self):
-        spec = pm.Specification(nx.path_graph(2), (0, 1), {(-1, -1), (1, 1)})
+        spec = pm.Specification(nx.path_graph(2), (0, 1), {(-1, -1), (1, 1)}, vartype=pm.SPIN)
         widget = pm.get_penalty_model(spec)
 
         self.assertEqual(widget.model.linear, {0: 0, 1: 0})

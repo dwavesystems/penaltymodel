@@ -36,7 +36,7 @@ To build from souce:
 Example Usage
 -------------
 
-Imagine that we want to map an AND gate to a QUBO. In other words, we want the solutions
+Imagine that we want to map an AND clause to a QUBO. In other words, we want the solutions
 to the QUBO (the solutions that minimize the energy) to be exactly the valid configurations
 of an AND gate. Let :math:`z = AND(x_1, x_2)`.
 
@@ -47,7 +47,8 @@ Before anything else, let's import that package we will need.
     import penaltymodel as pm
     import networkx as nx
 
-Next, we need to determine the feasible configurations that we wish to target. Below is the truth table representing an AND gate.
+Next, we need to determine the feasible configurations that we wish to target (by making the energy of these configuration in the binary quadratic low).
+Below is the truth table representing an AND clause.
 
 .. table:: AND Gate
    :name: tbl_ANDgate
@@ -67,7 +68,7 @@ The rows of the truth table are exactly the feasible configurations.
 
     feasible_configurations = {(0, 0, 0), (0, 1, 0), (1, 0, 0), (1, 1, 1)}
 
-We also need a target graph and to label the decision variables. We create a node in the graph for each variable in the problem, and we add an edge between each node, represnting the interactions between the variables. The labels of the nodes and the decision variables match.
+We also need a target graph and to label the decision variables. We create a node in the graph for each variable in the problem, and we add an edge between each node, represnting the interactions between the variables. In this case we allow an interaction between every variable, but more sparse interactions are possible. The labels of the nodes and the decision variables match.
 
 .. code-block:: python
 
@@ -91,14 +92,14 @@ However, if we know the QUBO, we can build the penalty model ourselves. We obser
 
 .. math::
 
-    E(x_1, x_2, z) = x_1 x_2 - 2(x_1 + x_2) z + 3 z
+    E(x_1, x_2, z) = x_1 x_2 - 2(x_1 + x_2) z + 3 z + 0
 
 We get the following energies for each row in our truth table.
 
 .. image:: https://user-images.githubusercontent.com/8395238/34234533-8da5a364-e5a0-11e7-9d9f-068b4ab3a0fd.png
     :target: https://user-images.githubusercontent.com/8395238/34234533-8da5a364-e5a0-11e7-9d9f-068b4ab3a0fd.png
 
-We can see that the energy is minimized on exactly the desired feasible configurations. So we encode this energy function as a QUBO
+We can see that the energy is minimized on exactly the desired feasible configurations. So we encode this energy function as a QUBO. We make the offset 0.0 because there is no constant energy offset.
 
 .. code-block:: python
 
