@@ -9,7 +9,7 @@ import itertools
 
 import networkx as nx
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, iterkeys
 
 from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
 from penaltymodel.classes.vartypes import Vartype
@@ -287,6 +287,17 @@ class Specification(object):
         ising_linear_ranges = self.ising_linear_ranges
         ising_quadratic_ranges = self.ising_quadratic_ranges
 
+        try:
+            old_labels = set(iterkeys(mapping))
+            new_labels = set(itervalues(mapping))
+        except TypeError:
+            raise ValueError("mapping targets must be hashable objects")
+
+        for v in new_labels:
+            if v in graph and v not in old_labels:
+                raise ValueError(('A variable cannot be relabeled "{}" without also relabeling '
+                                  "the existing variable of the same name").format(v))
+
         if copy:
             return Specification(nx.relabel_nodes(graph, mapping, copy=True),  # also checks the mapping
                                  tuple(mapping.get(v, v) for v in self.decision_variables),
@@ -298,8 +309,6 @@ class Specification(object):
                                                          for v, neighbors in iteritems(ising_quadratic_ranges)})
         else:
             # now we need the ising_linear_ranges and ising_quadratic_ranges
-            old_labels = set(mapping.keys())
-            new_labels = set(mapping.values())
             shared = old_labels & new_labels
 
             if shared:
@@ -344,18 +353,21 @@ class Specification(object):
 
             # we can just relabel in-place without worrying about conflict
             for v in old_labels:
-                ising_linear_ranges[mapping.get(v, v)] = ising_linear_ranges[v]
-                del ising_linear_ranges[v]
+                if v in mapping:
+                    ising_linear_ranges[mapping[v]] = ising_linear_ranges[v]
+                    del ising_linear_ranges[v]
 
             # need to do the deeper level first
             for neighbors in itervalues(ising_quadratic_ranges):
                 for v in list(neighbors):
-                    neighbors[mapping.get(v, v)] = neighbors[v]
-                    del neighbors[v]
+                    if v in mapping:
+                        neighbors[mapping[v]] = neighbors[v]
+                        del neighbors[v]
 
             # now the top level
             for v in old_labels:
-                ising_quadratic_ranges[mapping.get(v, v)] = ising_quadratic_ranges[v]
-                del ising_quadratic_ranges[v]
+                if v in mapping:
+                    ising_quadratic_ranges[mapping[v]] = ising_quadratic_ranges[v]
+                    del ising_quadratic_ranges[v]
 
             return self

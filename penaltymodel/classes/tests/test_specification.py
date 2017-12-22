@@ -1,4 +1,5 @@
 import unittest
+import itertools
 
 import networkx as nx
 
@@ -214,3 +215,63 @@ class TestSpecification(unittest.TestCase):
         mapping = {v: v + 5 for v in graph}
 
         new_spec = spec.relabel_variables(mapping, copy=False)
+
+    def test_relabel_forwards_and_backwards(self):
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+
+        # make another one
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        original_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+
+        identity = {v: v for v in graph}
+
+        new_label_sets = [(10, 1),
+                          ('a', 'b'),
+                          (1, 'b'),
+                          ('1', '2', '3', '4'),
+                          ('a', 'b', 'c', 'd')]
+        new_label_sets.extend(itertools.permutations(graph))
+
+        for new in new_label_sets:
+            mapping = dict(enumerate(new))
+            inv_mapping = {u: v for v, u in mapping.items()}
+
+            # apply then invert with copy=True
+            copy_spec = spec.relabel_variables(mapping, copy=True)
+            inv_copy = copy_spec.relabel_variables(inv_mapping, copy=True)
+            self.assertEqual(inv_copy, original_spec)
+            self.assertEqual(inv_copy.ising_linear_ranges, original_spec.ising_linear_ranges)
+            self.assertEqual(inv_copy.ising_quadratic_ranges, original_spec.ising_quadratic_ranges)
+
+            # apply then invert with copy=False
+            spec.relabel_variables(mapping, copy=False)
+            if mapping == identity:
+                self.assertEqual(spec, original_spec)
+            else:
+                self.assertNotEqual(spec, original_spec)
+            spec.relabel_variables(inv_mapping, copy=False)
+            self.assertEqual(spec, original_spec)
+            self.assertEqual(spec.ising_linear_ranges, original_spec.ising_linear_ranges)
+            self.assertEqual(spec.ising_quadratic_ranges, original_spec.ising_quadratic_ranges)
+
+    def test_bad_relabel(self):
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+
+        mapping = {0: 2, 1: 1}
+
+        with self.assertRaises(ValueError):
+            spec.relabel_variables(mapping, copy=True)
+
+        with self.assertRaises(ValueError):
+            spec.relabel_variables(mapping, copy=False)
