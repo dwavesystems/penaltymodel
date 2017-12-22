@@ -341,8 +341,8 @@ class Specification(object):
                         old_to_intermediate[old] = new
                         # don't need to add it to intermediate_to_new because it is a self-label
 
-                self.relabel_variables(old_to_intermediate, copy=False)
-                self.relabel_variables(intermediate_to_new, copy=False)
+                Specification.relabel_variables(self, old_to_intermediate, copy=False)
+                Specification.relabel_variables(self, intermediate_to_new, copy=False)
                 return self
 
             # modifies graph in place
