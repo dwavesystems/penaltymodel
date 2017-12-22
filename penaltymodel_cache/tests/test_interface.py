@@ -108,3 +108,43 @@ class TestInterfaceFunctions(unittest.TestCase):
 
         # check that the specification is equal to the retreived_pmodel
         self.assertTrue(spec.__eq__(retreived_pmodel))
+
+    def test_arbitrary_labels_on_k44(self):
+        dbfile = self.database
+
+        graph = nx.Graph()
+        for i in range(3):
+            for j in range(3, 6):
+                graph.add_edge(i, j)
+
+        decision_variables = (0, 5)
+        feasible_configurations = ((0, 0), (1, 1))  # equality
+
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: 0 for edge in graph.edges}
+        if decision_variables in quadratic:
+            quadratic[decision_variables] = -1
+        else:
+            u, v = decision_variables
+            assert (v, u) in quadratic
+            quadratic[(v, u)] = -1
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        pmodel = pm.PenaltyModel.from_specification(spec, model, 2, -1)
+
+        # now cache the pmodel to make sure there is something to find
+
+        for thingy in itertools.permutations(range(6)):
+            mapping = dict(enumerate(thingy))
+            pmodel = pmodel.relabel_variables(mapping, copy=True)
+            pmc.cache_penalty_model(pmodel, database=dbfile)
+
+        # now relabel some variables
+        mapping = {1: '1', 2: '2', 3: '3', 4: '4'}
+
+        new_spec = spec.relabel_variables(mapping)
+
+        # retrieve from the new_spec
+        # now try to retrieve it
+        retreived_pmodel = pmc.get_penalty_model(new_spec, database=dbfile)

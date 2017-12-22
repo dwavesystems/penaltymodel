@@ -13,7 +13,7 @@ if _PY2:
 else:
     exec(open("./penaltymodel_cache/package_info.py").read())
 
-install_requires = ['penaltymodel==1.0.0.dev3',
+install_requires = ['penaltymodel==1.0.0.dev5',
                     'six',
                     'homebase>=1.0.0']
 

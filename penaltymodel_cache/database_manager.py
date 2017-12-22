@@ -470,7 +470,7 @@ def insert_penalty_model(cur, penalty_model):
 
     linear, quadratic, offset = penalty_model.model.as_ising()
     nodelist = sorted(linear)
-    edgelist = sorted(sorted(quadratic))
+    edgelist = sorted(sorted(penalty_model.graph.edges))
 
     insert_graph(cur, nodelist, edgelist, encoded_data)
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
