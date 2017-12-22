@@ -65,7 +65,6 @@ class TestPenaltyModel(unittest.TestCase):
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
         spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
 
-
         linear = {v: -3 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
         model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)

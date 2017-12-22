@@ -489,8 +489,6 @@ class BinaryQuadraticModel(object):
         # next the quadratic biases
         new_quadratic = {}
         for (u, v), bias in iteritems(quadratic):
-            if bias == 0.0:
-                continue
             new_quadratic[(u, v)] = 4. * bias
             new_linear[u] -= 2. * bias
             new_linear[v] -= 2. * bias
@@ -518,8 +516,7 @@ class BinaryQuadraticModel(object):
 
         for (u, v), bias in iteritems(quadratic):
 
-            if bias != 0.0:
-                J[(u, v)] = .25 * bias
+            J[(u, v)] = .25 * bias
 
             h[u] += .25 * bias
             h[v] += .25 * bias
