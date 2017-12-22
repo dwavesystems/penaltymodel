@@ -547,6 +547,8 @@ def iter_penalty_model_from_specification(cur, specification):
         configs, energies = zip(*sorted(encoded.items()))
         encoded_data['feasible_configurations'] = json.dumps(configs, separators=(',', ':'))
         encoded_data['energies'] = json.dumps(energies, separators=(',', ':'))
+    if 'decision_variables' not in encoded_data:
+        encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
 
     select = \
         """
@@ -567,7 +569,9 @@ def iter_penalty_model_from_specification(cur, specification):
             num_variables = :num_variables AND
             num_feasible_configurations = :num_feasible_configurations AND
             feasible_configurations = :feasible_configurations AND
-            energies = :energies
+            energies = :energies AND
+            -- decision variables:
+            decision_variables = :decision_variables
             -- we could apply filters based on the energy ranges but in practice this seems slower
         ORDER BY classical_gap DESC;
         """
