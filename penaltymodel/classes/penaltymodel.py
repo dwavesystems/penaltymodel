@@ -207,6 +207,9 @@ class PenaltyModel(Specification):
                 Specification.__eq__(self, penalty_model) and
                 self.model == penalty_model.model)
 
+    def __ne__(self, penalty_model):
+        return not self.__eq__(penalty_model)
+
     def relabel_variables(self, mapping, copy=True):
         """Relabel the variables and nodes according to the given mapping.
 

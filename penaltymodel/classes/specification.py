@@ -264,6 +264,9 @@ class Specification(object):
                 self.decision_variables == specification.decision_variables and
                 self.feasible_configurations == specification.feasible_configurations)
 
+    def __ne__(self, specification):
+        return not self.__eq__(specification)
+
     def relabel_variables(self, mapping, copy=True):
         """Relabel the variables and nodes according to the given mapping.
 
