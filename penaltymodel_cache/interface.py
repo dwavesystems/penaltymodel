@@ -34,10 +34,10 @@ def get_penalty_model(specification, database=None):
 
     """
     # only handles index-labelled nodes
-    if not all(isinstance(v, int) for v in specification.graph):
+    if not is_index_labelled(specification.graph):
         relabel_applied = True
         mapping, inverse_mapping = _graph_canonicalization(specification.graph)
-        specification = specification.relabel_variables(mapping)
+        specification = specification.relabel_variables(mapping, copy=True)
     else:
         relabel_applied = False
 
@@ -80,9 +80,9 @@ def cache_penalty_model(penalty_model, database=None):
     """
 
     # only handles index-labelled nodes
-    if not all(isinstance(v, int) for v in penalty_model.graph):
-        mapping, inverse_mapping = _graph_canonicalization(penalty_model.graph)
-        penalty_model = penalty_model.relabel_variables(mapping)
+    if not is_index_labelled(penalty_model.graph):
+        mapping, __ = _graph_canonicalization(penalty_model.graph)
+        penalty_model = penalty_model.relabel_variables(mapping, copy=True)
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.
@@ -99,7 +99,15 @@ def cache_penalty_model(penalty_model, database=None):
     conn.close()
 
 
+def is_index_labelled(graph):
+    """graph is index-labels [0, len(graph) - 1]"""
+    return all(v in graph for v in range(len(graph)))
+
+
 def _graph_canonicalization(graph):
-    inverse_mapping = dict(enumerate(graph))
-    mapping = {idx: v for v, idx in iteritems(inverse_mapping)}
+    try:
+        inverse_mapping = dict(enumerate(sorted(graph)))
+    except TypeError:
+        inverse_mapping = dict(enumerate(graph))
+    mapping = {v: idx for idx, v in iteritems(inverse_mapping)}
     return mapping, inverse_mapping
