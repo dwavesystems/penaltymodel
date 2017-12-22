@@ -148,3 +148,38 @@ class TestInterfaceFunctions(unittest.TestCase):
         # retrieve from the new_spec
         # now try to retrieve it
         retreived_pmodel = pmc.get_penalty_model(new_spec, database=dbfile)
+
+    def test_insert_retrieve(self):
+        dbfile = self.database
+
+        linear = {'1': 0.0, '0': -0.5, '3': 1.0, '2': -0.5}
+        quadratic = {('0', '3'): -1.0, ('1', '2'): 1.0, ('0', '2'): 0.5, ('1', '3'): 1.0}
+        offset = 0.0
+        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype=pm.SPIN)
+
+        graph = nx.Graph()
+        graph.add_edges_from(quadratic)
+        decision_variables = ('0', '2', '3')
+        feasible_configurations = ((-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1))
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
+
+        classical_gap = 2
+        ground = -2.5
+
+        pmodel = pm.PenaltyModel.from_specification(spec, model, classical_gap, ground)
+
+        pmc.cache_penalty_model(pmodel, database=dbfile)
+
+        # print(spec.feasible_configurations)
+        # print(spec.decision_variables)
+
+        # get it back
+        ret_pmodel = pmc.get_penalty_model(spec, database=dbfile)
+
+        # now get back one with a different decision_variables
+        spec2 = pm.Specification(graph, ('3', '0', '2'), feasible_configurations, pm.SPIN)
+        try:
+            ret_pmodel = pmc.get_penalty_model(spec2, database=dbfile)
+            self.assertNotEqual(ret_pmodel, pmodel)
+        except:
+            pass
