@@ -150,12 +150,12 @@ class PenaltyModel(Specification):
                 min_, max_ = ising_linear_ranges[v]
                 if bias < min_ or bias > max_:
                     raise ValueError(("variable {} has bias {} outside of the specified range [{}, {}]"
-                                     ).format(v, bias, min_, max_))
+                                      ).format(v, bias, min_, max_))
             for (u, v), bias in iteritems(model.quadratic):
                 min_, max_ = ising_quadratic_ranges[u][v]
                 if bias < min_ or bias > max_:
                     raise ValueError(("interaction {}, {} has bias {} outside of the specified range [{}, {}]"
-                                     ).format(u, v, bias, min_, max_))
+                                      ).format(u, v, bias, min_, max_))
 
         if not isinstance(model, BinaryQuadraticModel):
             raise TypeError("expected 'model' to be a BinaryQuadraticModel")
@@ -207,6 +207,9 @@ class PenaltyModel(Specification):
                 Specification.__eq__(self, penalty_model) and
                 self.model == penalty_model.model)
 
+    def __ne__(self, penalty_model):
+        return not self.__eq__(penalty_model)
+
     def relabel_variables(self, mapping, copy=True):
         """Relabel the variables and nodes according to the given mapping.
 
@@ -233,8 +236,8 @@ class PenaltyModel(Specification):
             >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, pm.SPIN)
             >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
-            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)  # doctest: +SKIP 
-            >>> penalty_model.decision_variables  # doctest: +SKIP 
+            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)  # doctest: +SKIP
+            >>> penalty_model.decision_variables  # doctest: +SKIP
             ('a', 2)
 
         """

@@ -55,9 +55,11 @@ class TestPenaltyModel(unittest.TestCase):
         # without copy
         new_widget = widget.relabel_variables({0: 'a'}, copy=True)
         self.assertEqual(test_widget, new_widget)
+        self.assertEqual(new_widget.decision_variables, ('a', 2))
 
         widget.relabel_variables({0: 'a'}, copy=False)
         self.assertEqual(widget, test_widget)
+        self.assertEqual(widget.decision_variables, ('a', 2))
 
     def test_bad_energy_range(self):
         graph = nx.path_graph(3)
@@ -76,3 +78,46 @@ class TestPenaltyModel(unittest.TestCase):
         model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
         with self.assertRaises(ValueError):
             widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+    def test_relabel_forwards_and_backwards(self):
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+        # make another one
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        decision_variables = (0, 2)
+        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        linear = {v: 0 for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        original_widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+
+        new_label_sets = [(10, 1),
+                          ('a', 'b'),
+                          (1, 'b'),
+                          ('1', '2', '3', '4'),
+                          ('a', 'b', 'c', 'd')]
+        new_label_sets.extend(itertools.permutations(graph))
+
+        for new in new_label_sets:
+            mapping = dict(enumerate(new))
+            inv_mapping = {u: v for v, u in mapping.items()}
+
+            # apply then invert with copy=False
+            widget.relabel_variables(mapping, copy=False)
+            widget.relabel_variables(inv_mapping, copy=False)
+            self.assertEqual(widget, original_widget)
+
+            # apply then invert with copy=True
+            copy_widget = widget.relabel_variables(mapping, copy=True)
+            inv_copy = copy_widget.relabel_variables(inv_mapping, copy=True)
+            self.assertEqual(inv_copy, original_widget)
