@@ -479,3 +479,50 @@ class TestBinaryQuadraticModel(unittest.TestCase):
         for u in model.adj:
             for v in model.adj[u]:
                 self.assertTrue((u, v) in quadratic or (v, u) in quadratic)
+
+    def test_relabel_forwards_and_backwards(self):
+        graph = nx.path_graph(4)
+        graph.add_edge(0, 2)
+        linear = {v: v for v in graph}
+        quadratic = {edge: -1 for edge in graph.edges}
+        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        original_model = model.copy()
+
+        identity = {v: v for v in graph}
+
+        new_label_sets = [(10, 1),
+                          ('a', 'b'),
+                          (1, 'b'),
+                          ('1', '2', '3', '4'),
+                          ('a', 'b', 'c', 'd', 'e', 'f')]
+        new_label_sets.extend(itertools.permutations(graph))
+
+        for new in new_label_sets:
+            mapping = dict(enumerate(new))
+            inv_mapping = {u: v for v, u in mapping.items()}
+
+            # apply then invert with copy=True
+            copy_model = model.relabel_variables(mapping, copy=True)
+            inv_copy = copy_model.relabel_variables(inv_mapping, copy=True)
+            self.assertEqual(inv_copy, original_model)
+            self.assertEqual(inv_copy.adj, original_model.adj)
+
+            # apply then invert with copy=False
+            model.relabel_variables(mapping, copy=False)
+            if mapping == identity:
+                self.assertEqual(model, original_model)
+            else:
+                self.assertNotEqual(model, original_model)
+            model.relabel_variables(inv_mapping, copy=False)
+            self.assertEqual(model, original_model)
+            self.assertEqual(model.adj, original_model.adj)
+
+    def test_not_equal(self):
+        # two equal models
+        model0 = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0, 3: 0}, {(1, 2): -1, (0, 1): -1, (2, 3): -1, (0, 2): -1},
+                                         0.0, pm.Vartype.SPIN)
+        model1 = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0, 3: 0}, {(0, 1): -1, (1, 2): -1, (2, 3): -1, (0, 2): -1},
+                                         0.0, pm.Vartype.SPIN)
+
+        self.assertFalse(model0 != model1)
+        self.assertTrue(model0 == model1)

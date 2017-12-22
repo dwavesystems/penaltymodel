@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 import itertools
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, iterkeys
 
 from penaltymodel.classes.vartypes import Vartype
 
@@ -181,24 +181,15 @@ class BinaryQuadraticModel(object):
 
         if self.vartype == model.vartype:
             return all([self.linear == model.linear,
-                        self._quadratic_equality(self.quadratic, self.quadratic),
+                        self.adj == model.adj,  # adj is invariant of edge order, so check that instead of quadratic
                         self.offset == model.offset])
         else:
             # different vartypes are not equal
             return False
 
-    @staticmethod
-    def _quadratic_equality(quadratic0, quadratic1):
-        for (u, v), bias in iteritems(quadratic0):
-            if (u, v) in quadratic1:
-                if quadratic1[(u, v)] != bias:
-                    return False
-            elif (v, u) in quadratic1:
-                if quadratic1[(u, v)] != bias:
-                    return False
-            else:
-                return False
-        return True
+    def __ne__(self, model):
+        """Inversion of equality"""
+        return not self.__eq__(model)
 
     def __len__(self):
         """The length is number of variables."""
@@ -330,10 +321,15 @@ class BinaryQuadraticModel(object):
 
         """
         try:
-            old_labels = set(mapping.keys())
-            new_labels = set(mapping.values())
+            old_labels = set(iterkeys(mapping))
+            new_labels = set(itervalues(mapping))
         except TypeError:
             raise ValueError("mapping targets must be hashable objects")
+
+        for v in new_labels:
+            if v in self.linear and v not in old_labels:
+                raise ValueError(('A variable cannot be relabeled "{}" without also relabeling '
+                                  "the existing variable of the same name").format(v))
 
         if copy:
             return BinaryQuadraticModel({mapping.get(v, v): bias for v, bias in iteritems(self.linear)},
@@ -391,11 +387,7 @@ class BinaryQuadraticModel(object):
 
                 # acting on all of these in-place
                 linear[new] = linear[old]
-                try:
-                    adj[new] = adj[old]
-                except:
-                    print(new, old)
-                    raise
+                adj[new] = adj[old]
                 for u in adj[old]:
                     adj[u][new] = adj[u][old]
                     del adj[u][old]
