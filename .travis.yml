@@ -20,7 +20,7 @@ matrix:
             provider: pypi
             user: "dwtools"
             password:
-              secure:
+              secure: "hbTGrk5VW4ENJVLHScbU0RqN4+0MkNDHPO9SuvudNaRQ52GMPxNdsamPmjfB640i5jGXA6TaqoIfRqZCej5bu6FewHlPzdk/fj1etiae2omXJpiRzKiPMIJ+R88gQc6JUu15lEDuW8lNQtdIlxXPD1OwFjP2xC4kM7Tp7ByQYaVDkUi+Uu3HMkQZF0PHdli0C+wBMqjTVELOxBR4DVUl17Hm6XBGfm+8Xy7x6zb7PzfuckSaYxYxBDKL75T/TmH2Uo3dVHRgs1xBbXd+0+vDoGja9BPeKvw3UCcFF4QYaxhs7junwd3OuL5MkG7gDRZdX6KE8qnbDijLO8JOKj2GWmyaX9XJYHkIjSEZqESeEDdgYq/SluOOLQ3AX5mOCzB5U7tb2BKE/ZOsRRyKCkyQ2wcoiSruYifeIkduzP9oT0oEgecEEoLEy3XbEVFL9g9g8XwCHrIZ8eM7eau5HjsZu6Ou/UJu/fkYX7ya/jwBcyAmbjb7eB9KZ/drGoPWuw6LN54G3+qRgGjTuCWFV8uiZE6qO+z5CejV574VgqlBIu8K0C7dz2tBfoD/z4m2Ah0HlZ/AhoD/mowUldJ6wmyf3Xe/Dvhn1UAkoghA2jWQ+QntUUklauuN6UMZ3I1iNHPwtEYIYC4SljIzgocxfig7cxnGbBdT3TJ/Ayq2rsogc3I="
             distributions: "sdist bdist_wheel"
             on:
               tags: true
