@@ -6,7 +6,8 @@ install_requires = ['dimod>=0.3.1',
                     'six',
                     'networkx>=2.0',
                     'enum34>=1.1.6']
-extras_require = {}
+extras_require = {'all': ['penaltymodel_cache>=0.1.0<0.2.0',
+                          'penaltymodel_maxgap>=0.1.0<0.2.0']}
 
 packages = ['penaltymodel',
             'penaltymodel.classes']
