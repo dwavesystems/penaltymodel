@@ -14,7 +14,7 @@ tmp_database_name = 'tmp_test_database_manager_{}.db'.format(time.time())
 
 class TestInterfaceFunctions(unittest.TestCase):
     def setUp(self):
-        self.database = pmc.cache_file(filename=tmp_database_name)
+        self.database = pmc.cache_file()
 
     def test_typical(self):
         dbfile = self.database
