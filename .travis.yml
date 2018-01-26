@@ -12,6 +12,10 @@ matrix:
           env: TOXENV=py36
         - os: linux
           sudo: required
+          python: "3.5"
+          env: TOXENV=py36
+        - os: linux
+          sudo: required
           python: "nightly"
           env: TOXENV=pynightly
         - os: osx
