@@ -2,22 +2,35 @@ language: python
 
 matrix:
     include:
+    include:
         - os: linux
           sudo: required
           python: "2.7"
           env: TOXENV=py27
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python2.7/site-packages/smt.pth
+            - coverage run -m unittest discover
         - os: linux
           sudo: required
           python: "3.6"
           env: TOXENV=py36
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python3.6/site-packages/smt.pth
+            - coverage run -m unittest discover
         - os: linux
           sudo: required
           python: "3.5"
-          env: TOXENV=py36
+          env: TOXENV=py35
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python3.5/site-packages/smt.pth
+            - coverage run -m unittest discover
         - os: linux
           sudo: required
           python: "nightly"
           env: TOXENV=pynightly
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python3.7/site-packages/smt.pth
+            - coverage run -m unittest discover
         - os: osx
           language: generic
           env: TOXENV=py27
@@ -25,6 +38,9 @@ matrix:
             - brew update
             - virtualenv env -p python2
             - source env/bin/activate
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python2.7/site-packages/smt.pth
+            - coverage run -m unittest discover
         - os: osx
           language: generic
           env: TOXENV=py36
@@ -33,14 +49,16 @@ matrix:
             - brew install python3
             - virtualenv env -p python3
             - source env/bin/activate
+          script:
+            - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python3.6/site-packages/smt.pth
+            - coverage run -m unittest discover
 
 install:
-    - pip install -r requirements.txt
-    - pip install .
-    - pip install coveralls
-    
-script:
-- coverage run -m unittest discover
+  - pip install -r requirements.txt
+  - pysmt-install --z3 --confirm-agreement
+  - pysmt-install --msat --confirm-agreement
+  - pip install .
+  - pip install coveralls
 
 after_success:
   - coveralls

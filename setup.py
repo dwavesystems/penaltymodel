@@ -11,10 +11,10 @@ if _PY2:
 else:
     exec(open("./penaltymodel_maxgap/package_info.py").read())
 
-install_requires = ['six',
-                    'dwave_networkx>=0.6.0',
-                    'pysmt',
-                    'penaltymodel==1.0.0.dev3']
+install_requires = ['six>=1.11.0<2.0.0',
+                    'dwave_networkx>=0.6.0<0.7.0',
+                    'pysmt>=0.7.0<0.8.0',
+                    'penaltymodel>=0.12.0<0.13.0']
 extras_require = {}
 
 packages = ['penaltymodel_maxgap']

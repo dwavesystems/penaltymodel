@@ -1,0 +1,4 @@
+six==1.11.0
+penaltymodel>=0.12.0<0.13.0
+dwave_networkx==0.6.0
+pysmt==0.7.0
