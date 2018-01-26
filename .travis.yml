@@ -2,7 +2,6 @@ language: python
 
 matrix:
     include:
-    include:
         - os: linux
           sudo: required
           python: "2.7"
@@ -17,6 +16,14 @@ matrix:
           script:
             - pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/python3.6/site-packages/smt.pth
             - coverage run -m unittest discover
+          deploy:
+            provider: pypi
+            user: "dwtools"
+            password:
+              secure:
+            distributions: "sdist bdist_wheel"
+            on:
+              tags: true
         - os: linux
           sudo: required
           python: "3.5"
@@ -62,12 +69,3 @@ install:
 
 after_success:
   - coveralls
-
-deploy:
-  provider: pypi
-  user: "dwtools"
-  password:
-    secure:
-  distributions: "sdist bdist_wheel"
-  on:
-    tags: true
