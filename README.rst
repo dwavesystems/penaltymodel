@@ -1,3 +1,15 @@
+.. image:: https://travis-ci.org/dwavesystems/penaltymodel_maxgap.svg?branch=master
+    :target: https://travis-ci.org/dwavesystems/penaltymodel_maxgap
+
+.. image:: https://readthedocs.org/projects/penaltymodel-cache/badge/?version=latest
+    :target: http://penaltymodel-cache.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://coveralls.io/repos/github/dwavesystems/penaltymodel_maxgap/badge.svg?branch=master
+    :target: https://coveralls.io/github/dwavesystems/penaltymodel_maxgap?branch=master
+
+.. inclusion-marker-do-not-remove
+
 D-Wave Penalty Model Max-gap
 ============================
 
