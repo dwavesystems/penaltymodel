@@ -9,10 +9,8 @@ import itertools
 
 import networkx as nx
 
+from dimod import BinaryQuadraticModel, Vartype
 from six import itervalues, iteritems, iterkeys
-
-from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
-from penaltymodel.classes.vartypes import Vartype
 
 
 __all__ = ['Specification']
@@ -47,7 +45,7 @@ class Specification(object):
             energy. If given as an iterable, it will be case to a dict where
             the relative energies are all 0.
 
-        vartype (:class:`.Vartype`/str/set):
+        vartype (:class:`dimod.Vartype`/str/set):
             The variable type desired for the penalty model.
             Accepted input values:
             :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
@@ -79,7 +77,7 @@ class Specification(object):
         >>> graph = nx.path_graph(5)
         >>> decision_variables = (0, 4)  # the ends of the path
         >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree
-        >>> vartype = pm.Vartype.SPIN
+        >>> vartype = dimod.Vartype.SPIN
         >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype)
 
         If we want to make the interaction between (0, 1) ferromagnetic (negative):

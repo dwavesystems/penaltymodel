@@ -40,12 +40,13 @@ matrix:
             - source env/bin/activate
 
 install:
-    - pip install -r requirements.txt
+    - pip install -r tests/requirements.txt
     - pip install .
     - pip install coveralls
     
 script:
 - coverage run -m unittest discover
+- make -C ./docs/ doctest
 
 after_success:
   - coveralls

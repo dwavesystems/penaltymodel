@@ -2,7 +2,7 @@ from setuptools import setup
 
 from penaltymodel.package_info import __version__, __author__, __description__, __authoremail__
 
-install_requires = ['dimod>=0.5.0,<0.6.0',
+install_requires = ['dimod>=0.6.0,<0.7.0',
                     'six>=1.11.0,<2.0.0',
                     'networkx>=2.0,<3.0',
                     'enum34>=1.1.6,<2.0.0']

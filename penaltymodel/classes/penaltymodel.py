@@ -10,10 +10,9 @@ import itertools
 from six import itervalues, iteritems
 import networkx as nx
 
+from dimod import BinaryQuadraticModel, Vartype
 
 from penaltymodel.classes.specification import Specification
-from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
-from penaltymodel.classes.vartypes import Vartype
 
 
 __all__ = ['PenaltyModel']
@@ -57,7 +56,7 @@ class PenaltyModel(Specification):
             :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
             :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
 
-        model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+        model (:class:`dimod.BinaryQuadraticModel`): A binary quadratic model
             that has ground states that match the feasible_configurations.
 
         classical_gap (numeric): The difference in classical energy between the ground
@@ -93,15 +92,15 @@ class PenaltyModel(Specification):
         >>> graph = nx.path_graph(3)
         >>> decision_variables = (0, 2)  # the ends of the path
         >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree
-        >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+        >>> model = dimod.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, dimod.SPIN)
         >>> classical_gap = 2.0
         >>> ground_energy = -2.0
-        >>> widget = pm.PenaltyModel(graph, decision_variables, feasible_configurations, pm.SPIN,
+        >>> widget = pm.PenaltyModel(graph, decision_variables, feasible_configurations, dimod.SPIN,
         ...                          model, classical_gap, ground_energy)
 
         Or it can be created from a specification:
 
-        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
+        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
         >>> widget = pm.PenaltyModel.from_specification(spec, model, classical_gap, ground_energy)
 
     Attributes:
@@ -120,13 +119,12 @@ class PenaltyModel(Specification):
         ising_linear_ranges (dict[node, (number, number)]):
             Defines the energy ranges available for the linear
             biases of the penalty model.
-        model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+        model (:class:`dimod.BinaryQuadraticModel`): A binary quadratic model
             that has ground states that match the feasible_configurations.
         ising_quadratic_ranges (dict[edge, (number, number)]):
             Defines the energy ranges available for the quadratic
             biases of the penalty model.
-        vartype (:class:`.Vartype`): The variable type. If unknown or
-            unspecified will be :class:`.Vartype.UNDEFINED`.
+        vartype (:class:`dimod.Vartype`): The variable type.
 
     """
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
@@ -178,7 +176,7 @@ class PenaltyModel(Specification):
         Args:
             specification (:class:`.Specification`): A specification that was used
                 to generate the model.
-            model (:class:`.BinaryQuadraticModel`): A binary quadratic model
+            model (:class:`dimod.BinaryQuadraticModel`): A binary quadratic model
                 that has ground states that match the feasible_configurations.
             classical_gap (numeric): The difference in classical energy between the ground
                 state and the first excited state. Must be positive.
@@ -226,15 +224,15 @@ class PenaltyModel(Specification):
             relabeled according to mapping.
 
         Examples:
-            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, pm.SPIN)
-            >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, dimod.SPIN)
+            >>> model = dimod.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, dimod.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
             >>> relabeled_penalty_model = penalty_model.relabel_variables({0: 'a'})
             >>> relabeled_penalty_model.decision_variables
             ('a', 2)
 
-            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, pm.SPIN)
-            >>> model = pm.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, pm.SPIN)
+            >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, dimod.SPIN)
+            >>> model = dimod.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, dimod.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
             >>> penalty_model.relabel_variables({0: 'a'}, copy=False)  # doctest: +SKIP
             >>> penalty_model.decision_variables  # doctest: +SKIP
@@ -244,9 +242,9 @@ class PenaltyModel(Specification):
         # just use the relabeling of each component
         if copy:
             spec = Specification.relabel_variables(self, mapping, copy=True)
-            model = self.model.relabel_variables(mapping, copy=True)
+            model = self.model.relabel_variables(mapping, inplace=False)
             return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
         else:
             Specification.relabel_variables(self, mapping, copy=False)
-            self.model.relabel_variables(mapping, copy=False)
+            self.model.relabel_variables(mapping, inplace=True)
             return self

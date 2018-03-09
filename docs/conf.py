@@ -91,7 +91,7 @@ todo_include_todos = True
 
 modindex_common_prefix = ['penaltymodel.']
 
-doctest_global_setup = "import penaltymodel as pm;import networkx as nx"
+doctest_global_setup = "import penaltymodel as pm;import networkx as nx;import dimod"
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -193,9 +193,9 @@ epub_exclude_files = ['search.html']
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/3': None,
-                       'https://networkx.github.io/documentation/stable/': None}
-
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
+                       'dimod': ('http://dimod.readthedocs.io/en/latest/', None),
+                       'networkx': ('https://networkx.github.io/documentation/stable/', None)}
 
 # sort documentation they way the appear in the source file
 autodoc_member_order = 'bysource'
