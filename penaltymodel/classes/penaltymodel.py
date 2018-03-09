@@ -208,43 +208,44 @@ class PenaltyModel(Specification):
     def __ne__(self, penalty_model):
         return not self.__eq__(penalty_model)
 
-    def relabel_variables(self, mapping, copy=True):
+    def relabel_variables(self, mapping, inplace=True):
         """Relabel the variables and nodes according to the given mapping.
 
         Args:
             mapping (dict[hashable, hashable]): A dict with the current
                 variable labels as keys and new labels as values. A
                 partial mapping is allowed.
-            copy (bool, optional, default=True): If True, return a copy
-                with the variables relabeled. If False, relabel the nodes
-                in-place.
+
+            inplace (bool, optional, default=True):
+                If True, the penalty model is updated in-place; otherwise, a new penalty model
+                is returned.
 
         Returns:
-            :class:`.PenaltyModel`: A PenaltyModel with the variables
-            relabeled according to mapping.
+            :class:`.PenaltyModel`: A PenaltyModel with the variables relabeled according to
+            mapping.
 
         Examples:
             >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, dimod.SPIN)
             >>> model = dimod.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, dimod.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
-            >>> relabeled_penalty_model = penalty_model.relabel_variables({0: 'a'})
+            >>> relabeled_penalty_model = penalty_model.relabel_variables({0: 'a'}, inplace=False)
             >>> relabeled_penalty_model.decision_variables
             ('a', 2)
 
             >>> spec = pm.Specification(nx.path_graph(3), (0, 2), {(-1, -1), (1, 1)}, dimod.SPIN)
             >>> model = dimod.BinaryQuadraticModel({0: 0, 1: 0, 2: 0}, {(0, 1): -1, (1, 2): -1}, 0.0, dimod.SPIN)
             >>> penalty_model = pm.PenaltyModel.from_specification(spec, model, 2., -2.)
-            >>> penalty_model.relabel_variables({0: 'a'}, copy=False)  # doctest: +SKIP
-            >>> penalty_model.decision_variables  # doctest: +SKIP
+            >>> __ = penalty_model.relabel_variables({0: 'a'}, inplace=True)
+            >>> penalty_model.decision_variables
             ('a', 2)
 
         """
         # just use the relabeling of each component
-        if copy:
-            spec = Specification.relabel_variables(self, mapping, copy=True)
-            model = self.model.relabel_variables(mapping, inplace=False)
-            return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
-        else:
-            Specification.relabel_variables(self, mapping, copy=False)
+        if inplace:
+            Specification.relabel_variables(self, mapping, inplace=True)
             self.model.relabel_variables(mapping, inplace=True)
             return self
+        else:
+            spec = Specification.relabel_variables(self, mapping, inplace=False)
+            model = self.model.relabel_variables(mapping, inplace=False)
+            return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)

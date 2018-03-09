@@ -55,11 +55,11 @@ class TestPenaltyModel(unittest.TestCase):
         test_widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         # without copy
-        new_widget = widget.relabel_variables({0: 'a'}, copy=True)
+        new_widget = widget.relabel_variables({0: 'a'}, inplace=False)
         self.assertEqual(test_widget, new_widget)
         self.assertEqual(new_widget.decision_variables, ('a', 2))
 
-        widget.relabel_variables({0: 'a'}, copy=False)
+        widget.relabel_variables({0: 'a'}, inplace=True)
         self.assertEqual(widget, test_widget)
         self.assertEqual(widget.decision_variables, ('a', 2))
 
@@ -115,11 +115,11 @@ class TestPenaltyModel(unittest.TestCase):
             inv_mapping = {u: v for v, u in mapping.items()}
 
             # apply then invert with copy=False
-            widget.relabel_variables(mapping, copy=False)
-            widget.relabel_variables(inv_mapping, copy=False)
+            widget.relabel_variables(mapping, inplace=True)
+            widget.relabel_variables(inv_mapping, inplace=True)
             self.assertEqual(widget, original_widget)
 
             # apply then invert with copy=True
-            copy_widget = widget.relabel_variables(mapping, copy=True)
-            inv_copy = copy_widget.relabel_variables(inv_mapping, copy=True)
+            copy_widget = widget.relabel_variables(mapping, inplace=False)
+            inv_copy = copy_widget.relabel_variables(inv_mapping, inplace=False)
             self.assertEqual(inv_copy, original_widget)
