@@ -6,6 +6,8 @@ import networkx as nx
 
 import penaltymodel as pm
 
+import dimod
+
 
 class TestPenaltyModel(unittest.TestCase):
     def test_construction(self):
@@ -14,16 +16,16 @@ class TestPenaltyModel(unittest.TestCase):
         graph = nx.complete_graph(10)
         decision_variables = (0, 4, 5)
         feasible_configurations = {(-1, -1, -1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         # build a model
-        model = pm.BinaryQuadraticModel({v: 0 for v in graph},
-                                        {edge: 0 for edge in graph.edges},
-                                        0.0,
-                                        vartype=pm.Vartype.SPIN)
+        model = dimod.BinaryQuadraticModel({v: 0 for v in graph},
+                                           {edge: 0 for edge in graph.edges},
+                                           0.0,
+                                           vartype=dimod.SPIN)
 
         # build a PenaltyModel explicitly
-        pm0 = pm.PenaltyModel(graph, decision_variables, feasible_configurations, pm.SPIN, model, .1, 0)
+        pm0 = pm.PenaltyModel(graph, decision_variables, feasible_configurations, dimod.SPIN, model, .1, 0)
 
         # build from spec
         pm1 = pm.PenaltyModel.from_specification(spec, model, .1, 0)
@@ -35,10 +37,10 @@ class TestPenaltyModel(unittest.TestCase):
         graph = nx.path_graph(3)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         # now set up the same widget with 0 relabelled to 'a'
@@ -46,10 +48,10 @@ class TestPenaltyModel(unittest.TestCase):
         graph = nx.relabel_nodes(graph, {0: 'a'})
         decision_variables = ('a', 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         test_widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         # without copy
@@ -65,17 +67,17 @@ class TestPenaltyModel(unittest.TestCase):
         graph = nx.path_graph(3)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         linear = {v: -3 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         with self.assertRaises(ValueError):
             widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: 5 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         with self.assertRaises(ValueError):
             widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
@@ -84,10 +86,10 @@ class TestPenaltyModel(unittest.TestCase):
         graph.add_edge(0, 2)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         # make another one
@@ -95,10 +97,10 @@ class TestPenaltyModel(unittest.TestCase):
         graph.add_edge(0, 2)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         original_widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         new_label_sets = [(10, 1),

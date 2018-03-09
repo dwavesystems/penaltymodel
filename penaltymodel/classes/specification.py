@@ -9,10 +9,8 @@ import itertools
 
 import networkx as nx
 
+from dimod import BinaryQuadraticModel, Vartype
 from six import itervalues, iteritems, iterkeys
-
-from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
-from penaltymodel.classes.vartypes import Vartype
 
 
 __all__ = ['Specification']

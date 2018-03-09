@@ -10,10 +10,9 @@ import itertools
 from six import itervalues, iteritems
 import networkx as nx
 
+from dimod import BinaryQuadraticModel, Vartype
 
 from penaltymodel.classes.specification import Specification
-from penaltymodel.classes.binary_quadratic_model import BinaryQuadraticModel
-from penaltymodel.classes.vartypes import Vartype
 
 
 __all__ = ['PenaltyModel']
@@ -244,9 +243,9 @@ class PenaltyModel(Specification):
         # just use the relabeling of each component
         if copy:
             spec = Specification.relabel_variables(self, mapping, copy=True)
-            model = self.model.relabel_variables(mapping, copy=True)
+            model = self.model.relabel_variables(mapping, inplace=False)
             return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
         else:
             Specification.relabel_variables(self, mapping, copy=False)
-            self.model.relabel_variables(mapping, copy=False)
+            self.model.relabel_variables(mapping, inplace=True)
             return self

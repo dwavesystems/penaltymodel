@@ -5,10 +5,12 @@ import networkx as nx
 
 import penaltymodel as pm
 
+import dimod
+
 
 class TestSpecification(unittest.TestCase):
     def test_construction_empty(self):
-        spec = pm.Specification(nx.Graph(), [], {}, pm.SPIN)
+        spec = pm.Specification(nx.Graph(), [], {}, dimod.SPIN)
         self.assertEqual(len(spec), 0)
 
     def test_construction_typical(self):
@@ -16,12 +18,12 @@ class TestSpecification(unittest.TestCase):
         decision_variables = (0, 4, 5)
         feasible_configurations = {(-1, -1, -1): 0.}
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         self.assertEqual(spec.graph, graph)  # literally the same object
         self.assertEqual(spec.decision_variables, decision_variables)
         self.assertEqual(spec.feasible_configurations, feasible_configurations)
-        self.assertIs(spec.vartype, pm.SPIN)
+        self.assertIs(spec.vartype, dimod.SPIN)
 
     def test_construction_from_edgelist(self):
         graph = nx.barbell_graph(10, 7)
@@ -29,10 +31,10 @@ class TestSpecification(unittest.TestCase):
         feasible_configurations = {(-1, -1, -1): 0.}
 
         # specification from edges
-        spec0 = pm.Specification(graph.edges, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec0 = pm.Specification(graph.edges, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         # specification from graph
-        spec1 = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec1 = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         self.assertEqual(spec0, spec1)
 
@@ -42,14 +44,14 @@ class TestSpecification(unittest.TestCase):
         feasible_configurations = {(-1, -1, -1): 0.}
 
         with self.assertRaises(TypeError):
-            pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+            pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
     def test_ranges_default(self):
         graph = nx.barbell_graph(4, 16)
         decision_variables = (0, 4, 3)
         feasible_configurations = {(0, 0, 0): 0.}
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
 
         for v in graph:
             self.assertEqual(spec.ising_linear_ranges[v], [-2, 2])
@@ -65,7 +67,7 @@ class TestSpecification(unittest.TestCase):
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations,
                                 ising_linear_ranges={v: [-v, 2] for v in graph},
-                                vartype=pm.BINARY)
+                                vartype=dimod.BINARY)
 
         # check default energy ranges
         for v in graph:
@@ -73,7 +75,7 @@ class TestSpecification(unittest.TestCase):
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations,
                                 ising_linear_ranges={v: (-v, 2) for v in graph},
-                                vartype=pm.BINARY)
+                                vartype=dimod.BINARY)
 
         # check default energy ranges
         for v in graph:
@@ -86,7 +88,7 @@ class TestSpecification(unittest.TestCase):
 
         spec = pm.Specification(graph, decision_variables, feasible_configurations,
                                 ising_quadratic_ranges={0: {1: [0, 1], 2: [-1, 0]}, 2: {0: [-1, 0]}},
-                                vartype=pm.BINARY)
+                                vartype=dimod.BINARY)
 
         ising_quadratic_ranges = spec.ising_quadratic_ranges
         for u in ising_quadratic_ranges:
@@ -106,41 +108,41 @@ class TestSpecification(unittest.TestCase):
         with self.assertRaises(ValueError):
             pm.Specification(graph, decision_variables, feasible_configurations,
                              ising_linear_ranges={v: [-v, 'a'] for v in graph},
-                             vartype=pm.BINARY)
+                             vartype=dimod.BINARY)
 
         with self.assertRaises(TypeError):
             pm.Specification(graph, decision_variables, feasible_configurations,
                              ising_linear_ranges={v: [-v, 1, 1] for v in graph},
-                             vartype=pm.BINARY)
+                             vartype=dimod.BINARY)
 
     def test_vartype_specified(self):
         graph = nx.complete_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
-        self.assertIs(spec.vartype, pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
+        self.assertIs(spec.vartype, dimod.SPIN)
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
-        self.assertIs(spec.vartype, pm.BINARY)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
+        self.assertIs(spec.vartype, dimod.BINARY)
 
         # now set up a spec that can only have one vartype
         graph = nx.complete_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, -1): 0.}
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
-        self.assertIs(spec.vartype, pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
+        self.assertIs(spec.vartype, dimod.SPIN)
 
         # the feasible_configurations are spin
         with self.assertRaises(ValueError):
-            spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+            spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
 
     def test_relabel_typical(self):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
 
@@ -149,7 +151,7 @@ class TestSpecification(unittest.TestCase):
         # create a test spec
         graph = nx.relabel_nodes(graph, mapping)
         decision_variables = (mapping[v] for v in decision_variables)
-        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         self.assertEqual(new_spec, test_spec)
         self.assertEqual(new_spec.ising_linear_ranges, test_spec.ising_linear_ranges)
@@ -159,7 +161,7 @@ class TestSpecification(unittest.TestCase):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
 
@@ -168,7 +170,7 @@ class TestSpecification(unittest.TestCase):
         # create a test spec
         graph = nx.relabel_nodes(graph, mapping)
         decision_variables = (mapping[v] for v in decision_variables)
-        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         self.assertEqual(new_spec, test_spec)
         self.assertEqual(new_spec.ising_linear_ranges, test_spec.ising_linear_ranges)
@@ -178,7 +180,7 @@ class TestSpecification(unittest.TestCase):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = {i: v for i, v in enumerate('abcdefghijklmnopqrstuvwxyz') if i in graph}
 
@@ -190,7 +192,7 @@ class TestSpecification(unittest.TestCase):
         # create a test spec
         graph = nx.relabel_nodes(graph, mapping)
         decision_variables = (mapping[v] for v in decision_variables)
-        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        test_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         self.assertEqual(new_spec, test_spec)
         self.assertEqual(new_spec.ising_linear_ranges, test_spec.ising_linear_ranges)
@@ -200,7 +202,7 @@ class TestSpecification(unittest.TestCase):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = {v: v for v in graph}
 
@@ -210,7 +212,7 @@ class TestSpecification(unittest.TestCase):
         graph = nx.circular_ladder_graph(12)
         decision_variables = (0, 2, 5)
         feasible_configurations = {(1, 1, 1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = {v: v + 5 for v in graph}
 
@@ -221,14 +223,14 @@ class TestSpecification(unittest.TestCase):
         graph.add_edge(0, 2)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         # make another one
         graph = nx.path_graph(4)
         graph.add_edge(0, 2)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        original_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        original_spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         identity = {v: v for v in graph}
 
@@ -266,7 +268,7 @@ class TestSpecification(unittest.TestCase):
         graph.add_edge(0, 2)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         mapping = {0: 2, 1: 1}
 
