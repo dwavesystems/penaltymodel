@@ -14,7 +14,7 @@ except ImportError:
 try:
     import penaltymodel_maxgap as maxgap
     _maxgap = True
-except:
+except ImportError:
     _maxgap = False
 
 
