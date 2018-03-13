@@ -265,15 +265,15 @@ class Specification(object):
     def __ne__(self, specification):
         return not self.__eq__(specification)
 
-    def relabel_variables(self, mapping, copy=True):
+    def relabel_variables(self, mapping, inplace=True):
         """Relabel the variables and nodes according to the given mapping.
 
         Args:
             mapping (dict): a dict mapping the current variable/node labels
                 to new ones.
-            copy (bool, default): If True, return a copy of Specification
-                with the variables relabeled, otherwise apply the relabeling in
-                place.
+            inplace (bool, optional, default=True):
+                If True, the specification is updated in-place; otherwise, a new specification
+                is returned.
 
         Returns:
             :class:`.Specification`: A Specification with the variables
@@ -296,7 +296,7 @@ class Specification(object):
                 raise ValueError(('A variable cannot be relabeled "{}" without also relabeling '
                                   "the existing variable of the same name").format(v))
 
-        if copy:
+        if not inplace:
             return Specification(nx.relabel_nodes(graph, mapping, copy=True),  # also checks the mapping
                                  tuple(mapping.get(v, v) for v in self.decision_variables),
                                  self.feasible_configurations,  # does not change
@@ -339,8 +339,8 @@ class Specification(object):
                         old_to_intermediate[old] = new
                         # don't need to add it to intermediate_to_new because it is a self-label
 
-                Specification.relabel_variables(self, old_to_intermediate, copy=False)
-                Specification.relabel_variables(self, intermediate_to_new, copy=False)
+                Specification.relabel_variables(self, old_to_intermediate, inplace=True)
+                Specification.relabel_variables(self, intermediate_to_new, inplace=True)
                 return self
 
             # modifies graph in place

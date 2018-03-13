@@ -146,7 +146,7 @@ class TestSpecification(unittest.TestCase):
 
         mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
 
-        new_spec = spec.relabel_variables(mapping)
+        new_spec = spec.relabel_variables(mapping, inplace=False)
 
         # create a test spec
         graph = nx.relabel_nodes(graph, mapping)
@@ -165,7 +165,7 @@ class TestSpecification(unittest.TestCase):
 
         mapping = dict(enumerate('abcdefghijklmnopqrstuvwxyz'))
 
-        new_spec = spec.relabel_variables(mapping, copy=True)
+        new_spec = spec.relabel_variables(mapping, inplace=False)
 
         # create a test spec
         graph = nx.relabel_nodes(graph, mapping)
@@ -184,7 +184,7 @@ class TestSpecification(unittest.TestCase):
 
         mapping = {i: v for i, v in enumerate('abcdefghijklmnopqrstuvwxyz') if i in graph}
 
-        new_spec = spec.relabel_variables(mapping, copy=False)
+        new_spec = spec.relabel_variables(mapping, inplace=True)
 
         self.assertIs(new_spec, spec)  # should be the same object
         self.assertIs(new_spec.graph, spec.graph)
@@ -206,7 +206,7 @@ class TestSpecification(unittest.TestCase):
 
         mapping = {v: v for v in graph}
 
-        new_spec = spec.relabel_variables(mapping, copy=False)
+        new_spec = spec.relabel_variables(mapping, inplace=True)
 
     def test_relabel_inplace_overlap(self):
         graph = nx.circular_ladder_graph(12)
@@ -216,7 +216,7 @@ class TestSpecification(unittest.TestCase):
 
         mapping = {v: v + 5 for v in graph}
 
-        new_spec = spec.relabel_variables(mapping, copy=False)
+        new_spec = spec.relabel_variables(mapping, inplace=True)
 
     def test_relabel_forwards_and_backwards(self):
         graph = nx.path_graph(4)
@@ -245,20 +245,20 @@ class TestSpecification(unittest.TestCase):
             mapping = dict(enumerate(new))
             inv_mapping = {u: v for v, u in mapping.items()}
 
-            # apply then invert with copy=True
-            copy_spec = spec.relabel_variables(mapping, copy=True)
-            inv_copy = copy_spec.relabel_variables(inv_mapping, copy=True)
+            # apply then invert with inplace=False
+            copy_spec = spec.relabel_variables(mapping, inplace=False)
+            inv_copy = copy_spec.relabel_variables(inv_mapping, inplace=False)
             self.assertEqual(inv_copy, original_spec)
             self.assertEqual(inv_copy.ising_linear_ranges, original_spec.ising_linear_ranges)
             self.assertEqual(inv_copy.ising_quadratic_ranges, original_spec.ising_quadratic_ranges)
 
-            # apply then invert with copy=False
-            spec.relabel_variables(mapping, copy=False)
+            # apply then invert with inplace=True
+            spec.relabel_variables(mapping, inplace=True)
             if mapping == identity:
                 self.assertEqual(spec, original_spec)
             else:
                 self.assertNotEqual(spec, original_spec)
-            spec.relabel_variables(inv_mapping, copy=False)
+            spec.relabel_variables(inv_mapping, inplace=True)
             self.assertEqual(spec, original_spec)
             self.assertEqual(spec.ising_linear_ranges, original_spec.ising_linear_ranges)
             self.assertEqual(spec.ising_quadratic_ranges, original_spec.ising_quadratic_ranges)
@@ -273,7 +273,7 @@ class TestSpecification(unittest.TestCase):
         mapping = {0: 2, 1: 1}
 
         with self.assertRaises(ValueError):
-            spec.relabel_variables(mapping, copy=True)
+            spec.relabel_variables(mapping, inplace=False)
 
         with self.assertRaises(ValueError):
-            spec.relabel_variables(mapping, copy=False)
+            spec.relabel_variables(mapping, inplace=True)
