@@ -1,4 +1,4 @@
-dimod==0.6.0
+dimod==0.6.3
 six==1.11.0
 networkx==2.0
 enum34==1.1.6
