@@ -37,7 +37,7 @@ def get_penalty_model(specification, database=None):
     if not _is_index_labelled(specification.graph):
         relabel_applied = True
         mapping, inverse_mapping = _graph_canonicalization(specification.graph)
-        specification = specification.relabel_variables(mapping, copy=True)
+        specification = specification.relabel_variables(mapping, inplace=False)
     else:
         relabel_applied = False
 
@@ -63,7 +63,7 @@ def get_penalty_model(specification, database=None):
 
     if relabel_applied:
         # relabel the widget in-place
-        widget.relabel_variables(inverse_mapping, copy=False)
+        widget.relabel_variables(inverse_mapping, inplace=True)
 
     return widget
 
@@ -82,7 +82,7 @@ def cache_penalty_model(penalty_model, database=None):
     # only handles index-labelled nodes
     if not _is_index_labelled(penalty_model.graph):
         mapping, __ = _graph_canonicalization(penalty_model.graph)
-        penalty_model = penalty_model.relabel_variables(mapping, copy=True)
+        penalty_model = penalty_model.relabel_variables(mapping, inplace=False)
 
     # connect to the database. Note that once the connection is made it cannot be
     # broken up between several processes.

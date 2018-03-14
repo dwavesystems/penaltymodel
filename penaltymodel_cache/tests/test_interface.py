@@ -6,6 +6,7 @@ import itertools
 
 import networkx as nx
 import penaltymodel as pm
+import dimod
 
 import penaltymodel_cache as pmc
 
@@ -23,10 +24,10 @@ class TestInterfaceFunctions(unittest.TestCase):
         graph = nx.path_graph(3)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
         # cache the penaltymodel
@@ -49,7 +50,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         decision_variables = ('a', 'e')
         feasible_configurations = ((-1, -1), (1, 1))  # equality
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.SPIN)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: 0 for edge in graph.edges}
@@ -59,7 +60,7 @@ class TestInterfaceFunctions(unittest.TestCase):
             u, v = decision_variables
             assert (v, u) in quadratic
             quadratic[(v, u)] = -1
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         pmodel = pm.PenaltyModel.from_specification(spec, model, 2, -1)
 
         # now cache the pmodel to make sure there is something to find
@@ -68,7 +69,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         # now try to retrieve it
         retreived_pmodel = pmc.get_penalty_model(spec, database=dbfile)
 
-        self.assertIs(retreived_pmodel.model.vartype, pm.SPIN)
+        self.assertIs(retreived_pmodel.model.vartype, dimod.SPIN)
 
         # check that the specification is equal to the retreived_pmodel
         self.assertTrue(spec.__eq__(retreived_pmodel))
@@ -85,7 +86,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         decision_variables = ('a', 'e')
         feasible_configurations = ((0, 0), (1, 1))  # equality
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: 0 for edge in graph.edges}
@@ -95,7 +96,7 @@ class TestInterfaceFunctions(unittest.TestCase):
             u, v = decision_variables
             assert (v, u) in quadratic
             quadratic[(v, u)] = -1
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         pmodel = pm.PenaltyModel.from_specification(spec, model, 2, -1)
 
         # now cache the pmodel to make sure there is something to find
@@ -104,7 +105,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         # now try to retrieve it
         retreived_pmodel = pmc.get_penalty_model(spec, database=dbfile)
 
-        self.assertIs(retreived_pmodel.model.vartype, pm.BINARY)
+        self.assertIs(retreived_pmodel.model.vartype, dimod.BINARY)
 
         # check that the specification is equal to the retreived_pmodel
         self.assertTrue(spec.__eq__(retreived_pmodel))
@@ -120,7 +121,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         decision_variables = (0, 5)
         feasible_configurations = ((0, 0), (1, 1))  # equality
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: 0 for edge in graph.edges}
@@ -130,20 +131,20 @@ class TestInterfaceFunctions(unittest.TestCase):
             u, v = decision_variables
             assert (v, u) in quadratic
             quadratic[(v, u)] = -1
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
         pmodel = pm.PenaltyModel.from_specification(spec, model, 2, -1)
 
         # now cache the pmodel to make sure there is something to find
 
         for thingy in itertools.permutations(range(6)):
             mapping = dict(enumerate(thingy))
-            pmodel = pmodel.relabel_variables(mapping, copy=True)
+            pmodel = pmodel.relabel_variables(mapping, inplace=False)
             pmc.cache_penalty_model(pmodel, database=dbfile)
 
         # now relabel some variables
         mapping = {1: '1', 2: '2', 3: '3', 4: '4'}
 
-        new_spec = spec.relabel_variables(mapping)
+        new_spec = spec.relabel_variables(mapping, inplace=True)
 
         # retrieve from the new_spec
         # now try to retrieve it
@@ -155,13 +156,13 @@ class TestInterfaceFunctions(unittest.TestCase):
         linear = {'1': 0.0, '0': -0.5, '3': 1.0, '2': -0.5}
         quadratic = {('0', '3'): -1.0, ('1', '2'): 1.0, ('0', '2'): 0.5, ('1', '3'): 1.0}
         offset = 0.0
-        model = pm.BinaryQuadraticModel(linear, quadratic, offset, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, offset, vartype=dimod.SPIN)
 
         graph = nx.Graph()
         graph.add_edges_from(quadratic)
         decision_variables = ('0', '2', '3')
         feasible_configurations = ((-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1))
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
 
         classical_gap = 2
         ground = -2.5
@@ -177,7 +178,7 @@ class TestInterfaceFunctions(unittest.TestCase):
         ret_pmodel = pmc.get_penalty_model(spec, database=dbfile)
 
         # now get back one with a different decision_variables
-        spec2 = pm.Specification(graph, ('3', '0', '2'), feasible_configurations, pm.SPIN)
+        spec2 = pm.Specification(graph, ('3', '0', '2'), feasible_configurations, dimod.SPIN)
         try:
             ret_pmodel = pmc.get_penalty_model(spec2, database=dbfile)
             self.assertNotEqual(ret_pmodel, pmodel)
