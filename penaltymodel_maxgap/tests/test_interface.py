@@ -3,6 +3,7 @@ import itertools
 
 import networkx as nx
 import penaltymodel as pm
+import dimod
 
 import penaltymodel_maxgap as maxgap
 
@@ -12,7 +13,7 @@ class TestInterface(unittest.TestCase):
     Test that the interface gives a penalty model corresponding to the specification"""
     def test_typical(self):
         graph = nx.complete_graph(3)
-        spec = pm.Specification(graph, [0, 1], {(-1, -1): 0, (+1, +1): 0}, pm.SPIN)
+        spec = pm.Specification(graph, [0, 1], {(-1, -1): 0, (+1, +1): 0}, dimod.SPIN)
 
         widget = maxgap.get_penalty_model(spec)
 
@@ -31,10 +32,10 @@ class TestInterface(unittest.TestCase):
         decision_variables = (0, 1)
         feasible_configurations = ((0, 0), (1, 1))  # equality
 
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=pm.BINARY)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, vartype=dimod.BINARY)
         widget = maxgap.get_penalty_model(spec)
 
-        self.assertIs(widget.model.vartype, pm.BINARY)
+        self.assertIs(widget.model.vartype, dimod.BINARY)
 
         # test the correctness of the widget
         energies = {}
@@ -67,7 +68,7 @@ class TestInterface(unittest.TestCase):
         decision_variables = tuple(mapping[x] for x in decision_variables)
 
         spin_configurations = tuple([tuple([2 * i - 1 for i in b]) for b in feasible_configurations])
-        spec = pm.Specification(graph, decision_variables, spin_configurations, vartype=pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, spin_configurations, vartype=dimod.SPIN)
 
         pm0 = maxgap.get_penalty_model(spec)
         self.check_generated_ising_model(pm0.feasible_configurations, pm0.decision_variables,
@@ -82,17 +83,17 @@ class TestInterface(unittest.TestCase):
 
         from dimod import ExactSolver
 
-        samples = ExactSolver().sample_ising(linear, quadratic)
+        response = ExactSolver().sample_ising(linear, quadratic)
 
         # samples are returned in order of energy
-        sample, ground = next(iter(samples.items()))
+        sample, ground = next(iter(response.data(['sample', 'energy'])))
         gap = float('inf')
 
         self.assertIn(tuple(sample[v] for v in decision_variables), feasible_configurations)
 
         seen_configs = set()
 
-        for sample, energy in samples.items():
+        for sample, energy in response.data(['sample', 'energy']):
             config = tuple(sample[v] for v in decision_variables)
 
             # we want the minimum energy for each config of the decisison variables,

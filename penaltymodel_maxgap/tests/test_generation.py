@@ -6,6 +6,7 @@ import itertools
 import networkx as nx
 import dwave_networkx as dnx
 import penaltymodel as pm
+import dimod
 
 import penaltymodel_maxgap as maxgap
 
@@ -50,19 +51,17 @@ class TestGeneration(unittest.TestCase):
         if not feasible_configurations:
             return
 
-        from dimod import ExactSolver
-
-        samples = ExactSolver().sample_ising(linear, quadratic)
+        response = dimod.ExactSolver().sample_ising(linear, quadratic)
 
         # samples are returned in order of energy
-        sample, ground = next(iter(samples.items()))
+        sample, ground = next(iter(response.data(['sample', 'energy'])))
         gap = float('inf')
 
         self.assertIn(tuple(sample[v] for v in decision_variables), feasible_configurations)
 
         seen_configs = set()
 
-        for sample, energy in samples.items():
+        for sample, energy in response.data(['sample', 'energy']):
             config = tuple(sample[v] for v in decision_variables)
 
             # we want the minimum energy for each config of the decisison variables,

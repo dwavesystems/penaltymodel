@@ -1,5 +1,6 @@
 from six import iteritems
 import penaltymodel as pm
+import dimod
 
 from penaltymodel_maxgap.generation import generate_ising
 
@@ -27,7 +28,7 @@ def get_penalty_model(specification):
 
     # check that the feasible_configurations are spin
     feasible_configurations = specification.feasible_configurations
-    if specification.vartype is pm.BINARY:
+    if specification.vartype is dimod.BINARY:
         feasible_configurations = {tuple(2 * v - 1 for v in config): en
                                    for config, en in iteritems(feasible_configurations)}
 
@@ -43,6 +44,6 @@ def get_penalty_model(specification):
                                                     None)  # unspecified smt solver
 
     # set of the model with 0.0 offset
-    model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, pm.SPIN)
+    model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, dimod.SPIN)
 
     return pm.PenaltyModel.from_specification(specification, model, gap, ground)

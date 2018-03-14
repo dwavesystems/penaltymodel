@@ -1,4 +1,5 @@
 six==1.11.0
-penaltymodel==0.12.2
+penaltymodel==0.13.1
 dwave_networkx==0.6.0
 pysmt==0.7.0
+dimod==0.6.3
