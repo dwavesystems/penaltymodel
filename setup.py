@@ -13,9 +13,10 @@ if _PY2:
 else:
     exec(open("./penaltymodel_cache/package_info.py").read())
 
-install_requires = ['penaltymodel>=0.12.0,<0.13.0',
+install_requires = ['penaltymodel>=0.13.0,<0.14.0',
                     'six>=1.11.0,<2.0.0',
-                    'homebase>=1.0.0,<2.0.0']
+                    'homebase>=1.0.0,<2.0.0',
+                    'dimod>=0.6.0,<0.7.0']
 
 extras_require = {}
 

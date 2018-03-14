@@ -11,6 +11,8 @@ import base64
 from six import itervalues
 import penaltymodel as pm
 
+import dimod
+
 from penaltymodel_cache.schema import schema
 from penaltymodel_cache.cache_manager import cache_file
 
@@ -468,7 +470,7 @@ def insert_penalty_model(cur, penalty_model):
     """
     encoded_data = {}
 
-    linear, quadratic, offset = penalty_model.model.as_ising()
+    linear, quadratic, offset = penalty_model.model.to_ising()
     nodelist = sorted(linear)
     edgelist = sorted(sorted(edge) for edge in penalty_model.graph.edges)
 
@@ -581,6 +583,6 @@ def iter_penalty_model_from_specification(cur, specification):
         linear = _decode_linear_biases(row['linear_biases'], nodelist)
         quadratic = _decode_quadratic_biases(row['quadratic_biases'], edgelist)
 
-        model = pm.BinaryQuadraticModel(linear, quadratic, row['offset'], pm.SPIN)  # always spin
+        model = dimod.BinaryQuadraticModel(linear, quadratic, row['offset'], dimod.SPIN)  # always spin
 
         yield pm.PenaltyModel.from_specification(specification, model, row['classical_gap'], row['ground_energy'])

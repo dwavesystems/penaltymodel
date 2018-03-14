@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import networkx as nx
 import penaltymodel as pm
+import dimod
 
 import penaltymodel_cache as pmc
 
@@ -139,11 +140,11 @@ class TestDatabaseManager(unittest.TestCase):
         graph = nx.path_graph(3)
         decision_variables = (0, 2)
         feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.SPIN)
+        spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
 
         linear = {v: 0 for v in graph}
         quadratic = {edge: -1 for edge in graph.edges}
-        model = pm.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=pm.SPIN)
+        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
 
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
