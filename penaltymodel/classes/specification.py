@@ -9,7 +9,8 @@ import itertools
 
 import networkx as nx
 
-from dimod import BinaryQuadraticModel, Vartype
+import dimod
+from dimod import BinaryQuadraticModel
 from six import itervalues, iteritems, iterkeys
 
 
@@ -116,6 +117,7 @@ class Specification(object):
             interaction - there is an edge between nodes u, v in `graph`.
 
     """
+    @dimod.vartype_argument('vartype')
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
                  ising_linear_ranges=None,
                  ising_quadratic_ranges=None):
@@ -169,17 +171,6 @@ class Specification(object):
         #
         # vartype
         #
-        try:
-            if isinstance(vartype, str):
-                vartype = Vartype[vartype]
-            else:
-                vartype = Vartype(vartype)
-            if not (vartype is Vartype.SPIN or vartype is Vartype.BINARY):
-                raise ValueError
-        except (ValueError, KeyError):
-            raise TypeError(("expected input vartype to be one of: "
-                             "Vartype.SPIN, 'SPIN', {-1, 1}, "
-                             "Vartype.BINARY, 'BINARY', or {0, 1}."))
         # check that our feasible configurations match
         seen_variable_types = set().union(*feasible_configurations)
         if not seen_variable_types.issubset(vartype.value):
