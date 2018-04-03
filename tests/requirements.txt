@@ -1,3 +1,0 @@
--r ../docs/requirements.txt
--r ../requirements.txt
-coverage

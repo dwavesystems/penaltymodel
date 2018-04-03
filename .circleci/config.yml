@@ -11,21 +11,19 @@ jobs:
 
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}
+          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
           name: install dependencies
           command: |
-            python --version
-            pip --version
             python -m virtualenv env
             . env/bin/activate
-            pip install -r tests/requirements.txt
+            pip install -r requirements.txt
 
       - save_cache:
           paths:
             - ./env
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
         
       - run:
           name: run tests
@@ -37,6 +35,12 @@ jobs:
       #     name: codecov
       #     command: |
       #       bash <(curl -s https://codecov.io/bash)
+
+      - run:
+          name: doctest
+          command: |
+            . env/bin/activate
+            make -C docs/ doctest
 
   test-3.5:
     <<: *template
