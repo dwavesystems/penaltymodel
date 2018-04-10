@@ -9,5 +9,5 @@ import penaltymodel.exceptions
 from penaltymodel.interface import *
 import penaltymodel.interface
 
-from penaltymodel.package_info import *
+from penaltymodel.package_info import __version__
 import penaltymodel.package_info
