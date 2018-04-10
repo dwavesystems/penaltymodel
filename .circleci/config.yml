@@ -1,34 +1,61 @@
 version: 2
 jobs:
 
-  test-penaltymodel-core-3.6: &full-test-template
+  test-3.6: &full-test-template
     docker:
       - image: circleci/python:3.6-jessie
 
     steps:
       - checkout
 
+      # penaltymodel-core
+
       - restore_cache:
           keys:
           - core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install dependencies
+          name: install core dependencies
           command: |
-            python -m virtualenv env
-            . env/bin/activate
+            python -m virtualenv envcore
+            . envcore/bin/activate
             pip install -r penaltymodel_core/requirements.txt
 
       - save_cache:
           paths:
-            - ./env
+            - ./envcore
           key: core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
         
       - run:
-          name: run tests
+          name: run core unittests
           command: |
-            . env/bin/activate
+            . envcore/bin/activate
             cd penaltymodel_core
+            python -m unittest discover
+
+      # penaltymodel-cache
+
+      - restore_cache:
+          keys:
+          - cache-dependencies-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: install cache dependencies
+          command: |
+            python -m virtualenv envcache
+            . envcache/bin/activate
+            pip install -r penaltymodel_cache/requirements.txt
+
+      - save_cache:
+          paths:
+            - ./envcache
+          key: cache-dependencies-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+        
+      - run:
+          name: run cache tests
+          command: |
+            . envcache/bin/activate
+            cd penaltymodel_cache
             python -m unittest discover
 
       # - run:
@@ -55,17 +82,17 @@ jobs:
       #       . installenv/bin/activate
       #       python -m unittest discover
 
-  test-penaltymodel-core-3.5:
+  test-3.5:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.5-jessie
 
-  test-penaltymodel-core-3.4:
+  test-3.4:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.4-jessie
 
-  test-penaltymodel-core-2.7:
+  test-2.7:
     <<: *full-test-template
     docker:
       - image: circleci/python:2.7-jessie
@@ -77,10 +104,6 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          keys:
-          - core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
       - run:
           name: install dependencies and penaltymodel-core
           command: |
@@ -89,11 +112,6 @@ jobs:
             cd penaltymodel_core
             pip install -r requirements.txt
             pip install .
-
-      - save_cache:
-          paths:
-            - ./env
-          key: core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
           name: verify version matches tag
@@ -118,22 +136,72 @@ jobs:
             python setup.py bdist_wheel
             twine upload dist/*
 
+  deploy-penaltymodel-cache:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    steps:
+      - checkout
+
+      - run:
+          name: install dependencies and penaltymodel-cache
+          command: |
+            python -m virtualenv env
+            . env/bin/activate
+            cd penaltymodel_cache
+            pip install -r requirements.txt
+            pip install .
+
+      - run:
+          name: verify version matches tag
+          command: |
+            . env/bin/activate
+            python ci_utils/verify_penaltymodel_cache_version.py
+
+      - run:
+          name: init .pypirc
+          command: |
+            cd penaltymodel_cache
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = dwtools-ci" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: make packages and upload
+          command: |
+            . env/bin/activate
+            cd penaltymodel_cache
+            python setup.py sdist
+            python setup.py bdist_wheel
+            twine upload dist/*
+
 workflows:
   version: 2
   test:
     jobs:
-      - test-penaltymodel-core-3.6
-      - test-penaltymodel-core-3.5
-      - test-penaltymodel-core-3.4
-      - test-penaltymodel-core-2.7
+      - test-3.6
+      - test-3.5
+      - test-3.4
+      - test-2.7
       - deploy-penaltymodel-core:
           requires:
-            - test-penaltymodel-core-3.6
-            - test-penaltymodel-core-3.5
-            - test-penaltymodel-core-3.4
-            - test-penaltymodel-core-2.7
+          - test-3.6
+          - test-3.5
+          - test-3.4
+          - test-2.7
           filters:
             tags:
               only: /penaltymodel-core [0-9]+(\.[0-9]+)(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - deploy-penaltymodel-cache:
+          requires:
+          - test-3.6
+          - test-3.5
+          - test-3.4
+          - test-2.7
+          filters:
+            tags:
+              only: /penaltymodel-cache [0-9]+(\.[0-9]+)(\.[0-9]+)*/
             branches:
               ignore: /.*/
