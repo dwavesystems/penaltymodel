@@ -10,111 +10,122 @@ jobs:
     steps:
       - checkout
 
+      #
       # penaltymodel-core
+      #
 
       - restore_cache:
           keys:
-          - core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install core dependencies
+          name: install penaltymodel-core dependencies
           command: |
-            python -m virtualenv envcore
-            . envcore/bin/activate
+            python -m virtualenv env
+            . env/bin/activate
             pip install -r penaltymodel_core/requirements.txt
 
       - save_cache:
           paths:
-            - ./envcore
-          key: core-dependencies-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - ./env
+          key: core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
         
       - run:
           name: run core unittests
           command: |
-            . envcore/bin/activate
+            . env/bin/activate
             cd penaltymodel_core
             python -m unittest discover
 
+      - run:
+          name: clear environment
+          command: |
+            rm -rf env
+
+      #
       # penaltymodel-cache
+      #
 
       - restore_cache:
           keys:
-          - cache-dependencies-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - cache-dep-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install cache dependencies
+          name: install penaltymodel-cache dependencies
           command: |
-            python -m virtualenv envcache
-            . envcache/bin/activate
-            pip install -r penaltymodel_cache/requirements.txt
+            python -m virtualenv env
+            . env/bin/activate
+            pip install -r penaltymodel_core/requirements.txt
+            cd penaltymodel_cache
+            pip install -r requirements.txt
 
       - save_cache:
           paths:
-            - ./envcache
-          key: cache-dependencies-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - ./env
+          key: cache-dep-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
         
       - run:
           name: run cache tests
           command: |
-            . envcache/bin/activate
+            . env/bin/activate
             cd penaltymodel_cache
             python -m unittest discover
 
+      - run:
+          name: clear environment
+          command: |
+            rm -rf env
+
+      #
       # penaltymodel-maxgap
+      #
 
       - restore_cache:
           keys:
-          - maxgap-dependencies-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - maxgap-dep-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install maxgap dependencies
+          name: install penaltymodel-maxgap dependencies
           command: |
-            python -m virtualenv envmaxgap
-            . envmaxgap/bin/activate
-            pip install -r penaltymodel_maxgap/requirements.txt
-
-      - save_cache:
-          paths:
-            - ./envmaxgap
-          key: maxgap-dependencies-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            python -m virtualenv env
+            . env/bin/activate
+            pip install -r penaltymodel_core/requirements.txt
+            cd penaltymodel_maxgap
+            pip install -r requirements.txt
 
       - run:
           name: install SMT solvers
+          # installs them in .smt_solvers
           command: |
-            . envmaxgap/bin/activate
+            . env/bin/activate
             pysmt-install --z3 --confirm-agreement
             pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/$PYTHON_TAG/site-packages/smt.pth
-        
+
+      - save_cache:
+          paths:
+            - ./env
+            - ~/.smt_solvers
+          key: maxgap-dep-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+
       - run:
           name: run maxgap tests
           command: |
-            . envmaxgap/bin/activate
+            . env/bin/activate
             cd penaltymodel_maxgap
             python -m unittest discover
 
-      # - run:
-      #     name: codecov
-      #     command: |
-      #       bash <(curl -s https://codecov.io/bash)
+      # doctests, reuse the maxgap environment rather than needing to install the smt again
 
-      # - run:
-      #     name: doctest
-      #     command: |
-      #       . env/bin/activate
-      #       make -C docs/ doctest
-
-      # - run:
-      #     name: install from setup.py
-      #     command: |
-      #       python -m virtualenv installenv
-      #       . installenv/bin/activate
-      #       pip install .
-        
-      # - run:
-      #     name: run tests
-      #     command: |
-      #       . installenv/bin/activate
-      #       python -m unittest discover
+      - run:
+          name: doctest
+          command: |
+            . env/bin/activate
+            cd docs
+            pip install -r requirements.txt
+            make doctest
 
   test-3.5:
     <<: *full-test-template
