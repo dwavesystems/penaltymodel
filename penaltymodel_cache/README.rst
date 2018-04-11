@@ -29,6 +29,7 @@ To build from source:
 
     cd penaltymodel_cache
     pip install -r requirements.txt
+    pip install -e ../penaltymodel_core/
     python setup.py install
 
 .. installation-end-marker
