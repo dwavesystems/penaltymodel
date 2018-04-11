@@ -2,10 +2,7 @@ sphinx
 sphinx_rtd_theme
 
 -r ../penaltymodel_core/requirements.txt
-../penaltymodel_core/
 
 -r ../penaltymodel_cache/requirements.txt
-../penaltymodel_cache/
 
 -r ../penaltymodel_maxgap/requirements.txt
-../penaltymodel_maxgap/

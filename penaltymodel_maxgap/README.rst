@@ -28,6 +28,7 @@ To build from source:
 
     cd penaltymodel_maxgap
     pip install -r requirements.txt
+    pip install -e ../penaltymodel_core/
     python setup.py install
 
 Note that this library will not function without smt solvers installed.
