@@ -2,32 +2,30 @@
 
 .. _contents:
 
-D-Wave Penalty Model
-====================
-
 .. include:: ../README.rst
-  :start-after: inclusion-marker-do-not-remove
+  :start-after: index-start-marker
+  :end-before: index-end-marker
 
 Documentation
 -------------
 
 .. only:: html
 
-    :Release: |version|
-    :Date: |today|
+  :Release: |version|
+  :Date: |today|
 
 .. toctree::
-   :maxdepth: 1
+  :maxdepth: 1
 
-   penaltymodel_code
-   using_factories
-   license
+  packages/index
+  installation
+  license
 
+.. toctree::
+  :caption: D-Wave's Ocean Software
+  :maxdepth: 1
 
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-* :ref:`glossary`
+  dwave
+  ocean
+  contributing
+  glossary

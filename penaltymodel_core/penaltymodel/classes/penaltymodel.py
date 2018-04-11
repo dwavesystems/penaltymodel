@@ -89,6 +89,8 @@ class PenaltyModel(Specification):
     Examples:
         The penalty model can be created from its component parts:
 
+        >>> import networkx as nx
+        >>> import dimod
         >>> graph = nx.path_graph(3)
         >>> decision_variables = (0, 2)  # the ends of the path
         >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree

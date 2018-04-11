@@ -1,0 +1,4 @@
+homebase==1.0.0
+six==1.11.0
+dimod==0.6.7
+../penaltymodel_core/
