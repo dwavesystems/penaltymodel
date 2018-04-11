@@ -4,6 +4,8 @@ jobs:
   test-3.6: &full-test-template
     docker:
       - image: circleci/python:3.6-jessie
+        environment:
+          PYTHON_TAG: python3.6
 
     steps:
       - checkout
@@ -58,6 +60,38 @@ jobs:
             cd penaltymodel_cache
             python -m unittest discover
 
+      # penaltymodel-maxgap
+
+      - restore_cache:
+          keys:
+          - maxgap-dependencies-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: install maxgap dependencies
+          command: |
+            python -m virtualenv envmaxgap
+            . envmaxgap/bin/activate
+            pip install -r penaltymodel_maxgap/requirements.txt
+
+      - save_cache:
+          paths:
+            - ./envmaxgap
+          key: maxgap-dependencies-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: install SMT solvers
+          command: |
+            . envmaxgap/bin/activate
+            pysmt-install --z3 --confirm-agreement
+            pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/$PYTHON_TAG/site-packages/smt.pth
+        
+      - run:
+          name: run maxgap tests
+          command: |
+            . envmaxgap/bin/activate
+            cd penaltymodel_maxgap
+            python -m unittest discover
+
       # - run:
       #     name: codecov
       #     command: |
@@ -86,16 +120,22 @@ jobs:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.5-jessie
+        environment:
+          PYTHON_TAG: python3.5
 
   test-3.4:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.4-jessie
+        environment:
+          PYTHON_TAG: python3.4
 
   test-2.7:
     <<: *full-test-template
     docker:
       - image: circleci/python:2.7-jessie
+        environment:
+          PYTHON_TAG: python2.7
 
   deploy-penaltymodel-core:
     docker:
@@ -175,6 +215,45 @@ jobs:
             python setup.py bdist_wheel
             twine upload dist/*
 
+  deploy-penaltymodel-maxgap:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    steps:
+      - checkout
+
+      - run:
+          name: install dependencies and penaltymodel-maxgap
+          command: |
+            python -m virtualenv env
+            . env/bin/activate
+            cd penaltymodel_maxgap
+            pip install -r requirements.txt
+            pip install .
+
+      - run:
+          name: verify version matches tag
+          command: |
+            . env/bin/activate
+            python ci_utils/verify_penaltymodel_maxgap_version.py
+
+      - run:
+          name: init .pypirc
+          command: |
+            cd penaltymodel_maxgap
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = dwtools-ci" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: make packages and upload
+          command: |
+            . env/bin/activate
+            cd penaltymodel_maxgap
+            python setup.py sdist
+            python setup.py bdist_wheel
+            twine upload dist/*
+
 workflows:
   version: 2
   test:
@@ -205,3 +284,15 @@ workflows:
               only: /penaltymodel-cache [0-9]+(\.[0-9]+)(\.[0-9]+)*/
             branches:
               ignore: /.*/
+      - deploy-penaltymodel-maxgap:
+          requires:
+          - test-3.6
+          - test-3.5
+          - test-3.4
+          - test-2.7
+          filters:
+            tags:
+              only: /penaltymodel-maxgap [0-9]+(\.[0-9]+)(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+

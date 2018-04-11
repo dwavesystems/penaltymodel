@@ -191,23 +191,23 @@ class TestGeneration(unittest.TestCase):
         self.check_linear_energy_ranges(h, linear_energy_ranges)
         self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
-    def test_specify_msat(self):
-        """Test a simple model specifying yices as the smt solver. Combined
-        with the other test_specify_... tests, serves as a smoke test for
-        the smt_solver_name parameter.
-        """
-        linear_energy_ranges = defaultdict(lambda: (-2., 2.))
-        quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
+    # def test_specify_msat(self):
+    #     """Test a simple model specifying yices as the smt solver. Combined
+    #     with the other test_specify_... tests, serves as a smoke test for
+    #     the smt_solver_name parameter.
+    #     """
+    #     linear_energy_ranges = defaultdict(lambda: (-2., 2.))
+    #     quadratic_energy_ranges = defaultdict(lambda: (-1., 1.))
 
-        graph = nx.complete_graph(3)
-        configurations = {(-1, -1): 0, (1, 1): 0}
-        decision_variables = [0, 1]
+    #     graph = nx.complete_graph(3)
+    #     configurations = {(-1, -1): 0, (1, 1): 0}
+    #     decision_variables = [0, 1]
 
-        h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
-                                                  linear_energy_ranges,
-                                                  quadratic_energy_ranges,
-                                                  'msat')
-        self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
+    #     h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
+    #                                               linear_energy_ranges,
+    #                                               quadratic_energy_ranges,
+    #                                               'msat')
+    #     self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
 
     def test_specify_z3(self):
         """Test a simple model specifying yices as the smt solver. Combined
