@@ -4,9 +4,9 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = penaltymodel_maxgap
+SPHINXPROJ    = penaltymodel
 SOURCEDIR     = .
-BUILDDIR      = build
+BUILDDIR      = _build
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -15,7 +15,7 @@ help:
 .PHONY: help Makefile
 
 clean:
-	-rm -rf build/*
+	-rm -rf $(BUILDDIR)
 	-rm -rf generated/*
 
 # Catch-all target: route all unknown targets to Sphinx using the new

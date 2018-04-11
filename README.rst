@@ -1,8 +1,3 @@
-D-Wave Penalty Model
-====================
-
-One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipedia.org/wiki/Constraint_satisfaction_problem>`_) using an `Ising model <https://en.wikipedia.org/wiki/Ising_model>`_ or a `QUBO <https://en.wikipedia.org/wiki/Quadratic_unconstrained_binary_optimization>`_, is to map each individual constraint in the CSP to a 'small' Ising model or QUBO. This mapping is called a *penalty model*.
-
 .. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/penaltymodel
 
@@ -10,20 +5,12 @@ One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipe
     :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. inclusion-marker-do-not-remove
+.. index-start-marker
 
-Installation
-------------
+D-Wave Penalty Model
+====================
 
-To install the core package:
-
-.. code-block:: bash
-
-    pip install penaltymodel
-
-
-Example Usage
--------------
+One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipedia.org/wiki/Constraint_satisfaction_problem>`_) using an `Ising model <https://en.wikipedia.org/wiki/Ising_model>`_ or a `QUBO <https://en.wikipedia.org/wiki/Quadratic_unconstrained_binary_optimization>`_, is to map each individual constraint in the CSP to a 'small' Ising model or QUBO. This mapping is called a *penalty model*.
 
 Imagine that we want to map an AND clause to a QUBO. In other words, we want the solutions
 to the QUBO (the solutions that minimize the energy) to be exactly the valid configurations
@@ -114,6 +101,24 @@ With all of the pieces, we can now build the penalty model.
 
     classical_gap = 1
     p_model = pm.PenaltyModel.from_specification(spec, qubo, classical_gap, ground_energy)
+
+.. index-end-marker
+
+This project is part of the `D-Wave Ocean <todo>`_ software stack.
+
+Installation
+------------
+
+.. installation-start-marker
+
+To install the core package:
+
+.. code-block:: bash
+
+    pip install penaltymodel
+
+.. installation-end-marker
+
 
 License
 -------

@@ -1,12 +1,16 @@
 D-Wave Penalty Model - Core
 ===========================
 
-.. inclusion-marker-do-not-remove
+.. index-start-marker
 
 The core penalty model package. Contains the logic shared in the penalty model ecosystem.
 
+.. index-end-marker
+
 Installation
 ------------
+
+.. installation-start-marker
 
 To install:
 
@@ -18,8 +22,11 @@ To build from souce:
 
 .. code-block:: bash
     
+    cd penatlymodel_core
     pip install -r requirements.txt
     python setup.py install
+
+.. installation-end-marker
 
 
 License

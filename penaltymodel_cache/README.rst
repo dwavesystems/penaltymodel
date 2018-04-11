@@ -1,21 +1,21 @@
-
-.. inclusion-marker-do-not-remove
-
 Penalty Model Cache
 ===================
 
-A local cache for penalty models. Serves as a factory and cache for penaltymodel_.
+.. index-start-marker
 
-How it works
-------------
+A local cache for penalty models. Serves as a factory and cache for penaltymodel.
 
 On install, penaltymodel_cache registers an entry point that can be read by
 penaltymodel. By identifying itself as both a cache and a factory, it will
 be used automatically by any project that uses penaltymodel's :code:`get_penalty_model`
 function. It will also be automatically populated
 
+.. index-end-marker
+
 Installing
 ----------
+
+.. installation-start-marker
 
 To install:
 
@@ -27,9 +27,11 @@ To build from source:
 
 .. code-block:: bash
 
-    git clone https://github.com/dwavesystems/penaltymodel_cache.git
     cd penaltymodel_cache
+    pip install -r requirements.txt
     python setup.py install
+
+.. installation-end-marker
 
 Cache Location
 --------------
@@ -42,5 +44,3 @@ License
 -------
 
 Released under the Apache License 2.0. See LICENSE
-
-.. _penaltymodel: https://github.com/dwavesystems/penaltymodel

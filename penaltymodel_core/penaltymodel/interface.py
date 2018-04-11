@@ -8,6 +8,8 @@ and installed on the python path can be accessed through the :func:`get_penalty_
 function.
 
 Examples:
+    >>> import networkx as nx
+    >>> import dimod
     >>> graph = nx.path_graph(5)
     >>> decision_variables = (0, 4)  # the ends of the path
     >>> feasible_configurations = {(-1, -1), (1, 1)}  # we want the ends of the path to agree
