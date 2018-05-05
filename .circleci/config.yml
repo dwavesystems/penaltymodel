@@ -107,13 +107,21 @@ jobs:
             - ~/.smt_solvers
           key: maxgap-dep-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
-
       - run:
           name: run maxgap tests
           command: |
             . env/bin/activate
             cd penaltymodel_maxgap
             python -m unittest discover
+
+      - run:
+          name: verify z3 installs with pip
+          command: |
+            python -m virtualenv tmp
+            . tmp/bin/activate
+            cd penaltymodel_maxgap
+            pip install -e ../penaltymodel_core/ .
+            python -m unittest penaltymodel_maxgap.tests.test_smt.TestTheta
 
       # doctests, reuse the maxgap environment rather than needing to install the smt again
 
