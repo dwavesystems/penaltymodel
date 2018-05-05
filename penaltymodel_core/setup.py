@@ -1,6 +1,15 @@
+import sys
 from setuptools import setup
 
-from penaltymodel.package_info import __version__, __author__, __description__, __authoremail__
+_PY2 = sys.version_info.major == 2
+
+# add __version__, __author__, __authoremail__, __description__ to this namespace
+# equivalent to:
+# from penaltymodel_cache.packaing_info import *
+if _PY2:
+    execfile("./penaltymodel/package_info.py")
+else:
+    exec(open("./penaltymodel/package_info.py").read())
 
 install_requires = ['dimod>=0.6.3,<0.7.0',
                     'six>=1.11.0,<2.0.0',
