@@ -34,10 +34,10 @@ To build from source:
 Note that this library will not function without smt solvers installed. The solvers
 are accessed through the pysmt_ package.
 
-In the standard setup (`pip install` or `setup.py install` above), Z3_ solver is installed
+In the standard setup (``pip install`` or ``setup.py install`` above), Z3_ solver is installed
 auto-magically. See the accompanying pysmt documentation for installing other smt solvers.
 
-In development mode (`pip install -e` or `setup.py develop`) solvers are not installed.
+In development mode (``pip install -e`` or ``setup.py develop``) solvers are not installed.
 Check pysmt_ documentation to see how to do it manually.
 
 .. _pysmt: https://github.com/pysmt/pysmt
