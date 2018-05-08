@@ -1,9 +1,17 @@
-.. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
-    :target: https://circleci.com/gh/dwavesystems/penaltymodel
+.. image:: https://img.shields.io/pypi/v/penaltymodel.svg
+    :target: https://pypi.python.org/pypi/penaltymodel
+
+.. image:: https://coveralls.io/repos/github/dwavesystems/penaltymodel/badge.svg?branch=master
+    :target: https://coveralls.io/github/dwavesystems/penaltymodel?branch=master
 
 .. image:: https://readthedocs.org/projects/penaltymodel/badge/?version=latest
     :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+
+.. image:: https://ci.appveyor.com/api/projects/status/cqfk8il1e4hgg7ih?svg=true
+    :target: https://ci.appveyor.com/project/dwave-adtt/penaltymodel
+
+.. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
+    :target: https://circleci.com/gh/dwavesystems/penaltymodel
 
 .. index-start-marker
 
