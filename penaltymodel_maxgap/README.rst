@@ -31,9 +31,14 @@ To build from source:
     pip install -e ../penaltymodel_core/
     python setup.py install
 
-Note that this library will not function without smt solvers installed.
-The solvers are accessed through the pysmt_ package. See the accompanying
-pysmt documentation for installing smt solvers.
+Note that this library will not function without smt solvers installed. The solvers
+are accessed through the pysmt_ package.
+
+In the standard setup (``pip install`` or ``setup.py install`` above), Z3_ solver is installed
+auto-magically. See the accompanying pysmt documentation for installing other smt solvers.
+
+In development mode (``pip install -e`` or ``setup.py develop``) solvers are not installed.
+Check pysmt_ documentation to see how to do it manually.
 
 .. _pysmt: https://github.com/pysmt/pysmt
 
@@ -43,3 +48,7 @@ License
 -------
 
 Released under the Apache License 2.0. See LICENSE
+
+The bundled Z3_ solver used by pysmt_ is licensed under the MIT license.
+
+.. _Z3: https://github.com/Z3Prover/z3
