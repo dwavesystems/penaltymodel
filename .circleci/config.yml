@@ -29,19 +29,19 @@ jobs:
           key: env-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &install-core-template
-          name: install penaltymodel ecosystem
+          name: install penaltymodel
           command: |
             . env/bin/activate
             pip install penaltymodel_core/
 
       - run: &install-cache-template
-          name: install penaltymodel ecosystem
+          name: install penaltymodel-cache
           command: |
             . env/bin/activate
             pip install penaltymodel_cache/
 
       - run: &install-maxgap-template
-          name: install penaltymodel ecosystem
+          name: install penaltymodel-maxgap
           command: |
             . env/bin/activate
             pip install penaltymodel_maxgap/
@@ -224,7 +224,7 @@ jobs:
             mkdir dist
 
       - run:
-          name: build sdist and bdist and upload
+          name: build sdist and bdist
           command: |
             . env/bin/activate
             cd penaltymodel_core
@@ -238,6 +238,75 @@ jobs:
             . env/bin/activate
             pip install twine
             twine upload dist/*
+
+  deploy-maxgap:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
+
+      - run: *install-maxgap-template
+
+      - run:
+          name: verify version matches tag
+          command: |
+            . env/bin/activate
+            pip install .
+            [[ "$(pip show penaltymodel-maxgap 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/penaltymodel-maxgap ([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+
+      - run: *pypirc-file-template
+
+      - run:
+          name: build sdist
+          command: |
+            . env/bin/activate
+            cd penaltymodel_maxgap
+            python setup.py sdist
+            mv dist/* ../dist/
+
+      - run: *twine-template
+
+  deploy-cache:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
+
+      - run: *install-cache-template
+
+      - run:
+          name: verify version matches tag
+          command: |
+            . env/bin/activate
+            pip install .
+            [[ "$(pip show penaltymodel-cache 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/penaltymodel-cache ([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+
+      - run: *pypirc-file-template
+
+      - run:
+          name: build bdist and sdist
+          command: |
+            . env/bin/activate
+            cd penaltymodel_cache
+            python setup.py sdist
+            python setup.py bdist_wheel
+            mv dist/* ../dist/
+
+      - run: *twine-template
 
 workflows:
   version: 2
@@ -259,15 +328,15 @@ workflows:
               only: /^penaltymodel [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
-      # - deploy-cache:
-      #     filters:
-      #       tags:
-      #         only: /^penaltymodel-cache [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-      #       branches:
-      #         ignore: /.*/
-      # - deploy-maxgap:
-      #     filters:
-      #       tags:
-      #         only: /^penaltymodel-maxgap [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-      #       branches:
-      #         ignore: /.*/
+      - deploy-cache:
+          filters:
+            tags:
+              only: /^penaltymodel-cache [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+            branches:
+              ignore: /.*/
+      - deploy-maxgap:
+          filters:
+            tags:
+              only: /^penaltymodel-maxgap [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+            branches:
+              ignore: /.*/
