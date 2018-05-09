@@ -4,8 +4,6 @@ from setuptools import setup
 _PY2 = sys.version_info.major == 2
 
 # add __version__, __author__, __authoremail__, __description__ to this namespace
-# equivalent to:
-# from penaltymodel_cache.packaing_info import *
 if _PY2:
     execfile("./penaltymodel/package_info.py")
 else:
