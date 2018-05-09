@@ -14,7 +14,7 @@ install_requires = ['dimod>=0.6.3,<0.7.0',
                     'networkx>=2.0,<3.0',
                     'enum34>=1.1.6,<2.0.0']
 extras_require = {'all': ['penaltymodel_cache>=0.2.0,<0.3.0',
-                          'penaltymodel_maxgap>=0.2.0,<0.3.0']}
+                          'penaltymodel_maxgap>=0.3.0,<0.4.0']}
 
 packages = ['penaltymodel',
             'penaltymodel.classes']
