@@ -1,0 +1,27 @@
+environment:
+
+  matrix:
+
+    # https://www.appveyor.com/docs/build-environment/#python
+
+    - PYTHON: "C:\\Python27"
+    - PYTHON: "C:\\Python27-x64"
+    - PYTHON: "C:\\Python35"
+    - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python36-x64"
+
+install:
+  - "%PYTHON%\\python.exe --version"
+  - "%PYTHON%\\python.exe -m pip install -r requirements.txt"
+  - "%PYTHON%\\python.exe -m pip install penaltymodel_core\\"
+  - "%PYTHON%\\python.exe -m pip install penaltymodel_cache\\"
+  - "%PYTHON%\\python.exe -m pip install penaltymodel_maxgap\\"
+
+build: off
+
+test_script:
+  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_core"
+  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_cache"
+  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_maxgap"
+  - "%PYTHON%\\python.exe -m unittest discover"

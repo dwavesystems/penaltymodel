@@ -4,264 +4,306 @@ jobs:
   test-3.6: &full-test-template
     docker:
       - image: circleci/python:3.6-jessie
-        environment:
-          PYTHON_TAG: python3.6
 
     steps:
       - checkout
 
-      #
-      # penaltymodel-core
-      #
-
       - restore_cache:
           keys:
-            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - env-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
-      - run:
-          name: install penaltymodel-core dependencies
+      - run: &create-virtualenv-template
+          name: create virtual environement
           command: |
             python -m virtualenv env
+
+      - run: &install-requirements-template
+          name: install requirements
+          command: |
             . env/bin/activate
-            pip install -r penaltymodel_core/requirements.txt
+            pip install -r requirements.txt
 
       - save_cache:
           paths:
             - ./env
-          key: core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: env-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: &install-core-template
+          name: install penaltymodel
+          command: |
+            . env/bin/activate
+            pip install penaltymodel_core/
+
+      - run: &install-cache-template
+          name: install penaltymodel-cache
+          command: |
+            . env/bin/activate
+            pip install penaltymodel_cache/
+
+      - run: &install-maxgap-template
+          name: install penaltymodel-maxgap
+          command: |
+            . env/bin/activate
+            pip install penaltymodel_maxgap/
+
+      - run: &core-tests-template
+          name: core tests
+          command: |
+            . env/bin/activate
+            coverage run -a -m unittest discover -s penaltymodel_core/
         
-      - run:
-          name: run core unittests
+      - run: &cache-tests-template
+          name: cache tests
           command: |
             . env/bin/activate
-            cd penaltymodel_core
+            coverage run -a -m unittest discover -s penaltymodel_cache/
+
+      - run: &maxgap-tests-template
+          name: maxgap tests
+          command: |
+            . env/bin/activate
+            coverage run -a -m unittest discover -s penaltymodel_maxgap/
+
+      - run: &integration-tests-template
+          name: integration tests
+          command: |
+            . env/bin/activate
             python -m unittest discover
-
-      - run:
-          name: clear environment
-          command: |
-            rm -rf env
-
-      #
-      # penaltymodel-cache
-      #
-
-      - restore_cache:
-          keys:
-            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-            - cache-dep-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run:
-          name: install penaltymodel-cache dependencies
-          command: |
-            python -m virtualenv env
-            . env/bin/activate
-            pip install -r penaltymodel_cache/requirements.txt
-            pip install -e penaltymodel_core/
-
-      - save_cache:
-          paths:
-            - ./env
-          key: cache-dep-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-        
-      - run:
-          name: run cache tests
-          command: |
-            . env/bin/activate
-            cd penaltymodel_cache
-            python -m unittest discover
-
-      - run:
-          name: clear environment
-          command: |
-            rm -rf env
-
-      #
-      # penaltymodel-maxgap
-      #
-
-      - restore_cache:
-          keys:
-            - core-dep-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-            - maxgap-dep-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run:
-          name: install penaltymodel-maxgap dependencies
-          command: |
-            python -m virtualenv env
-            . env/bin/activate
-            pip install -r penaltymodel_maxgap/requirements.txt
-            pip install -e penaltymodel_core/
-
-      - run:
-          name: install SMT solvers
-          # installs them in .smt_solvers
-          command: |
-            . env/bin/activate
-            pysmt-install --z3 --confirm-agreement
-            pysmt-install --env | sed -e 's/export PYTHONPATH="//g' | sed -e 's/:${PYTHONPATH}"//g' > $VIRTUAL_ENV/lib/$PYTHON_TAG/site-packages/smt.pth
-
-      - save_cache:
-          paths:
-            - ./env
-            - ~/.smt_solvers
-          key: maxgap-dep-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-
-      - run:
-          name: run maxgap tests
-          command: |
-            . env/bin/activate
-            cd penaltymodel_maxgap
-            python -m unittest discover
-
-      # doctests, reuse the maxgap environment rather than needing to install the smt again
 
       - run:
           name: doctest
           command: |
             . env/bin/activate
-            cd docs
-            pip install -r requirements.txt
-            make doctest
+            make -C docs/ doctest
+
+      - run:
+          # requires COVERALLS_REPO_TOKEN env variable
+          name: coveralls
+          command: |
+            . env/bin/activate
+            if [[ -v COVERALLS_REPO_TOKEN ]]; then coveralls; fi
 
   test-3.5:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.5-jessie
-        environment:
-          PYTHON_TAG: python3.5
 
   test-3.4:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.4-jessie
-        environment:
-          PYTHON_TAG: python3.4
 
   test-2.7:
     <<: *full-test-template
     docker:
       - image: circleci/python:2.7-jessie
-        environment:
-          PYTHON_TAG: python2.7
 
-  deploy-penaltymodel-core:
-    docker:
-      - image: circleci/python:3.6-jessie
+  test-osx:
+    macos:
+      xcode: "9.0"
+
+    working_directory: ~/repo
 
     steps:
       - checkout
 
-      - run:
-          name: install dependencies and penaltymodel-core
+      - run: 
+          name: install pyenv
           command: |
+            brew install pyenv
+
+      - restore_cache:
+          keys:
+          - pyenv-versions-{{ .Environment.CIRCLE_JOB }}
+          - env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: install python 2.7.14 and 3.6.5 with pyenv
+          command: |
+            pyenv install 2.7.14 -s
+            pyenv install 3.6.5 -s
+
+      - save_cache:
+          paths:
+            - ~/.pyenv
+          key: pyenv-versions-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: create virtualenv for 2.7.14
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local 2.7.14
+            python -m pip install virtualenv
             python -m virtualenv env
-            . env/bin/activate
-            cd penaltymodel_core
-            pip install -r requirements.txt
-            pip install .
+
+      - run: *install-requirements-template
+
+      - save_cache:
+          paths:
+            - ./env
+          key: env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: *install-core-template
+
+      - run: *install-cache-template
+
+      - run: *install-maxgap-template
+
+      - run: *core-tests-template
+
+      - run: *cache-tests-template
+
+      - run: *maxgap-tests-template
+
+      - run: *integration-tests-template
+
+      - run:
+          name: clear virtual environment
+          command: |
+            rm -rf env
+
+      - restore_cache:
+          keys:
+          - env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: create virtualenv for 3.6.5
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local 3.6.5
+            python -m pip install virtualenv
+            python -m virtualenv env
+
+      - run: *install-requirements-template
+
+      - save_cache:
+          paths:
+            - ./env
+          key: env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: *install-core-template
+
+      - run: *install-cache-template
+
+      - run: *install-maxgap-template
+
+      - run: *core-tests-template
+
+      - run: *cache-tests-template
+
+      - run: *maxgap-tests-template
+
+      - run: *integration-tests-template
+
+  deploy-core:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
 
       - run:
           name: verify version matches tag
           command: |
             . env/bin/activate
-            python ci_utils/verify_penaltymodel_version.py
+            [[ "$(pip show penaltymodel 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/core-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
 
-      - run:
+      - run: &pypirc-file-template
           name: init .pypirc
           command: |
-            cd penaltymodel_core
             echo -e "[pypi]" >> ~/.pypirc
             echo -e "username = dwtools-ci" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+            mkdir dist
 
       - run:
-          name: make packages and upload
+          name: build sdist and bdist
           command: |
             . env/bin/activate
             cd penaltymodel_core
             python setup.py sdist
             python setup.py bdist_wheel
+            mv dist/* ../dist/
+
+      - run: &twine-template
+          name: upload
+          command: |
+            . env/bin/activate
+            pip install twine
             twine upload dist/*
 
-  deploy-penaltymodel-cache:
+  deploy-maxgap:
     docker:
       - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
 
     steps:
       - checkout
 
-      - run:
-          name: install dependencies and penaltymodel-cache
-          command: |
-            python -m virtualenv env
-            . env/bin/activate
-            cd penaltymodel_cache
-            pip install -r requirements.txt
-            pip install .
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
+
+      - run: *install-maxgap-template
 
       - run:
           name: verify version matches tag
           command: |
             . env/bin/activate
-            python ci_utils/verify_penaltymodel_cache_version.py
+            [[ "$(pip show penaltymodel-maxgap 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/maxgap-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+
+      - run: *pypirc-file-template
 
       - run:
-          name: init .pypirc
-          command: |
-            cd penaltymodel_cache
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = dwtools-ci" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-
-      - run:
-          name: make packages and upload
+          name: build sdist
           command: |
             . env/bin/activate
-            cd penaltymodel_cache
+            cd penaltymodel_maxgap
             python setup.py sdist
-            python setup.py bdist_wheel
-            twine upload dist/*
+            mv dist/* ../dist/
 
-  deploy-penaltymodel-maxgap:
+      - run: *twine-template
+
+  deploy-cache:
     docker:
       - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
 
     steps:
       - checkout
 
-      - run:
-          name: install dependencies and penaltymodel-maxgap
-          command: |
-            python -m virtualenv env
-            . env/bin/activate
-            cd penaltymodel_maxgap
-            pip install -r requirements.txt
-            pip install .
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
+
+      - run: *install-cache-template
 
       - run:
           name: verify version matches tag
           command: |
             . env/bin/activate
-            python ci_utils/verify_penaltymodel_maxgap_version.py
+            [[ "$(pip show penaltymodel-cache 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/cache-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+
+      - run: *pypirc-file-template
 
       - run:
-          name: init .pypirc
-          command: |
-            cd penaltymodel_maxgap
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = dwtools-ci" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-
-      - run:
-          name: make packages and upload
+          name: build bdist and sdist
           command: |
             . env/bin/activate
-            cd penaltymodel_maxgap
+            cd penaltymodel_cache
             python setup.py sdist
             python setup.py bdist_wheel
-            twine upload dist/*
+            mv dist/* ../dist/
+
+      - run: *twine-template
 
 workflows:
   version: 2
@@ -271,37 +313,27 @@ workflows:
       - test-3.5
       - test-3.4
       - test-2.7
-      - deploy-penaltymodel-core:
+      - test-osx:
           requires:
-          - test-3.6
-          - test-3.5
-          - test-3.4
-          - test-2.7
+            - test-3.6
+            - test-2.7
+            - test-3.5
+            - test-3.4
+      - deploy-core:
           filters:
             tags:
-              only: /penaltymodel-core [0-9]+(\.[0-9]+)(\.[0-9]+)*/
+              only: /^core-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
-      - deploy-penaltymodel-cache:
-          requires:
-          - test-3.6
-          - test-3.5
-          - test-3.4
-          - test-2.7
+      - deploy-cache:
           filters:
             tags:
-              only: /penaltymodel-cache [0-9]+(\.[0-9]+)(\.[0-9]+)*/
+              only: /^cache-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
-      - deploy-penaltymodel-maxgap:
-          requires:
-          - test-3.6
-          - test-3.5
-          - test-3.4
-          - test-2.7
+      - deploy-maxgap:
           filters:
             tags:
-              only: /penaltymodel-maxgap [0-9]+(\.[0-9]+)(\.[0-9]+)*/
+              only: /^maxgap-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
-

@@ -1,8 +1,0 @@
-sphinx
-sphinx_rtd_theme
-
--r ../penaltymodel_core/requirements.txt
-
--r ../penaltymodel_cache/requirements.txt
-
--r ../penaltymodel_maxgap/requirements.txt

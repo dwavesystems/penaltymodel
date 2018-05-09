@@ -1,0 +1,9 @@
+[run]
+source =
+    penaltymodel_core/
+    penaltymodel_cache/
+    penaltymodel_maxgap/
+
+[report]
+exclude_lines:
+    pragma: no cover
