@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/pypi/v/penaltymodel-maxgap.svg
+    :target: https://pypi.python.org/pypi/penaltymodel-maxgap
+
 D-Wave Penalty Model Max-gap
 ============================
 

@@ -1,6 +1,3 @@
-.. image:: https://img.shields.io/pypi/v/penaltymodel.svg
-    :target: https://pypi.python.org/pypi/penaltymodel
-
 .. image:: https://coveralls.io/repos/github/dwavesystems/penaltymodel/badge.svg?branch=master
     :target: https://coveralls.io/github/dwavesystems/penaltymodel?branch=master
 

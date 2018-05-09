@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/pypi/v/penaltymodel.svg
+    :target: https://pypi.python.org/pypi/penaltymodel
+
 D-Wave Penalty Model - Core
 ===========================
 

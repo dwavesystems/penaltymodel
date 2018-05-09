@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/pypi/v/penaltymodel-cache.svg
+    :target: https://pypi.python.org/pypi/penaltymodel-cache
+
 Penalty Model Cache
 ===================
 
