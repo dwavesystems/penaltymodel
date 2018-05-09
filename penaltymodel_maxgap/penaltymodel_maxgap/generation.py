@@ -11,8 +11,8 @@ import itertools
 from collections import defaultdict
 
 from six import iteritems
-from pysmt.shortcuts import Solver
 import penaltymodel as pm
+from pysmt.shortcuts import Solver
 
 from penaltymodel_maxgap.smt import Table
 
