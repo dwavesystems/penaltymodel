@@ -213,7 +213,7 @@ jobs:
           command: |
             . env/bin/activate
             pip install .
-            [[ "$(pip show penaltymodel 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/penaltymodel ([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+            [[ "$(pip show penaltymodel 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/core-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
 
       - run: &pypirc-file-template
           name: init .pypirc
@@ -259,7 +259,7 @@ jobs:
           command: |
             . env/bin/activate
             pip install .
-            [[ "$(pip show penaltymodel-maxgap 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/penaltymodel-maxgap ([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+            [[ "$(pip show penaltymodel-maxgap 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/maxgap-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
 
       - run: *pypirc-file-template
 
@@ -293,7 +293,7 @@ jobs:
           command: |
             . env/bin/activate
             pip install .
-            [[ "$(pip show penaltymodel-cache 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/penaltymodel-cache ([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+            [[ "$(pip show penaltymodel-cache 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/cache-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
 
       - run: *pypirc-file-template
 
@@ -325,18 +325,18 @@ workflows:
       - deploy-core:
           filters:
             tags:
-              only: /^penaltymodel [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+              only: /^core-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
       - deploy-cache:
           filters:
             tags:
-              only: /^penaltymodel-cache [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+              only: /^cache-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
       - deploy-maxgap:
           filters:
             tags:
-              only: /^penaltymodel-maxgap [0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+              only: /^maxgap-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
