@@ -13,9 +13,13 @@ jobs:
             - env-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install requirements
+          name: create virtual environement
           command: |
             python -m virtualenv env
+
+      - run: &install-requirements-template
+          name: install requirements
+          command: |
             . env/bin/activate
             pip install -r requirements.txt
 
@@ -24,7 +28,7 @@ jobs:
             - ./env
           key: env-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
-      - run:
+      - run: &install-ecosystem-template
           name: install penaltymodel ecosystem
           command: |
             . env/bin/activate
@@ -32,25 +36,25 @@ jobs:
             pip install penaltymodel_cache/
             pip install penaltymodel_maxgap/
 
-      - run:
+      - run: &core-tests-template
           name: core tests
           command: |
             . env/bin/activate
             coverage run -a -m unittest discover -s penaltymodel_core/
         
-      - run:
+      - run: &cache-tests-template
           name: cache tests
           command: |
             . env/bin/activate
             coverage run -a -m unittest discover -s penaltymodel_cache/
 
-      - run:
+      - run: &maxgap-tests-template
           name: maxgap tests
           command: |
             . env/bin/activate
             coverage run -a -m unittest discover -s penaltymodel_maxgap/
 
-      - run:
+      - run: &integration-tests-template
           name: integration tests
           command: |
             . env/bin/activate
@@ -84,6 +88,95 @@ jobs:
     docker:
       - image: circleci/python:2.7-jessie
 
+  test-osx:
+    macos:
+      xcode: "9.0"
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run: 
+          name: install pyenv
+          command: |
+            brew install pyenv
+
+      - restore_cache:
+          keys:
+          - pyenv-versions-{{ .Environment.CIRCLE_JOB }}
+          - env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: install python 2.7.14 and 3.6.5 with pyenv
+          command: |
+            pyenv install 2.7.14 -s
+            pyenv install 3.6.5 -s
+
+      - save_cache:
+          paths:
+            - ~/.pyenv
+          key: pyenv-versions-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: create virtualenv for 2.7.14
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local 2.7.14
+            python -m pip install virtualenv
+            python -m virtualenv env
+
+      - run: *install-requirements-template
+
+      - save_cache:
+          paths:
+            - ./env
+          key: env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: *install-ecosystem-template
+
+      - run: *core-tests-template
+
+      - run: *cache-tests-template
+
+      - run: *maxgap-tests-template
+
+      - run: *integration-tests-template
+
+      - run:
+          name: clear virtual environment
+          command: |
+            rm -rf env
+
+      - restore_cache:
+          keys:
+          - env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: create virtualenv for 3.6.5
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local 3.6.5
+            python -m pip install virtualenv
+            python -m virtualenv env
+
+      - run: *install-requirements-template
+
+      - save_cache:
+          paths:
+            - ./env
+          key: env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: *install-ecosystem-template
+
+      - run: *core-tests-template
+
+      - run: *cache-tests-template
+
+      - run: *maxgap-tests-template
+
+      - run: *integration-tests-template
+
 workflows:
   version: 2
   test:
@@ -92,3 +185,9 @@ workflows:
       - test-3.5
       - test-3.4
       - test-2.7
+      - test-osx:
+          requires:
+            - test-3.6
+            - test-2.7
+            - test-3.5
+            - test-3.4
