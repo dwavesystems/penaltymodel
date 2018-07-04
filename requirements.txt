@@ -4,6 +4,8 @@
 
 -r penaltymodel_maxgap/requirements.txt
 
+-r penaltymodel_ortools/requirements.txt
+
 sphinx
 sphinx_rtd_theme
 
