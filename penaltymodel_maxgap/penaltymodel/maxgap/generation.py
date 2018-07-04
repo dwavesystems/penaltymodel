@@ -11,10 +11,10 @@ import itertools
 from collections import defaultdict
 
 from six import iteritems
-import penaltymodel as pm
+import penaltymodel.core as pm
 from pysmt.shortcuts import Solver
 
-from penaltymodel_maxgap.smt import Table
+from penaltymodel.maxgap.smt import Table
 
 __all__ = ['generate_ising']
 

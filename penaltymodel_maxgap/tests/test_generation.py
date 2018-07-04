@@ -5,10 +5,10 @@ import itertools
 
 import networkx as nx
 import dwave_networkx as dnx
-import penaltymodel as pm
+import penaltymodel.core as pm
 import dimod
 
-import penaltymodel_maxgap as maxgap
+import penaltymodel.maxgap as maxgap
 
 from pysmt.environment import get_env, reset_env
 
