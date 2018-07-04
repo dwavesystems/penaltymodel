@@ -22,7 +22,7 @@ Functions and Utilities
 
 from pkg_resources import iter_entry_points
 
-from penaltymodel.exceptions import FactoryException, ImpossiblePenaltyModel
+from penaltymodel.core.exceptions import FactoryException, ImpossiblePenaltyModel
 
 __all__ = ['FACTORY_ENTRYPOINT', 'CACHE_ENTRYPOINT', 'get_penalty_model', 'penaltymodel_factory',
            'iter_factories', 'iter_caches']

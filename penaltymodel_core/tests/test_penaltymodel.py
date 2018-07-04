@@ -4,7 +4,7 @@ import itertools
 
 import networkx as nx
 
-import penaltymodel as pm
+import penaltymodel.core as pm
 
 import dimod
 

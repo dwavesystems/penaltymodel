@@ -1,5 +1,5 @@
 Database Schema
 ===============
 
-.. literalinclude:: ../../../penaltymodel_cache/penaltymodel_cache/schema.py
+.. literalinclude:: ../../../penaltymodel_cache/penaltymodel/cache/schema.py
     :language: python

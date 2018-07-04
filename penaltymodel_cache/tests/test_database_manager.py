@@ -6,10 +6,10 @@ import os
 from collections import defaultdict
 
 import networkx as nx
-import penaltymodel as pm
+import penaltymodel.core as pm
 import dimod
 
-import penaltymodel_cache as pmc
+import penaltymodel.cache as pmc
 
 
 class TestConnectionAndConfiguration(unittest.TestCase):

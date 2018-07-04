@@ -1,8 +1,8 @@
 from six import iteritems
-import penaltymodel as pm
+import penaltymodel.core as pm
 import dimod
 
-from penaltymodel_maxgap.generation import generate_ising
+from penaltymodel.maxgap.generation import generate_ising
 
 __all__ = ['get_penalty_model']
 

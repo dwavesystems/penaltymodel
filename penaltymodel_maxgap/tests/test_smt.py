@@ -8,10 +8,10 @@ from pysmt.shortcuts import GT, LT, And, Equals, GE, LE, Not
 import networkx as nx
 import dwave_networkx as dnx
 
-from penaltymodel_maxgap.smt import Theta, Table, limitReal
+from penaltymodel.maxgap.smt import Theta, Table, limitReal
 
 
-F = lambda x: Fraction(x).limit_denominator()
+def F(x): return Fraction(x).limit_denominator()
 
 
 class TestTheta(pysmt.test.TestCase):

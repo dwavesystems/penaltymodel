@@ -4,9 +4,9 @@ import networkx as nx
 
 import dimod
 
-import penaltymodel as pm
-import penaltymodel_cache as pmc
-import penaltymodel_maxgap as maxgap
+import penaltymodel.core as pm
+import penaltymodel.cache as pmc
+import penaltymodel.maxgap as maxgap
 
 
 class TestInterfaceWithCache(unittest.TestCase):

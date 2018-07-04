@@ -2,10 +2,10 @@ import unittest
 import itertools
 
 import networkx as nx
-import penaltymodel as pm
+import penaltymodel.core as pm
 import dimod
 
-import penaltymodel_maxgap as maxgap
+import penaltymodel.maxgap as maxgap
 
 
 class TestInterface(unittest.TestCase):

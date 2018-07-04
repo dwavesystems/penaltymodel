@@ -1,5 +1,5 @@
 Interface
 =========
 
-.. automodule:: penaltymodel_cache.interface
+.. automodule:: penaltymodel.cache.interface
     :members:

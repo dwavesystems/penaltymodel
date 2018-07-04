@@ -3,11 +3,11 @@ Included Classes
 
 .. py:currentmodule:: penaltymodel
 
-.. automodule:: penaltymodel.classes.penaltymodel
+.. automodule:: penaltymodel.core.classes.penaltymodel
 .. autoclass:: PenaltyModel
     :members:
     :inherited-members:
 
-.. automodule:: penaltymodel.classes.specification
+.. automodule:: penaltymodel.core.classes.specification
 .. autoclass:: Specification
     :members:
