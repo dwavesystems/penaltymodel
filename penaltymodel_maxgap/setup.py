@@ -71,7 +71,7 @@ setup(
     setup_requires=setup_requires,
     install_requires=install_requires,
     extras_require=extras_require,
-    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel_maxgap:get_penalty_model']},
+    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel.maxgap:get_penalty_model']},
     cmdclass={'install': PysmtSolverInstall},
     zip_safe=False
 )

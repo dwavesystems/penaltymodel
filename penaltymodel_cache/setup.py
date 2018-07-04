@@ -35,7 +35,7 @@ setup(
     packages=packages,
     install_requires=install_requires,
     extras_require=extras_require,
-    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel_cache:get_penalty_model'],
-                  'penaltymodel_cache': ['penaltymodel_cache = penaltymodel_cache:cache_penalty_model']},
+    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel.cache:get_penalty_model'],
+                  'penaltymodel_cache': ['penaltymodel_cache = penaltymodel.cache:cache_penalty_model']},
     zip_safe=False
 )
