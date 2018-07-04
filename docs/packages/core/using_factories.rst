@@ -3,8 +3,8 @@ Using PenaltyModel Factories
 
 .. py:currentmodule:: penaltymodel
 
-.. automodule:: penaltymodel.interface
+.. automodule:: penaltymodel.core.interface
     :members:
 
-.. automodule:: penaltymodel.exceptions
+.. automodule:: penaltymodel.core.exceptions
     :members:

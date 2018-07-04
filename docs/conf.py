@@ -102,9 +102,9 @@ modindex_common_prefix = ['penaltymodel.']
 
 doctest_global_setup = \
     """
-import penaltymodel as pm
-import penaltymodel_cache as pmc
-import penaltymodel_maxgap as maxgap
+import penaltymodel.core as pm
+import penaltymodel.cache as pmc
+import penaltymodel.maxgap as maxgap
     """
 
 

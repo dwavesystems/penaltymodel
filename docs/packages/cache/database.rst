@@ -1,5 +1,5 @@
 Database Utilities
 ==================
 
-.. automodule:: penaltymodel_cache.database_manager
+.. automodule:: penaltymodel.cache.database_manager
     :members:

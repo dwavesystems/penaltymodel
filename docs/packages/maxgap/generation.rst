@@ -1,5 +1,5 @@
 SMT Generation
 ==============
 
-.. automodule:: penaltymodel_maxgap.generation
+.. automodule:: penaltymodel.maxgap.generation
     :members:

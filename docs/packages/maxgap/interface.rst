@@ -1,5 +1,5 @@
 Interface
 =========
 
-.. automodule:: penaltymodel_maxgap.interface
+.. automodule:: penaltymodel.maxgap.interface
     :members:

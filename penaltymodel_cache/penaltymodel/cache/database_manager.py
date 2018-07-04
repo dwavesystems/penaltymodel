@@ -455,7 +455,7 @@ def insert_penalty_model(cur, penalty_model):
 
     Examples:
         >>> import networkx as nx
-        >>> import penaltymodel as pm
+        >>> import penaltymodel.core as pm
         >>> import dimod
         >>> graph = nx.path_graph(3)
         >>> decision_variables = (0, 2)
