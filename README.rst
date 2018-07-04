@@ -10,10 +10,28 @@
 .. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/penaltymodel
 
+Included Packages
+=================
+
++---------------------------------+---------------------------------+
+| penaltymodel                    | |core|                          |
++---------------------------------+---------------------------------+
+| penaltymodel-cache              | |cache|                         |
++---------------------------------+---------------------------------+
+| penatlymodel-maxgap             | |maxgap|                        |
++---------------------------------+---------------------------------+
+
+.. |core| image:: https://img.shields.io/pypi/v/penaltymodel.svg
+.. _core: https://pypi.python.org/pypi/penaltymodel
+.. |cache| image:: https://img.shields.io/pypi/v/penaltymodel-cache.svg
+.. _cache: https://pypi.python.org/pypi/penaltymodel-cache
+.. |maxgap| image:: https://img.shields.io/pypi/v/penaltymodel-maxgap.svg
+.. _maxgap: https://pypi.python.org/pypi/penaltymodel-maxgap
+
 .. index-start-marker
 
-D-Wave Penalty Model
-====================
+Penalty Model
+=============
 
 One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipedia.org/wiki/Constraint_satisfaction_problem>`_) using an `Ising model <https://en.wikipedia.org/wiki/Ising_model>`_ or a `QUBO <https://en.wikipedia.org/wiki/Quadratic_unconstrained_binary_optimization>`_, is to map each individual constraint in the CSP to a 'small' Ising model or QUBO. This mapping is called a *penalty model*.
 
