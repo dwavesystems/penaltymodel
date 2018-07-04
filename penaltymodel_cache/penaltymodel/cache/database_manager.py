@@ -9,12 +9,12 @@ import struct
 import base64
 
 from six import itervalues
-import penaltymodel as pm
+import penaltymodel.core as pm
 
 import dimod
 
-from penaltymodel_cache.schema import schema
-from penaltymodel_cache.cache_manager import cache_file
+from penaltymodel.cache.schema import schema
+from penaltymodel.cache.cache_manager import cache_file
 
 __all__ = ["cache_connect",
            "insert_graph", "iter_graph",

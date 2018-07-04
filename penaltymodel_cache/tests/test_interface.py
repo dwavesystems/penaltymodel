@@ -5,10 +5,10 @@ import multiprocessing
 import itertools
 
 import networkx as nx
-import penaltymodel as pm
+import penaltymodel.core as pm
 import dimod
 
-import penaltymodel_cache as pmc
+import penaltymodel.cache as pmc
 
 tmp_database_name = 'tmp_test_database_manager_{}.db'.format(time.time())
 

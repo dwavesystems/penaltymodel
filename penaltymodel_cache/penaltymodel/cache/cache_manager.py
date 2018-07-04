@@ -2,7 +2,7 @@ import os
 
 import homebase
 
-from penaltymodel_cache.package_info import __version__
+from penaltymodel.cache.package_info import __version__
 
 __all__ = ['cache_file']
 

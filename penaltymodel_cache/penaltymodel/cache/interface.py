@@ -2,9 +2,9 @@
 """
 from six import iteritems
 
-import penaltymodel as pm
+import penaltymodel.core as pm
 
-from penaltymodel_cache.database_manager import cache_connect, insert_penalty_model, \
+from penaltymodel.cache.database_manager import cache_connect, insert_penalty_model, \
     iter_penalty_model_from_specification
 
 
