@@ -12,7 +12,7 @@ import networkx as nx
 
 from dimod import BinaryQuadraticModel, Vartype
 
-from penaltymodel.classes.specification import Specification
+from penaltymodel.core.classes.specification import Specification
 
 
 __all__ = ['PenaltyModel']
