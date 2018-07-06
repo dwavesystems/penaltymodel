@@ -105,9 +105,14 @@ def generate_bqm(graph, table, decision,
     if quadratic_energy_ranges is None:
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
-    h, J, offset, gap, *aux = _generate_ising(graph, table, decision,
-                                              linear_energy_ranges, quadratic_energy_ranges,
-                                              return_auxiliary)
+    if return_auxiliary:
+        h, J, offset, gap, aux = _generate_ising(graph, table, decision,
+                                                 linear_energy_ranges, quadratic_energy_ranges,
+                                                 return_auxiliary)
+    else:
+        h, J, offset, gap = _generate_ising(graph, table, decision,
+                                            linear_energy_ranges, quadratic_energy_ranges,
+                                            return_auxiliary)
 
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
     bqm.add_variables_from((v, round(bias, precision)) for v, bias in h.items())
@@ -115,7 +120,7 @@ def generate_bqm(graph, table, decision,
     bqm.add_offset(round(offset, precision))
 
     if return_auxiliary:
-        return bqm, round(gap, precision), aux[0]
+        return bqm, round(gap, precision), aux
     else:
         return bqm, round(gap, precision)
 
