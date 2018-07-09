@@ -3,6 +3,7 @@ source =
     penaltymodel_core/
     penaltymodel_cache/
     penaltymodel_maxgap/
+    penaltymodel_mip/
 
 [report]
 exclude_lines:
