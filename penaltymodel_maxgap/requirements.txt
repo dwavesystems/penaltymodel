@@ -1,4 +1,5 @@
 six==1.11.0
 dwave_networkx==0.6.0
 pysmt==0.7.0
-dimod==0.6.7
+dimod==0.6.7; python_version<="3.4"
+dimod==0.6.13; python_version>="3.5"
