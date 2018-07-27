@@ -335,7 +335,7 @@ jobs:
           name: verify version matches tag
           command: |
             . env/bin/activate
-            [[ "$(pip show penaltymodel-mip 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/cache-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+            [[ "$(pip show penaltymodel-mip 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/mip-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
 
       - run: *pypirc-file-template
 
@@ -343,7 +343,7 @@ jobs:
           name: build bdist and sdist
           command: |
             . env/bin/activate
-            cd penaltymodel_cache
+            cd penaltymodel_mip
             python setup.py sdist
             python setup.py bdist_wheel
             mv dist/* ../dist/
