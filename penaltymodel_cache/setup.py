@@ -23,6 +23,22 @@ packages = ['penaltymodel',
             'penaltymodel.cache',
             ]
 
+classifiers = [
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 2',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    ]
+
+python_requires = '>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*'
+
 setup(
     name='penaltymodel-cache',
     version=__version__,
@@ -35,6 +51,8 @@ setup(
     packages=packages,
     install_requires=install_requires,
     extras_require=extras_require,
+    classifiers=classifiers,
+    python_requires=python_requires,
     entry_points={'penaltymodel_factory': ['maxgap = penaltymodel.cache:get_penalty_model'],
                   'penaltymodel_cache': ['penaltymodel_cache = penaltymodel.cache:cache_penalty_model']},
     zip_safe=False

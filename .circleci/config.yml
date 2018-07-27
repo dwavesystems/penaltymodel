@@ -1,9 +1,9 @@
 version: 2
 jobs:
 
-  test-3.6: &full-test-template
+  test-3.7: &full-test-template
     docker:
-      - image: circleci/python:3.6-jessie
+      - image: circleci/python:3.7-stretch
 
     steps:
       - checkout
@@ -89,30 +89,37 @@ jobs:
             make -C docs/ doctest
 
       - run:
-          # requires COVERALLS_REPO_TOKEN env variable
-          name: coveralls
+          name: codecov
           command: |
             . env/bin/activate
-            if [[ -v COVERALLS_REPO_TOKEN ]]; then coveralls; fi
+            codecov
+
+  test-3.6:
+    <<: *full-test-template
+    docker:
+      - image: circleci/python:3.6-jessie
 
   test-3.5:
     <<: *full-test-template
     docker:
       - image: circleci/python:3.5-jessie
 
-  test-3.4:
-    <<: *full-test-template
-    docker:
-      - image: circleci/python:3.4-jessie
+  # test-3.4:
+  #   <<: *full-test-template
+  #   docker:
+  #     - image: circleci/python:3.4-jessie
 
   test-2.7:
     <<: *full-test-template
     docker:
       - image: circleci/python:2.7-jessie
 
-  test-osx:
+  test-osx-3.7: &osx-tests-template
     macos:
-      xcode: "9.0"
+      xcode: "9.4.1"
+    environment:
+      PYTHON: 3.7.0
+      # HOMEBREW_NO_AUTO_UPDATE: 1  # for 3.7 we need to update homebrew
 
     working_directory: ~/repo
 
@@ -126,76 +133,36 @@ jobs:
 
       - restore_cache:
           keys:
-          - pyenv-versions-{{ .Environment.CIRCLE_JOB }}
-          - env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - pyenv-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: install python 2.7.14 and 3.6.5 with pyenv
+          name: install python
           command: |
-            pyenv install 2.7.14 -s
-            pyenv install 3.6.5 -s
+            pyenv install $PYTHON -s
 
       - save_cache:
           paths:
             - ~/.pyenv
-          key: pyenv-versions-{{ .Environment.CIRCLE_JOB }}
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}
 
       - run:
-          name: create virtualenv for 2.7.14
+          name: create virtualenv
           command: |
             eval "$(pyenv init -)"
-            pyenv local 2.7.14
+            pyenv local $PYTHON
             python -m pip install virtualenv
             python -m virtualenv env
-
-      - run: *install-requirements-template
-
-      - save_cache:
-          paths:
-            - ./env
-          key: env2.7-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run: *install-core-template
-
-      - run: *install-cache-template
-
-      - run: *install-maxgap-template
-
-      - run: *install-mip-template
-
-      - run: *core-tests-template
-
-      - run: *cache-tests-template
-
-      - run: *maxgap-tests-template
-
-      - run: *mip-tests-template
-
-      - run: *integration-tests-template
-
-      - run:
-          name: clear virtual environment
-          command: |
-            rm -rf env
 
       - restore_cache:
           keys:
-          - env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run:
-          name: create virtualenv for 3.6.5
-          command: |
-            eval "$(pyenv init -)"
-            pyenv local 3.6.5
-            python -m pip install virtualenv
-            python -m virtualenv env
+          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: *install-requirements-template
 
       - save_cache:
           paths:
             - ./env
-          key: env3.6-{{ checksum "requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: *install-core-template
 
@@ -214,6 +181,30 @@ jobs:
       - run: *mip-tests-template
 
       - run: *integration-tests-template
+
+  test-osx-3.6:
+    <<: *osx-tests-template
+    environment:
+      PYTHON: 3.6.5
+      HOMEBREW_NO_AUTO_UPDATE: 1
+
+  test-osx-3.5:
+    <<: *osx-tests-template
+    environment:
+      PYTHON: 3.5.5
+      HOMEBREW_NO_AUTO_UPDATE: 1
+
+  # test-osx-3.4:
+  #   <<: *osx-tests-template
+  #   environment:
+  #     PYTHON: 3.4.8
+  #     HOMEBREW_NO_AUTO_UPDATE: 1
+
+  test-osx-2.7:
+    <<: *osx-tests-template
+    environment:
+      PYTHON: 2.7.15
+      HOMEBREW_NO_AUTO_UPDATE: 1
 
   deploy-core:
     docker:
@@ -363,16 +354,16 @@ workflows:
   version: 2
   test:
     jobs:
+      - test-3.7
       - test-3.6
       - test-3.5
-      - test-3.4
+      # - test-3.4
       - test-2.7
-      - test-osx:
-          requires:
-            - test-3.6
-            - test-2.7
-            - test-3.5
-            - test-3.4
+      - test-osx-3.7
+      - test-osx-3.6
+      - test-osx-3.5
+      # - test-osx-3.4
+      - test-osx-2.7
       - deploy-core:
           filters:
             tags:

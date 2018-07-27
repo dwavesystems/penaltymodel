@@ -31,7 +31,10 @@ classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
     ]
+
+python_requires = '>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*'
 
 setup(
     name='penaltymodel-mip',
@@ -44,6 +47,7 @@ setup(
     license='Apache 2.0',
     packages=packages,
     classifiers=classifiers,
+    python_requires=python_requires,
     install_requires=install_requires,
     entry_points={'penaltymodel_factory': ['mip = penaltymodel.mip:get_penalty_model']},
     zip_safe=False
