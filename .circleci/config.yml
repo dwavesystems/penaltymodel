@@ -343,7 +343,7 @@ jobs:
           name: build bdist and sdist
           command: |
             . env/bin/activate
-            cd penaltymodel_cache
+            cd penaltymodel_mip
             python setup.py sdist
             python setup.py bdist_wheel
             mv dist/* ../dist/
