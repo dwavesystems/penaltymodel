@@ -89,11 +89,10 @@ jobs:
             make -C docs/ doctest
 
       - run:
-          # requires COVERALLS_REPO_TOKEN env variable
-          name: coveralls
+          name: codecov
           command: |
             . env/bin/activate
-            if [[ -v COVERALLS_REPO_TOKEN ]]; then coveralls; fi
+            codecov
 
   test-3.6:
     <<: *full-test-template
