@@ -16,8 +16,8 @@ install_requires = ['dimod>=0.6.3,<0.7.0',
                     ]
 
 extras_require = {'all': ['penaltymodel_cache>=0.3.0,<0.4.0',
-                          'penaltymodel_maxgap>=0.4.0,<0.5.0',
-                          "penaltymodel_mip>=0.1.0,<0.2.0; platform_machine != 'x86'"
+                          'penaltymodel_maxgap>=0.4.0,<0.5.0'
+                          "penaltymodel_mip>=0.1.0,<0.2.0; platform_machine!='x86' and python_version!='3.4'"
                           ]
                   }
 
@@ -25,6 +25,22 @@ packages = ['penaltymodel',
             'penaltymodel.core',
             'penaltymodel.core.classes'
             ]
+
+classifiers = [
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 2',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    ]
+
+python_requires = '>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*'
 
 setup(
     name='penaltymodel',
@@ -36,6 +52,8 @@ setup(
     url='https://github.com/dwavesystems/penaltymodel',
     license='Apache 2.0',
     packages=packages,
+    classifiers=classifiers,
+    python_requires=python_requires,
     install_requires=install_requires,
     extras_require=extras_require,
     zip_safe=False
