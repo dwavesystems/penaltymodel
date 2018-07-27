@@ -12,7 +12,7 @@ else:
     exec(open("./penaltymodel/mip/package_info.py").read())
 
 install_requires = ['dimod>=0.6.0,<0.7.0',
-                    'networkx>=2.0,<3.0'
+                    'networkx>=2.0,<3.0',
                     'ortools>=6.6.4659,<7.0.0',
                     'penaltymodel>=0.15.0,<0.16.0',
                     ]
