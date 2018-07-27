@@ -1,5 +1,5 @@
-.. image:: https://coveralls.io/repos/github/dwavesystems/penaltymodel/badge.svg?branch=master
-    :target: https://coveralls.io/github/dwavesystems/penaltymodel?branch=master
+.. image:: https://codecov.io/gh/dwavesystems/penaltymodel/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/dwavesystems/penaltymodel
 
 .. image:: https://readthedocs.org/projects/penaltymodel/badge/?version=latest
     :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
@@ -20,6 +20,8 @@ Included Packages
 +---------------------------------+---------------------------------+
 | penatlymodel-maxgap             | |maxgap|                        |
 +---------------------------------+---------------------------------+
+| penatlymodel-mip                | |mip|                           |
++---------------------------------+---------------------------------+
 
 .. |core| image:: https://img.shields.io/pypi/v/penaltymodel.svg
 .. _core: https://pypi.python.org/pypi/penaltymodel
@@ -27,6 +29,8 @@ Included Packages
 .. _cache: https://pypi.python.org/pypi/penaltymodel-cache
 .. |maxgap| image:: https://img.shields.io/pypi/v/penaltymodel-maxgap.svg
 .. _maxgap: https://pypi.python.org/pypi/penaltymodel-maxgap
+.. |mip| image:: https://img.shields.io/pypi/v/penaltymodel-mip.svg
+.. _mip: https://pypi.python.org/pypi/penaltymodel-mip
 
 .. index-start-marker
 
