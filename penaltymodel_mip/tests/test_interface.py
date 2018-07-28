@@ -76,6 +76,35 @@ class TestInterface(unittest.TestCase):
                                          pm0.model.linear, pm0.model.quadratic, pm0.ground_energy - pm0.model.offset,
                                          pm0.classical_gap)
 
+    def test_eight_variable(self):
+
+        def f(a, b, c, d, e, f, g, h):
+            if a and b:
+                return False
+            if c and d:
+                return False
+            if e and f:
+                return False
+            return not (g and h)
+
+        configs = {config for config in itertools.product((0, 1), repeat=8) if f(*config)}
+        decision = list('abcdefgh')
+        spec = pm.Specification(nx.complete_graph(decision), decision, configs, pm.BINARY)
+
+        model = mip.get_penalty_model(spec)
+
+        bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
+        bqm.add_variables_from((v, 1.0) for v in decision)
+        bqm.add_interactions_from((u, v, 0.0) for u, v in itertools.combinations(decision, 2))
+        bqm.add_interaction('a', 'b', 1)
+        bqm.add_interaction('c', 'd', 1)
+        bqm.add_interaction('e', 'f', 1)
+        bqm.add_interaction('g', 'h', 1)
+
+        bqm.add_offset(4)
+
+        self.assertEqual(model.model.spin, bqm)
+
     def check_generated_ising_model(self, feasible_configurations, decision_variables,
                                     linear, quadratic, ground_energy, infeasible_gap):
         """Check that the given Ising model has the correct energy levels"""
