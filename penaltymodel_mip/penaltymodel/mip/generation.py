@@ -13,7 +13,7 @@ import penaltymodel.core as pm
 
 def generate_bqm(graph, table, decision,
                  linear_energy_ranges=None, quadratic_energy_ranges=None,
-                 precision=7, max_decision=4, max_variables=8,
+                 precision=7, max_decision=8, max_variables=10,
                  return_auxiliary=False):
     """Get a binary quadratic model with specific ground states.
 
