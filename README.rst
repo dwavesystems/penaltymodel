@@ -47,7 +47,8 @@ Before anything else, let's import that package we will need.
 
 .. code-block:: python
 
-    import penaltymodel as pm
+    import penaltymodel.core as pm
+    import dimod
     import networkx as nx
 
 Next, we need to determine the feasible configurations that we wish to target (by making the energy of these configuration in the binary quadratic low).
@@ -83,7 +84,7 @@ We now have everything needed to build our Specification. We have binary variabl
 
 .. code-block:: python
 
-    spec = pm.Specification(graph, decision_variables, feasible_configurations, pm.BINARY)
+    spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.BINARY)
 
 At this point, if we have any factories installed, we could use the factory interface to get an appropriate penalty model for our specification.
 
@@ -106,16 +107,16 @@ We can see that the energy is minimized on exactly the desired feasible configur
 
 .. code-block:: python
 
-    qubo = pm.BinaryQuadraticModel({'x1': 0., 'x2': 0., 'z': 3.},
+    qubo = dimod.BinaryQuadraticModel({'x1': 0., 'x2': 0., 'z': 3.},
                                    {('x1', 'x2'): 1., ('x1', 'z'): 2., ('x2', 'z'): 2.},
                                    0.0,
-                                   pm.BINARY)
+                                   dimod.BINARY)
 
 We know from the table that our ground energy is :math:`0`, but we can calculate it using the qubo to check that this is true for the feasible configuration :math:`(0, 1, 0)`.
 
 .. code-block:: python
 
-    ground_energy = qubo.energy({'x1': 0, 'x2': 1, 'x3': 0})
+    ground_energy = qubo.energy({'x1': 0, 'x2': 1, 'z': 0})
 
 The last value that we need is the classical gap. This is the difference in energy between the lowest infeasible state and the ground state.
 
