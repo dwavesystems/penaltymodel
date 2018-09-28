@@ -1,8 +1,8 @@
 .. image:: https://codecov.io/gh/dwavesystems/penaltymodel/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/dwavesystems/penaltymodel
 
-.. image:: https://readthedocs.org/projects/penaltymodel/badge/?version=latest
-    :target: http://penaltymodel.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.com/projects/d-wave-systems-penaltymodel/badge/?version=latest
+    :target: https://docs.ocean.dwavesys.com/projects/penaltymodel/en/latest/?badge=latest
 
 .. image:: https://ci.appveyor.com/api/projects/status/cqfk8il1e4hgg7ih?svg=true
     :target: https://ci.appveyor.com/project/dwave-adtt/penaltymodel
