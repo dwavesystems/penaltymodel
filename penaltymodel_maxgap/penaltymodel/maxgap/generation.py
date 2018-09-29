@@ -102,7 +102,8 @@ def generate_ising(graph, feasible_configurations, decision_variables,
 
                 if solver.solve():
                     model = solver.get_model()
-                    gmin = float(model.get_py_value(table.gap).limit_denominator())
+                    gmin = float(model.get_py_value(table.gap))
+
                 else:
                     solver.pop()
                     gmax = g
@@ -113,14 +114,13 @@ def generate_ising(graph, feasible_configurations, decision_variables,
             raise pm.ImpossiblePenaltyModel("Model cannot be built")
 
     # finally we need to convert our values back into python floats.
-    # we use limit_denominator to deal with some of the rounding
-    # issues.
+
     theta = table.theta
-    linear = {v: float(model.get_py_value(bias).limit_denominator())
+    linear = {v: float(model.get_py_value(bias))
               for v, bias in iteritems(theta.linear)}
-    quadratic = {(u, v): float(model.get_py_value(bias).limit_denominator())
+    quadratic = {(u, v): float(model.get_py_value(bias))
                  for (u, v), bias in iteritems(theta.quadratic)}
-    ground_energy = -float(model.get_py_value(theta.offset).limit_denominator())
-    classical_gap = float(model.get_py_value(table.gap).limit_denominator())
+    ground_energy = -float(model.get_py_value(theta.offset))
+    classical_gap = float(model.get_py_value(table.gap))
 
     return linear, quadratic, ground_energy, classical_gap
