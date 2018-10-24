@@ -53,7 +53,6 @@ setup(
     extras_require=extras_require,
     classifiers=classifiers,
     python_requires=python_requires,
-    entry_points={'penaltymodel_factory': ['maxgap = penaltymodel.cache:get_penalty_model'],
-                  'penaltymodel_cache': ['penaltymodel_cache = penaltymodel.cache:cache_penalty_model']},
+    entry_points={'penaltymodel_cache': ['penaltymodel_cache = penaltymodel.cache:cache_penalty_model']},
     zip_safe=False
 )
