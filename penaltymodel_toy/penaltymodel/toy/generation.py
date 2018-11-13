@@ -50,10 +50,15 @@ def generate_bqm(graph, table, decision_variables,
         v_ind = decision_variables.index(v)
 
         #TODO: math is so simple, may not need to multiply; could do pattern matching
-        invalid_states[:, j + m_linear] = np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
+        # Taking negative in order to flip the inequality
+        invalid_states[:, j + m_linear] = -np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
 
-    invalid_states[:, -2] = 1     # Column associated with offset
-    invalid_states[:, -1] = -1     # Column associated with gap
+    invalid_states[:, -2] = -1     # Column associated with offset
+    invalid_states[:, -1] = 1     # Column associated with gap
+
+    # Cost function
+    cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
+    cost_weights[1, -1] = -1     # Only interested in maximizing the gap
 
     # Bounds
     #TODO: assumes order of edges does not change; NEED TO VERIFY
@@ -71,6 +76,9 @@ def generate_bqm(graph, table, decision_variables,
         except KeyError:
             bounds.append((-1, 1))
 
-    bqm, gap, _, success, _, _, _ = linprog(1, bounds=bounds)
+    bqm, gap, _, success, _, _, _ = linprog(cost_weights,
+                                            A_eq=valid_states, b_eq=np.zeros((n_valid, 1)),
+                                            A_ub=invalid_states, b_ub=np.zeros((n_invalid, 1)),
+                                            bounds=bounds)
 
     print("Inside toy generate bqm!")
