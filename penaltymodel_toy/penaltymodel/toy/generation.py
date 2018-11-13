@@ -42,7 +42,18 @@ def generate_bqm(graph, table, decision_variables,
     valid_states[:, -1] = 0     # Column associated with gap
 
     # Invalid states
+    invalid_states = np.empty((n_invalid, m_linear + m_quadratic))
+    invalid_states[:, m_linear] = np.asarray(list(invalid_linear))      # Populate linear spins
 
+    for j, (u, v) in enumerate(graph.edges):
+        u_ind = decision_variables.index(u)     #TODO: smarter way of grabbing relevant column
+        v_ind = decision_variables.index(v)
+
+        #TODO: math is so simple, may not need to multiply; could do pattern matching
+        invalid_states[:, j + m_linear] = np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
+
+    invalid_states[:, -2] = 1     # Column associated with offset
+    invalid_states[:, -1] = -1     # Column associated with gap
 
     # Bounds
     #TODO: assumes order of edges does not change; NEED TO VERIFY
