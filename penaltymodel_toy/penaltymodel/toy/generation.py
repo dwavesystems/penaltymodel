@@ -86,7 +86,6 @@ def generate_bqm(graph, table, decision_variables,
                                             A_ub=invalid_states, b_ub=np.zeros((n_invalid, 1)),
                                             bounds=bounds)
 
-    print("Inside toy generate bqm!")
     x = result.x
     h = x[:m_linear]
     J = x[m_linear:-2]

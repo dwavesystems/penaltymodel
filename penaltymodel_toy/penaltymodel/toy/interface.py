@@ -27,8 +27,6 @@ def get_penalty_model(specification):
         priority (int): -100
 
     """
-    print("We're inside toy!")
-
     # check that the feasible_configurations are spin
     feasible_configurations = specification.feasible_configurations
     if specification.vartype is dimod.BINARY:
