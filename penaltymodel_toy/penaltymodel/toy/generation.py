@@ -1,3 +1,4 @@
+import dimod
 from itertools import product
 import numpy as np
 import penaltymodel.core as pm
@@ -79,9 +80,20 @@ def generate_bqm(graph, table, decision_variables,
     bounds.append((None, None))     # for offset
     bounds.append((None, None))     # for gap
 
-    bqm, gap, _, success, _, _, _ = linprog(cost_weights.flatten(),
+    # Returns a Scipy OptimizeResult
+    result = linprog(cost_weights.flatten(),
                                             A_eq=valid_states, b_eq=np.zeros((n_valid, 1)),
                                             A_ub=invalid_states, b_ub=np.zeros((n_invalid, 1)),
                                             bounds=bounds)
 
     print("Inside toy generate bqm!")
+    x = result.x
+    h = x[:m_linear]
+    J = x[m_linear:-2]
+    offset = x[-2]
+    gap = x[-1]
+    bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
+    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(decision_variables, h))
+    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(graph.edges(), J))
+    bqm.add_offset(round(offset, precision))
+    return bqm, gap
