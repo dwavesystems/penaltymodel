@@ -28,8 +28,8 @@ def generate_bqm(graph, table, decision_variables,
     invalid_linear = all_linear - valid_linear
 
     # Valid states
-    valid_states = np.empty((n_valid, m_linear + m_quadratic))
-    valid_states[:, m_linear] = np.asarray(list(valid_linear))      # Populate linear spins
+    valid_states = np.empty((n_valid, m_linear + m_quadratic + 2))
+    valid_states[:, :m_linear] = np.asarray(list(valid_linear))      # Populate linear spins
 
     for j, (u, v) in enumerate(graph.edges):
         u_ind = decision_variables.index(u)     #TODO: smarter way of grabbing relevant column
@@ -42,23 +42,23 @@ def generate_bqm(graph, table, decision_variables,
     valid_states[:, -1] = 0     # Column associated with gap
 
     # Invalid states
-    invalid_states = np.empty((n_invalid, m_linear + m_quadratic))
-    invalid_states[:, m_linear] = np.asarray(list(invalid_linear))      # Populate linear spins
+    invalid_states = np.empty((n_invalid, m_linear + m_quadratic + 2))
+    invalid_states[:, :m_linear] = np.asarray(list(invalid_linear))      # Populate linear spins
 
     for j, (u, v) in enumerate(graph.edges):
         u_ind = decision_variables.index(u)     #TODO: smarter way of grabbing relevant column
         v_ind = decision_variables.index(v)
 
         #TODO: math is so simple, may not need to multiply; could do pattern matching
-        # Taking negative in order to flip the inequality
-        invalid_states[:, j + m_linear] = -np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
+        invalid_states[:, j + m_linear] = np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
 
-    invalid_states[:, -2] = -1     # Column associated with offset
-    invalid_states[:, -1] = 1     # Column associated with gap
+    invalid_states[:, -2] = 1     # Column associated with offset
+    invalid_states[:, -1] = -1     # Column associated with gap
+    invalid_states = -1 * invalid_states # Taking negative in order to flip the inequality
 
     # Cost function
     cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
-    cost_weights[1, -1] = -1     # Only interested in maximizing the gap
+    cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Bounds
     #TODO: assumes order of edges does not change; NEED TO VERIFY
@@ -76,7 +76,10 @@ def generate_bqm(graph, table, decision_variables,
         except KeyError:
             bounds.append((-1, 1))
 
-    bqm, gap, _, success, _, _, _ = linprog(cost_weights,
+    bounds.append((None, None))     # for offset
+    bounds.append((None, None))     # for gap
+
+    bqm, gap, _, success, _, _, _ = linprog(cost_weights.flatten(),
                                             A_eq=valid_states, b_eq=np.zeros((n_valid, 1)),
                                             A_ub=invalid_states, b_ub=np.zeros((n_invalid, 1)),
                                             bounds=bounds)
