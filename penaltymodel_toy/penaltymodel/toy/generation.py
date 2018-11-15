@@ -1,3 +1,4 @@
+from bisect import bisect_left
 import dimod
 from itertools import product
 import numpy as np
@@ -16,7 +17,10 @@ def generate_bqm(graph, table, decision_variables,
     if len(graph) != len(decision_variables):
         return
 
-    # TODO: Note: table is a dict when you're using QUBOs in the problem
+    # Sort graph information
+    nodes = sorted(decision_variables)
+    edges = graph.edges
+
     # Set variable names for lengths
     m_linear = len(decision_variables)      # Number of linear biases
     m_quadratic = len(graph.edges)          # Number of quadratic biases
@@ -32,9 +36,9 @@ def generate_bqm(graph, table, decision_variables,
     valid_states = np.empty((n_valid, m_linear + m_quadratic + 2))
     valid_states[:, :m_linear] = np.asarray(list(valid_linear))      # Populate linear spins
 
-    for j, (u, v) in enumerate(graph.edges):
-        u_ind = decision_variables.index(u)     #TODO: smarter way of grabbing relevant column
-        v_ind = decision_variables.index(v)
+    for j, (u, v) in enumerate(edges):
+        u_ind = bisect_left(nodes, u)
+        v_ind = bisect_left(nodes, v)
 
         #TODO: math is so simple, may not need to multiply; could do pattern matching
         valid_states[:, j + m_linear] = np.multiply(valid_states[:, u_ind], valid_states[:, v_ind])
@@ -46,9 +50,9 @@ def generate_bqm(graph, table, decision_variables,
     invalid_states = np.empty((n_invalid, m_linear + m_quadratic + 2))
     invalid_states[:, :m_linear] = np.asarray(list(invalid_linear))      # Populate linear spins
 
-    for j, (u, v) in enumerate(graph.edges):
-        u_ind = decision_variables.index(u)     #TODO: smarter way of grabbing relevant column
-        v_ind = decision_variables.index(v)
+    for j, (u, v) in enumerate(edges):
+        u_ind = bisect_left(nodes, u)
+        v_ind = bisect_left(nodes, v)
 
         #TODO: math is so simple, may not need to multiply; could do pattern matching
         invalid_states[:, j + m_linear] = np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
@@ -62,16 +66,14 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Bounds
-    #TODO: assumes order of edges does not change; NEED TO VERIFY
-    #TODO: aux probably needs energy range too; NO it doesn't because this won't deal with auxiliary
     bounds = []
-    for node in decision_variables:
+    for node in nodes:
         try:
             bounds.append(linear_energy_ranges[node])
         except KeyError:
             bounds.append((-2, 2))
 
-    for edge in graph.edges():
+    for edge in edges:
         try:
             bounds.append(quadratic_energy_ranges[edge])
         except KeyError:
@@ -92,7 +94,7 @@ def generate_bqm(graph, table, decision_variables,
     offset = x[-2]
     gap = x[-1]
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(decision_variables, h))
-    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(graph.edges(), J))
+    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(nodes, h))
+    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(edges, J))
     bqm.add_offset(round(offset, precision))
     return bqm, gap

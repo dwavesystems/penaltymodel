@@ -2,6 +2,7 @@ from itertools import product
 import dwavebinarycsp as dbc
 import unittest
 
+
 class TestLinearProgramming(unittest.TestCase):
     def test_or_gate_binary(self):
         min_gap = 2
@@ -22,7 +23,7 @@ class TestLinearProgramming(unittest.TestCase):
                 self.assertEqual(energy, ground_energy)
             else:
                 # Non-or-gate values
-                self.assertGreaterEqual(energy, ground_energy + min_gap)
+                self.assertGreaterEqual(energy, ground_energy + min_gap, "Failed for a:{}, b:{}, c:{}".format(a, b, c))
 
     def test_and_gate_ising(self):
         min_gap = 2
@@ -43,7 +44,7 @@ class TestLinearProgramming(unittest.TestCase):
                 self.assertEqual(energy, ground_energy)
             else:
                 # and-or-gate values
-                self.assertGreaterEqual(energy, ground_energy + min_gap, "a:{}, b:{}, c:{}".format(a, b, c))
+                self.assertGreaterEqual(energy, ground_energy + min_gap, "Failed for a:{}, b:{}, c:{}".format(a, b, c))
 
 
 if __name__ == "__main__":
