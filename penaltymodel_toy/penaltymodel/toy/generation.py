@@ -7,6 +7,24 @@ from scipy.optimize import linprog
 
 #TODO: would be nice to have a file for default linear energy ranges (currently, [-2, 2]); quad energy [-1, 1]
 
+def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
+    n_states = len(spin_states)
+    n_nodes = len(nodes)
+    n_edges = len(edges)
+
+    matrix = np.empty((n_states, n_nodes + n_edges + 2))
+    matrix[:, :n_nodes] = spin_states      # Populate linear spins
+
+    for j, (u, v) in enumerate(edges):
+        u_ind = bisect_left(nodes, u)
+        v_ind = bisect_left(nodes, v)
+        matrix[:, j + n_nodes] = np.multiply(matrix[:, u_ind], matrix[:, v_ind])
+
+    matrix[:, -2] = offset_weight     # Column associated with offset
+    matrix[:, -1] = gap_weight     # Column associated with gap
+    return matrix
+
+
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None,
                  precision=7, max_decision=8, max_variables=10,
@@ -28,37 +46,15 @@ def generate_bqm(graph, table, decision_variables,
     n_invalid = 2**(m_linear) - n_valid     # Number of invalid spin combinations
 
     # Determining valid and invalid states
-    all_linear = set(product([-1, 1], repeat=m_linear))
-    valid_linear = set(table.keys())
-    invalid_linear = all_linear - valid_linear
+    invalid_table = set(product([-1, 1], repeat=m_linear)) - set(table.keys())
+    invalid_linear = np.array(list(invalid_table))
+    valid_linear = np.array(list(table.keys()))
 
     # Valid states
-    valid_states = np.empty((n_valid, m_linear + m_quadratic + 2))
-    valid_states[:, :m_linear] = np.asarray(list(valid_linear))      # Populate linear spins
-
-    for j, (u, v) in enumerate(edges):
-        u_ind = bisect_left(nodes, u)
-        v_ind = bisect_left(nodes, v)
-
-        #TODO: math is so simple, may not need to multiply; could do pattern matching
-        valid_states[:, j + m_linear] = np.multiply(valid_states[:, u_ind], valid_states[:, v_ind])
-
-    valid_states[:, -2] = 1     # Column associated with offset
-    valid_states[:, -1] = 0     # Column associated with gap
+    valid_states = _get_lp_matrix(valid_linear, nodes, edges, 1, 0)
 
     # Invalid states
-    invalid_states = np.empty((n_invalid, m_linear + m_quadratic + 2))
-    invalid_states[:, :m_linear] = np.asarray(list(invalid_linear))      # Populate linear spins
-
-    for j, (u, v) in enumerate(edges):
-        u_ind = bisect_left(nodes, u)
-        v_ind = bisect_left(nodes, v)
-
-        #TODO: math is so simple, may not need to multiply; could do pattern matching
-        invalid_states[:, j + m_linear] = np.multiply(invalid_states[:, u_ind], invalid_states[:, v_ind])
-
-    invalid_states[:, -2] = 1     # Column associated with offset
-    invalid_states[:, -1] = -1     # Column associated with gap
+    invalid_states = _get_lp_matrix(invalid_linear, nodes, edges, 1, -1)
     invalid_states = -1 * invalid_states # Taking negative in order to flip the inequality
 
     # Cost function
@@ -83,18 +79,12 @@ def generate_bqm(graph, table, decision_variables,
     bounds.append((None, None))     # for gap
 
     # Returns a Scipy OptimizeResult
-    result = linprog(cost_weights.flatten(),
-                                            A_eq=valid_states, b_eq=np.zeros((n_valid, 1)),
-                                            A_ub=invalid_states, b_ub=np.zeros((n_invalid, 1)),
-                                            bounds=bounds)
+    result = linprog(cost_weights.flatten(), A_eq=valid_states, b_eq=np.zeros((n_valid, 1)), A_ub=invalid_states,
+                     b_ub=np.zeros((n_invalid, 1)), bounds=bounds)
 
-    x = result.x
-    h = x[:m_linear]
-    J = x[m_linear:-2]
-    offset = x[-2]
-    gap = x[-1]
+    x = result.x  # x = [h biases, J biases, offset, gap]
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(nodes, h))
-    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(edges, J))
-    bqm.add_offset(round(offset, precision))
-    return bqm, gap
+    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(nodes, x[:m_linear]))     # h bias
+    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(edges, x[m_linear:-2])) # J bias
+    bqm.add_offset(round(x[-2], precision)) # offset
+    return bqm, x[-1] # bqm, gap

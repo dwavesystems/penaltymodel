@@ -3,6 +3,7 @@ import dwavebinarycsp as dbc
 import unittest
 
 
+#TODO: need to run without truth table
 class TestLinearProgramming(unittest.TestCase):
     def test_or_gate_binary(self):
         min_gap = 2
