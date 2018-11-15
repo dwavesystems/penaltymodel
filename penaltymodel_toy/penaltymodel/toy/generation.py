@@ -62,19 +62,8 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Bounds
-    bounds = []
-    for node in nodes:
-        try:
-            bounds.append(linear_energy_ranges[node])
-        except KeyError:
-            bounds.append((-2, 2))
-
-    for edge in edges:
-        try:
-            bounds.append(quadratic_energy_ranges[edge])
-        except KeyError:
-            bounds.append((-1, 1))
-
+    bounds = [linear_energy_ranges.get(node, (-2, 2)) for node in nodes]
+    bounds += [quadratic_energy_ranges.get(edge, (-1, 1)) for edge in edges]
     bounds.append((None, None))     # for offset
     bounds.append((None, None))     # for gap
 
