@@ -11,7 +11,7 @@ __all__ = ['get_penalty_model']
 
 @pm.penaltymodel_factory(100)
 def get_penalty_model(specification):
-    """Factory function for penaltymodel-mip.
+    """Factory function for penaltymodel-lp.
 
     Args:
         specification (penaltymodel.Specification): The specification

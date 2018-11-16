@@ -37,7 +37,7 @@ def generate_bqm(graph, table, decision_variables,
     # TODO: better way of saying that toy does not deal with auxiliary
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
-        return
+        raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
 
     # Sort graph information
     # Note: nodes' and edges' order determine the column order of the LP
@@ -82,6 +82,9 @@ def generate_bqm(graph, table, decision_variables,
     J = x[m_linear:-2]
     offset = x[-2]
     gap = x[-1]
+
+    if gap <= 0:
+        raise ValueError('Gap is not a positive value') # Should compare with min gap
 
     # Create BQM
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
