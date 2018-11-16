@@ -5,8 +5,8 @@ import numpy as np
 import penaltymodel.core as pm
 from scipy.optimize import linprog
 
-#TODO: would be nice to have a file for default linear energy ranges (currently, [-2, 2]); quad energy [-1, 1]
 
+#TODO: would be nice to have a file for default linear energy ranges (currently, [-2, 2]); quad energy [-1, 1]
 def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     # Set up an empty matrix
     n_states = len(spin_states)

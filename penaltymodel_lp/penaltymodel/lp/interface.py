@@ -4,7 +4,7 @@ from six import iteritems
 
 import penaltymodel.core as pm
 
-from penaltymodel.toy.generation import generate_bqm
+from penaltymodel.lp.generation import generate_bqm
 
 __all__ = ['get_penalty_model']
 
