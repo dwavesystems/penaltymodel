@@ -57,6 +57,5 @@ class TestLinearProgramming(unittest.TestCase):
         bqm = dbc.stitch(csp, min_classical_gap=min_gap)
 
 
-
 if __name__ == "__main__":
     unittest.main()

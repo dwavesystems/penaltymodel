@@ -30,9 +30,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 
 
 def generate_bqm(graph, table, decision_variables,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None,
-                 precision=7, max_decision=8, max_variables=10,
-                 return_auxiliary=False):
+                 linear_energy_ranges=None, quadratic_energy_ranges=None):
 
     # TODO: better way of saying that toy does not deal with auxiliary
     # Check for auxiliary variables in the graph
@@ -88,8 +86,8 @@ def generate_bqm(graph, table, decision_variables,
 
     # Create BQM
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    bqm.add_variables_from((v, round(bias, precision)) for v, bias in zip(nodes, h))
-    bqm.add_interactions_from((u, v, round(bias, precision)) for (u, v), bias in zip(edges, J))
-    bqm.add_offset(round(offset, precision))
+    bqm.add_variables_from((v, bias) for v, bias in zip(nodes, h))
+    bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(edges, J))
+    bqm.add_offset(offset)
 
     return bqm, gap
