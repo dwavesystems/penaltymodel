@@ -37,6 +37,12 @@ def generate_bqm(graph, table, decision_variables,
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
 
+    if not linear_energy_ranges:
+        linear_energy_ranges = {}
+
+    if not quadratic_energy_ranges:
+        quadratic_energy_ranges = {}
+
     # Sort graph information
     # Note: nodes' and edges' order determine the column order of the LP
     nodes = sorted(decision_variables)

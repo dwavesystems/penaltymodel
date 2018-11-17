@@ -1,6 +1,7 @@
 from itertools import product
 import dwavebinarycsp as dbc
 import unittest
+import penaltymodel.lp as lp
 
 
 #TODO: need to run without truth table
