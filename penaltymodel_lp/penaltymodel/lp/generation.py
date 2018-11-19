@@ -1,4 +1,3 @@
-from bisect import bisect_left
 import dimod
 from itertools import product
 import numpy as np
@@ -6,7 +5,6 @@ import penaltymodel.core as pm
 from scipy.optimize import linprog
 
 
-#TODO: would be nice to have a file for default linear energy ranges (currently, [-2, 2]); quad energy [-1, 1]
 def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     # Set up an empty matrix
     n_states = len(spin_states)
@@ -18,9 +16,10 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     matrix[:, :m_linear] = spin_states
 
     # Populate quadratic terms
+    node_indices = dict(zip(nodes, range(m_linear)))
     for j, (u, v) in enumerate(edges):
-        u_ind = bisect_left(nodes, u)
-        v_ind = bisect_left(nodes, v)
+        u_ind = node_indices[u]
+        v_ind = node_indices[v]
         matrix[:, j + m_linear] = np.multiply(matrix[:, u_ind], matrix[:, v_ind])
 
     # Populate offset and gap columns, respectively
@@ -32,7 +31,6 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None):
 
-    # TODO: better way of saying that toy does not deal with auxiliary
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
@@ -43,16 +41,16 @@ def generate_bqm(graph, table, decision_variables,
     if not quadratic_energy_ranges:
         quadratic_energy_ranges = {}
 
-    # Sort graph information
+    # Simplify graph naming
     # Note: nodes' and edges' order determine the column order of the LP
-    nodes = sorted(decision_variables)
+    nodes = decision_variables
     edges = graph.edges
 
     # Set variable names for lengths
     m_linear = len(nodes)                   # Number of linear biases
     m_quadratic = len(edges)                # Number of quadratic biases
     n_valid = len(table)                    # Number of valid spin combinations
-    n_invalid = 2**(m_linear) - n_valid     # Number of invalid spin combinations
+    n_invalid = 2**m_linear - n_valid       # Number of invalid spin combinations
 
     # Determining valid and invalid spin states
     spin_states = product([-1, 1], repeat=m_linear)
@@ -89,7 +87,7 @@ def generate_bqm(graph, table, decision_variables,
     gap = x[-1]
 
     if gap <= 0:
-        raise ValueError('Gap is not a positive value') # Should compare with min gap
+        raise ValueError('Gap is not a positive value') # TODO: Should compare with min gap
 
     # Create BQM
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
