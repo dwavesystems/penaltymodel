@@ -6,6 +6,7 @@ import penaltymodel.lp as lp
 
 
 #TODO: need to run without truth table
+#TODO: test with binary values
 class TestLinearProgramming(unittest.TestCase):
     def test_or_gate_bqm(self):
         min_gap = 2

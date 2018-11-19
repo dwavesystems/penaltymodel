@@ -1,7 +1,6 @@
 import dimod
 from itertools import product
 import numpy as np
-import penaltymodel.core as pm
 from scipy.optimize import linprog
 
 

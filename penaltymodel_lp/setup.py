@@ -1,6 +1,6 @@
 from setuptools import setup
 
-FACTORY_ENTRYPOINT = 'penaltymodel_factory'  #TODO: import constant
+FACTORY_ENTRYPOINT = 'penaltymodel_factory'
 
 setup(
     name="penaltymodel-lp",
