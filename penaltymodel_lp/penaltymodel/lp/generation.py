@@ -55,7 +55,8 @@ def generate_bqm(graph, table, decision_variables,
     n_invalid = 2**(m_linear) - n_valid     # Number of invalid spin combinations
 
     # Determining valid and invalid spin states
-    invalid_table = set(product([-1, 1], repeat=m_linear)) - set(table.keys())
+    spin_states = product([-1, 1], repeat=m_linear)
+    invalid_table = set(state for state in spin_states if state not in table.keys())
     invalid_linear = np.array(list(invalid_table))
     valid_linear = np.array(list(table.keys()))
 
@@ -64,7 +65,7 @@ def generate_bqm(graph, table, decision_variables,
 
     # Linear programming matrix for invalid spins
     invalid_states = _get_lp_matrix(invalid_linear, nodes, edges, 1, -1)
-    invalid_states = -1 * invalid_states    # Taking negative in order to flip the inequality
+    invalid_states *= -1   # Taking negative in order to flip the inequality
 
     # Bounds
     bounds = [linear_energy_ranges.get(node, (-2, 2)) for node in nodes]
