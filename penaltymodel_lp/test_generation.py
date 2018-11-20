@@ -13,7 +13,7 @@ class TestLinearProgramming(unittest.TestCase):
         or_gate_values = {(-1, 1, 1): 0, (1, -1, 1): 0, (1, 1, 1): 0, (-1, -1, -1): 0}
 
         # Make a BQM for an or-gate
-        nodes = {'a', 'b', 'c'}
+        nodes = ['a', 'b', 'c']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes)
 
         # Check that valid or-gate inputs are at ground; invalid values meet threshold requirement

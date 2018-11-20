@@ -41,7 +41,6 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None):
 
-    #TODO: case where table is an iterable rather than dict
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
