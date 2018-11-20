@@ -80,7 +80,7 @@ jobs:
           name: integration tests
           command: |
             . env/bin/activate
-            python -m unittest discover
+            python -m unittest discover tests/
 
       - run:
           name: doctest
