@@ -68,8 +68,8 @@ def generate_bqm(graph, table, decision_variables,
         gap_weight = np.asarray([-table[state] for state in noted_linear])
     else:
         # Case where table is an iterable
-        noted_linear = table
-        gap_weight = 0      # Since gap_weight is unspecified, default to 0
+        noted_linear = list(table)  # Cannot be a set because we will be be passing it into a numpy array
+        gap_weight = 0              # Since gap_weight is unspecified, default to 0
     noted_states = _get_lp_matrix(np.asarray(noted_linear), nodes, edges, 1, gap_weight)
 
     # Linear programming matrix for spins states that were not specified by table

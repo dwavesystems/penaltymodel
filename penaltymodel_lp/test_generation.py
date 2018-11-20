@@ -32,6 +32,11 @@ class TestLinearProgramming(unittest.TestCase):
         min_gap = 2
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
+        # Make a BQM for an xor-gate
+        # Note: this should not be possible with an auxiliary variable
+        nodes = ['a', 'b', 'c']
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
+
         # Make a BQM for an and-gate
         csp = dbc.ConstraintSatisfactionProblem(dbc.SPIN)
         csp.add_constraint(xor_gate_values, ('a', 'b', 'c'))
