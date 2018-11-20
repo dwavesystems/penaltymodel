@@ -30,6 +30,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None):
 
+    #TODO: case where table is an iterable rather than dict
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
@@ -48,21 +49,21 @@ def generate_bqm(graph, table, decision_variables,
     # Set variable names for lengths
     m_linear = len(nodes)                   # Number of linear biases
     m_quadratic = len(edges)                # Number of quadratic biases
-    n_valid = len(table)                    # Number of valid spin combinations
-    n_invalid = 2**m_linear - n_valid       # Number of invalid spin combinations
+    n_noted = len(table)                    # Number of noted spin combinations
+    n_unnoted = 2**m_linear - n_noted       # Number of unnoted spin combinations
 
-    # Determining valid and invalid spin states
+    # Determining noted and unnoted spin states
     spin_states = product([-1, 1], repeat=m_linear)
-    invalid_table = set(state for state in spin_states if state not in table.keys())
-    invalid_linear = np.array(list(invalid_table))
-    valid_linear = np.array(list(table.keys()))
+    unnoted_table = set(state for state in spin_states if state not in table.keys())
+    unnoted_linear = np.array(list(unnoted_table))
+    noted_linear = np.array(list(table.keys()))
 
-    # Linear programming matrix for valid spins
-    valid_states = _get_lp_matrix(valid_linear, nodes, edges, 1, 0)
+    # Linear programming matrix for noted spins
+    noted_states = _get_lp_matrix(noted_linear, nodes, edges, 1, 0)
 
-    # Linear programming matrix for invalid spins
-    invalid_states = _get_lp_matrix(invalid_linear, nodes, edges, 1, -1)
-    invalid_states *= -1   # Taking negative in order to flip the inequality
+    # Linear programming matrix for unnoted spins
+    unnoted_states = _get_lp_matrix(unnoted_linear, nodes, edges, 1, -1)
+    unnoted_states *= -1   # Taking negative in order to flip the inequality
 
     # Bounds
     bounds = [linear_energy_ranges.get(node, (-2, 2)) for node in nodes]
@@ -75,8 +76,8 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Returns a Scipy OptimizeResult
-    result = linprog(cost_weights.flatten(), A_eq=valid_states, b_eq=np.zeros((n_valid, 1)), A_ub=invalid_states,
-                     b_ub=np.zeros((n_invalid, 1)), bounds=bounds)
+    result = linprog(cost_weights.flatten(), A_eq=noted_states, b_eq=np.zeros((n_noted, 1)), A_ub=unnoted_states,
+                     b_ub=np.zeros((n_unnoted, 1)), bounds=bounds)
 
     # Split result
     x = result.x
