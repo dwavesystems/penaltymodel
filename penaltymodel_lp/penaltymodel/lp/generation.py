@@ -1,6 +1,7 @@
 import dimod
 from itertools import product
 import numpy as np
+from operator import itemgetter
 from scipy.optimize import linprog
 
 
@@ -49,20 +50,20 @@ def generate_bqm(graph, table, decision_variables,
     # Set variable names for lengths
     m_linear = len(nodes)                   # Number of linear biases
     m_quadratic = len(edges)                # Number of quadratic biases
-    n_noted = len(table)                    # Number of noted spin combinations
-    n_unnoted = 2**m_linear - n_noted       # Number of unnoted spin combinations
+    n_noted = len(table)                    # Number of spin combinations specified in the table
+    n_unnoted = 2**m_linear - n_noted       # Number of spin combinations of length `m_linear` that were not specified
 
     # Determining noted and unnoted spin states
     spin_states = product([-1, 1], repeat=m_linear)
-    unnoted_table = set(state for state in spin_states if state not in table.keys())
-    unnoted_linear = np.array(list(unnoted_table))
-    noted_linear = np.array(list(table.keys()))
+    noted_linear = list(table.keys())
+    unnoted_linear = [state for state in spin_states if state not in noted_linear]
 
-    # Linear programming matrix for noted spins
-    noted_states = _get_lp_matrix(noted_linear, nodes, edges, 1, 0)
+    # Linear programming matrix for specified spins
+    gap_weight = np.asarray([-table[state] for state in noted_linear])
+    noted_states = _get_lp_matrix(np.asarray(noted_linear), nodes, edges, 1, gap_weight)
 
-    # Linear programming matrix for unnoted spins
-    unnoted_states = _get_lp_matrix(unnoted_linear, nodes, edges, 1, -1)
+    # Linear programming matrix for spins that were not specified
+    unnoted_states = _get_lp_matrix(np.asarray(unnoted_linear), nodes, edges, 1, -1)
     unnoted_states *= -1   # Taking negative in order to flip the inequality
 
     # Bounds
