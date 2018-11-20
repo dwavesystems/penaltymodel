@@ -1,11 +1,21 @@
 import dimod
 from itertools import product
 import numpy as np
-from operator import itemgetter
 from scipy.optimize import linprog
 
 
 def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
+    """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
+    LP matrix:
+        [spin_states, corresponding states of edges, offset_weight, gap_weight]
+
+    Args:
+        spin_states: Numpy array of spin states
+        nodes: Iterable
+        edges: Iterable of tuples
+        offset_weight: Numpy 1-D array or number
+        gap_weight: Numpy 1-D array or a number
+    """
     # Set up an empty matrix
     n_states = len(spin_states)
     m_linear = len(nodes)
@@ -53,16 +63,19 @@ def generate_bqm(graph, table, decision_variables,
     n_noted = len(table)                    # Number of spin combinations specified in the table
     n_unnoted = 2**m_linear - n_noted       # Number of spin combinations of length `m_linear` that were not specified
 
-    # Determining noted and unnoted spin states
-    spin_states = product([-1, 1], repeat=m_linear)
-    noted_linear = list(table.keys())
-    unnoted_linear = [state for state in spin_states if state not in noted_linear]
-
-    # Linear programming matrix for specified spins
-    gap_weight = np.asarray([-table[state] for state in noted_linear])
+    # Linear programming matrix for spin states specified by table
+    if isinstance(table, dict):
+        noted_linear = list(table.keys())
+        gap_weight = np.asarray([-table[state] for state in noted_linear])
+    else:
+        # Case where table is an iterable
+        noted_linear = table
+        gap_weight = 0      # Since gap_weight is unspecified, default to 0
     noted_states = _get_lp_matrix(np.asarray(noted_linear), nodes, edges, 1, gap_weight)
 
-    # Linear programming matrix for spins that were not specified
+    # Linear programming matrix for spins states that were not specified by table
+    spin_states = product([-1, 1], repeat=m_linear)
+    unnoted_linear = [state for state in spin_states if state not in noted_linear]  # Spin states unspecified by table
     unnoted_states = _get_lp_matrix(np.asarray(unnoted_linear), nodes, edges, 1, -1)
     unnoted_states *= -1   # Taking negative in order to flip the inequality
 
@@ -83,7 +96,7 @@ def generate_bqm(graph, table, decision_variables,
     # Split result
     x = result.x
     h = x[:m_linear]
-    J = x[m_linear:-2]
+    j = x[m_linear:-2]
     offset = x[-2]
     gap = x[-1]
 
@@ -93,7 +106,7 @@ def generate_bqm(graph, table, decision_variables,
     # Create BQM
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
     bqm.add_variables_from((v, bias) for v, bias in zip(nodes, h))
-    bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(edges, J))
+    bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(edges, j))
     bqm.add_offset(offset)
 
     return bqm, gap
