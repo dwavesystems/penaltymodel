@@ -7,7 +7,7 @@ import penaltymodel.lp as lp
 
 #TODO: need to run without truth table
 #TODO: test with binary values
-class TestLinearProgramming(unittest.TestCase):
+class TestPenaltyModelLinearProgramming(unittest.TestCase):
     def verify_gate_bqm(self, bqm, nodes, get_gate_output, min_gap=2):
         """Check that valid gate inputs are at ground; invalid values meet threshold (min_gap) requirement
         """
@@ -21,7 +21,8 @@ class TestLinearProgramming(unittest.TestCase):
                 self.assertGreaterEqual(energy, min_gap, "Failed for {}".format(spin_state))
 
     def test_empty(self):
-        pass
+        with self.assertRaises(ValueError):
+            result = lp.generate_bqm(nx.complete_graph([]), [], [])
 
     def test_dictionary_input(self):
         # Make or-gate BQM
@@ -63,7 +64,7 @@ class TestLinearProgramming(unittest.TestCase):
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
         # Make a BQM for an xor-gate
-        # Note: this should not be possible with an auxiliary variable
+        # Note: this should not be possible without an auxiliary variable
         nodes = ['a', 'b', 'c']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
 

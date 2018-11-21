@@ -112,8 +112,17 @@ def generate_bqm(graph, table, decision_variables,
     offset = x[-2]
     gap = x[-1]
 
+    """
+    if not result.success:
+        #TODO: Should I be propagating this error?
+        raise ValueError(result.message)
+
     if gap <= 0:
         raise ValueError('Gap is not a positive value') # TODO: Should compare with min gap
+    """
+    #TODO: Provide more detailed error?
+    if not result.success or gap <= 0:
+        raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
     # Create BQM
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
