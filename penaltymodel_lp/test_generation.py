@@ -22,7 +22,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(ValueError):
-            result = lp.generate_bqm(nx.complete_graph([]), [], [])
+            lp.generate_bqm(nx.complete_graph([]), [], [])
 
     def test_dictionary_input(self):
         # Make or-gate BQM
@@ -59,19 +59,22 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             energy = bqm.energy({'x': x, 'y': y})
             self.assertEqual(energy, expected_energy, "Failed for x:{}, y:{}".format(x, y))
 
-    def not_test_xor_gate_without_aux(self):
-        min_gap = 2
+    def test_attempt_on_difficult_problem(self):
+        # Set up xor-gate
+        # Note: penaltymodel-lp would need an auxiliary variable in order to handle this; however, no auxiliaries
+        #   are provided, hence, it should pass the problem to another penalty model.
+        nodes = ['a', 'b', 'c']
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
-        # Make a BQM for an xor-gate
-        # Note: this should not be possible without an auxiliary variable
-        nodes = ['a', 'b', 'c']
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
+        # penaltymodel-lp should not be able to handle an xor-gate
+        with self.assertRaises(ValueError):
+            lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
 
-        # Make a BQM for an and-gate
+        # Check that penaltymodel-lp is able to pass the problem to another penaltymodel
         csp = dbc.ConstraintSatisfactionProblem(dbc.SPIN)
         csp.add_constraint(xor_gate_values, ('a', 'b', 'c'))
-        bqm = dbc.stitch(csp, min_classical_gap=min_gap)
+        bqm = dbc.stitch(csp)   # BQM created by a different penaltymodel (not penaltymodel-lp)
+        self.assertGreaterEqual(len(bqm.linear) + len(bqm.quadratic), 1)    # Check BQM exists
 
 
 if __name__ == "__main__":
