@@ -8,6 +8,9 @@ import penaltymodel.lp as lp
 #TODO: need to run without truth table
 #TODO: test with binary values
 class TestLinearProgramming(unittest.TestCase):
+    def test_empty(self):
+        pass
+
     def test_or_gate_bqm(self):
         min_gap = 2
         or_gate_values = {(-1, 1, 1): 0, (1, -1, 1): 0, (1, 1, 1): 0, (-1, -1, -1): 0}
@@ -28,7 +31,18 @@ class TestLinearProgramming(unittest.TestCase):
                 # Non-or-gate values
                 self.assertGreaterEqual(energy, ground_energy + min_gap, "Failed for a:{}, b:{}, c:{}".format(a, b, c))
 
-    def test_xor_gate_without_aux(self):
+    def test_multi_energy_bqm(self):
+        configurations = {(-1, -1): -.5, (-1, 1): 3.5, (1, -1): 1.5, (1, 1): 3.5}
+        nodes = ['x', 'y']
+
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
+
+        # Verify bqm
+        for (x, y), expected_energy in configurations.items():
+            energy = bqm.energy({'x': x, 'y': y})
+            self.assertEqual(energy, expected_energy, "Failed for x:{}, y:{}".format(x, y))
+
+    def not_test_xor_gate_without_aux(self):
         min_gap = 2
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
