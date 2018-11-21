@@ -11,7 +11,7 @@ class TestLinearProgramming(unittest.TestCase):
     def test_empty(self):
         pass
 
-    def test_or_gate_bqm(self):
+    def test_dictionary_inputs(self):
         min_gap = 2
         or_gate_values = {(-1, 1, 1): 0, (1, -1, 1): 0, (1, 1, 1): 0, (-1, -1, -1): 0}
 
@@ -30,6 +30,12 @@ class TestLinearProgramming(unittest.TestCase):
             else:
                 # Non-or-gate values
                 self.assertGreaterEqual(energy, ground_energy + min_gap, "Failed for a:{}, b:{}, c:{}".format(a, b, c))
+
+    def test_iterable_inputs(self):
+        min_gap = 2
+        and_gate_set = {(-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1)}
+        nodes = [1, 2, 3]
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes)
 
     def test_multi_energy_bqm(self):
         configurations = {(-1, -1): -.5, (-1, 1): 3.5, (1, -1): 1.5, (1, 1): 3.5}

@@ -84,7 +84,10 @@ def generate_bqm(graph, table, decision_variables,
         unnoted_matrix *= -1   # Taking negative in order to flip the inequality
 
     # Constraints
-    noted_bound = np.asarray([table[state] for state in noted_states])
+    if isinstance(table, dict):
+        noted_bound = np.asarray([table[state] for state in noted_states])
+    else:
+        noted_bound = np.zeros((n_noted, 1))
     unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
