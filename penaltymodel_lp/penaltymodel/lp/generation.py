@@ -46,6 +46,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     return matrix
 
 
+#TODO: check table is not empty
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None):
 
@@ -70,20 +71,21 @@ def generate_bqm(graph, table, decision_variables,
     n_noted = len(table)                    # Number of spin combinations specified in the table
     n_unnoted = 2**m_linear - n_noted       # Number of spin combinations of length `m_linear` that were not specified
 
-    # Linear programming matrix for spin states specified by table
-    noted_linear = table.keys() if isinstance(table, dict) else table
-    noted_linear = list(noted_linear)
-    noted_states = _get_lp_matrix(np.asarray(noted_linear), nodes, edges, 1, 0)
+    # Linear programming matrix for spin states specified by 'table'
+    noted_states = table.keys() if isinstance(table, dict) else table
+    noted_states = list(noted_states)
+    noted_matrix = _get_lp_matrix(np.asarray(noted_states), nodes, edges, 1, 0)
 
-    # Linear programming matrix for spins states that were not specified by table
+    # Linear programming matrix for spins states that were not specified by 'table'
     spin_states = product([-1, 1], repeat=m_linear)
-    unnoted_linear = [state for state in spin_states if state not in noted_linear]  # Spin states unspecified by table
-    unnoted_states = _get_lp_matrix(np.asarray(unnoted_linear), nodes, edges, 1, -1)
-    if unnoted_states is not None:
-        unnoted_states *= -1   # Taking negative in order to flip the inequality
+    unnoted_states = [state for state in spin_states if state not in noted_states]  # Spin states unspecified by table
+    unnoted_matrix = _get_lp_matrix(np.asarray(unnoted_states), nodes, edges, 1, -1)
+    if unnoted_matrix is not None:
+        unnoted_matrix *= -1   # Taking negative in order to flip the inequality
 
     # Constraints
-    noted_equality = np.asarray([table[state] for state in noted_linear])
+    noted_bound = np.asarray([table[state] for state in noted_states])
+    unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
     max_gap = m_linear * MAX_LINEAR_BIAS + m_quadratic * MAX_QUADRATIC_BIAS
@@ -97,8 +99,8 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Returns a Scipy OptimizeResult
-    result = linprog(cost_weights.flatten(), A_eq=noted_states, b_eq=noted_equality, A_ub=unnoted_states,
-                     b_ub=np.zeros((n_unnoted, 1)), bounds=bounds)
+    result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound, A_ub=unnoted_matrix,
+                     b_ub=unnoted_bound, bounds=bounds)
 
     # Split result
     x = result.x
