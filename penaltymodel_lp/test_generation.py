@@ -19,7 +19,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             energy = bqm.energy(spin_state)
 
             if c == get_gate_output(a, b):
-                self.assertEqual(energy, ground_energy, "Failed for {}".format(spin_state))
+                self.assertEqual(ground_energy, energy, "Failed for {}".format(spin_state))
             else:
                 self.assertGreaterEqual(energy, ground_energy + min_gap,
                                         "Failed for {}".format(spin_state))
@@ -70,7 +70,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Verify BQM
         for (x, y), expected_energy in configurations.items():
             energy = bqm.energy({'x': x, 'y': y})
-            self.assertEqual(energy, expected_energy, "Failed for x:{}, y:{}".format(x, y))
+            self.assertEqual(expected_energy, energy, "Failed for x:{}, y:{}".format(x, y))
 
     def test_mixed_specification_truth_table(self):
         # Set a ground state and a valid state with an energy level
@@ -88,6 +88,28 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                 self.assertEqual(energy, configurations[(i, j, k)])
             else:
                 self.assertGreaterEqual(energy, 2)
+
+    def test_gap_energy_level(self):
+        """Check that gap is with respect to the lowest energy level provided by user.
+        Note: In the future, gap should be with respect to the highest energy level provided
+        """
+        config = {(1, 1): 3, (-1, -1): 9, (-1, 1): 8}
+        nodes = ['a', 'b']
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes)
+
+        self.assertGreater(gap, 0)
+
+        # Check specified config
+        for a, b in config.keys():
+            expected_energy = config[(a, b)]
+            energy = bqm.energy({'a': a, 'b': b})
+            self.assertEqual(expected_energy, energy)
+
+        # Check unspecified configuration
+        # Namely, threshold is gap + min-config-energy (i.e. 3). Threshold should not be based on
+        # gap + 0, nor gap + largest-config-energy (i.e. 9).
+        energy = bqm.energy({'a': 1, 'b': -1})
+        self.assertEqual(8, energy)
 
     def test_attempt_on_difficult_problem(self):
         # Set up xor-gate

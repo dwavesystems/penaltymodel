@@ -50,6 +50,8 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 
 #TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
 # penaltymodel check)
+#TODO: Check if len(table.keys()[0]) == len(decision_variables)
+
 #TODO: Adding min_gap into code
 #TODO: Checking min_gap < max_gap (occurs at bqm.stitch or penaltymodel?)
 def generate_bqm(graph, table, decision_variables,
@@ -91,7 +93,7 @@ def generate_bqm(graph, table, decision_variables,
     # Constraints
     if isinstance(table, dict):
         noted_bound = np.asarray([table[state] for state in noted_states])
-        unnoted_bound = np.full((n_unnoted, 1), min(table.values()))
+        unnoted_bound = np.full((n_unnoted, 1), -1 * min(table.values()))  # -1 for flipped inequality
     else:
         noted_bound = np.zeros((n_noted, 1))
         unnoted_bound = np.zeros((n_unnoted, 1))
@@ -111,6 +113,10 @@ def generate_bqm(graph, table, decision_variables,
     result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
                      A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
 
+    #TODO: propagate scipy.optimize.linprog's error message?
+    if not result.success:
+        raise ValueError('Penaltymodel-lp is unable to find a solution.')
+
     # Split result
     x = result.x
     h = x[:m_linear]
@@ -119,7 +125,7 @@ def generate_bqm(graph, table, decision_variables,
     gap = x[-1]
 
     #TODO: propagate scipy.optimize.linprog's error message?
-    if not result.success or gap <= 0:
+    if gap <= 0:
         raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
     # Create BQM
