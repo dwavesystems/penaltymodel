@@ -86,9 +86,10 @@ def generate_bqm(graph, table, decision_variables,
     # Constraints
     if isinstance(table, dict):
         noted_bound = np.asarray([table[state] for state in noted_states])
+        unnoted_bound = np.full((n_unnoted, 1), min(table.values()))
     else:
         noted_bound = np.zeros((n_noted, 1))
-    unnoted_bound = np.zeros((n_unnoted, 1))
+        unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
     max_gap = m_linear * MAX_LINEAR_BIAS + m_quadratic * MAX_QUADRATIC_BIAS

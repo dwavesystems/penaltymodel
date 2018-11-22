@@ -30,23 +30,26 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         or_gate_values = {(-1, 1, 1): 0, (1, -1, 1): 0, (1, 1, 1): 0, (-1, -1, -1): 0}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes)
 
+        self.assertGreater(gap, 0)
         self.verify_gate_bqm(bqm, nodes, max)
 
     def test_set_input(self):
         # Generate BQM for a set
         nodes = [1, 2, 3]
         and_gate_set = {(-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1)}
-        bqm_set, gap_set = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes)
 
-        self.verify_gate_bqm(bqm_set, nodes, min)
+        self.assertGreater(gap, 0)
+        self.verify_gate_bqm(bqm, nodes, min)
 
     def test_list_input(self):
         # Generate BQM for a list
         nodes = [1, 2, 3]
         nand_gate_list = [(-1, -1, 1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)]
-        bqm_list, gap_list = lp.generate_bqm(nx.complete_graph(nodes), nand_gate_list, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), nand_gate_list, nodes)
 
-        self.verify_gate_bqm(bqm_list, nodes, lambda x, y: -1 * min(x, y))
+        self.assertGreater(gap, 0)
+        self.verify_gate_bqm(bqm, nodes, lambda x, y: -1 * min(x, y))
 
     def test_multi_energy_bqm(self):
         # Create BQM for fully determined configuration with no ground states
@@ -58,6 +61,20 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         for (x, y), expected_energy in configurations.items():
             energy = bqm.energy({'x': x, 'y': y})
             self.assertEqual(energy, expected_energy, "Failed for x:{}, y:{}".format(x, y))
+
+    def test_mixed_specification_truth_table(self):
+        # Set a ground state and a valid state with an energy level
+        # Note: all other states should be invalid
+        configurations = {(-1, -1, 1): 0, (1, -1, 1): 2}
+        nodes = ['x', 'y', 'z']
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
+
+        for i, j, k in product([-1, 1], repeat=3):
+            energy = bqm.energy({'x': i, 'y': j, 'z': k})
+            if (i, j, k) in configurations.keys():
+                self.assertEqual(energy, configurations[(i, j, k)])
+            else:
+                self.assertGreaterEqual(energy, 2)
 
     def test_attempt_on_difficult_problem(self):
         # Set up xor-gate
