@@ -8,17 +8,19 @@ import penaltymodel.lp as lp
 #TODO: need to run without truth table
 #TODO: test with binary values
 class TestPenaltyModelLinearProgramming(unittest.TestCase):
-    def verify_gate_bqm(self, bqm, nodes, get_gate_output, min_gap=2):
-        """Check that valid gate inputs are at ground; invalid values meet threshold (min_gap) requirement
+    def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2):
+        """Check that all equally valid gate inputs are at ground and that invalid values meet
+        threshold (min_gap) requirement.
         """
         for a, b, c in product([-1, 1], repeat=3):
             spin_state = {nodes[0]: a, nodes[1]: b, nodes[2]: c}
             energy = bqm.energy(spin_state)
 
             if c == get_gate_output(a, b):
-                self.assertEqual(energy, 0, "Failed for {}".format(spin_state))
+                self.assertEqual(energy, ground_energy, "Failed for {}".format(spin_state))
             else:
-                self.assertGreaterEqual(energy, min_gap, "Failed for {}".format(spin_state))
+                self.assertGreaterEqual(energy, ground_energy + min_gap,
+                                        "Failed for {}".format(spin_state))
 
     def test_empty(self):
         with self.assertRaises(ValueError):
@@ -27,11 +29,16 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
     def test_dictionary_input(self):
         # Make or-gate BQM
         nodes = ['a', 'b', 'c']
-        or_gate_values = {(-1, 1, 1): 0, (1, -1, 1): 0, (1, 1, 1): 0, (-1, -1, -1): 0}
+        ground = 0
+        min_gap = 2
+        or_gate_values = {(-1, 1, 1): ground,
+                          (1, -1, 1): ground,
+                          (1, 1, 1): ground,
+                          (-1, -1, -1): ground}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes)
 
-        self.assertGreater(gap, 0)
-        self.verify_gate_bqm(bqm, nodes, max)
+        self.assertGreaterEqual(gap, min_gap, "Gap is less than {}".format(min_gap))
+        self.verify_gate_bqm(bqm, nodes, max, ground_energy=ground, min_gap=min_gap)
 
     def test_set_input(self):
         # Generate BQM for a set
@@ -78,8 +85,9 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
 
     def test_attempt_on_difficult_problem(self):
         # Set up xor-gate
-        # Note: penaltymodel-lp would need an auxiliary variable in order to handle this; however, no auxiliaries
-        #   are provided, hence, it should pass the problem to another penalty model.
+        # Note: penaltymodel-lp would need an auxiliary variable in order to handle this;
+        #   however, no auxiliaries are provided, hence, it should pass the problem to another
+        #   penalty model.
         nodes = ['a', 'b', 'c']
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
@@ -90,7 +98,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Check that penaltymodel-lp is able to pass the problem to another penaltymodel
         csp = dbc.ConstraintSatisfactionProblem(dbc.SPIN)
         csp.add_constraint(xor_gate_values, ('a', 'b', 'c'))
-        bqm = dbc.stitch(csp)   # BQM created by a different penaltymodel (not penaltymodel-lp)
+        bqm = dbc.stitch(csp)   # BQM created by a penaltymodel that is not penaltymodel-lp
         self.assertGreaterEqual(len(bqm.linear) + len(bqm.quadratic), 1)    # Check BQM exists
 
 

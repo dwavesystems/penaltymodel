@@ -7,6 +7,7 @@ MIN_LINEAR_BIAS = -2
 MAX_LINEAR_BIAS = 2
 MIN_QUADRATIC_BIAS = -1
 MAX_QUADRATIC_BIAS = 1
+DEFAULT_GAP = 2
 
 
 def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
@@ -28,7 +29,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     n_states = len(spin_states)
     m_linear = len(nodes)
     m_quadratic = len(edges)
-    matrix = np.empty((n_states, m_linear + m_quadratic + 2))   # +2 columns to account for offset and gap
+    matrix = np.empty((n_states, m_linear + m_quadratic + 2))   # +2 columns for offset and gap
 
     # Populate linear terms (i.e. spin states)
     matrix[:, :m_linear] = spin_states
@@ -48,7 +49,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 
 #TODO: check table is not empty
 def generate_bqm(graph, table, decision_variables,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None):
+                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_gap=DEFAULT_GAP):
 
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
@@ -69,7 +70,7 @@ def generate_bqm(graph, table, decision_variables,
     m_linear = len(nodes)                   # Number of linear biases
     m_quadratic = len(edges)                # Number of quadratic biases
     n_noted = len(table)                    # Number of spin combinations specified in the table
-    n_unnoted = 2**m_linear - n_noted       # Number of spin combinations of length `m_linear` that were not specified
+    n_unnoted = 2**m_linear - n_noted       # Number of spin combinations that were not specified
 
     # Linear programming matrix for spin states specified by 'table'
     noted_states = table.keys() if isinstance(table, dict) else table
@@ -78,7 +79,7 @@ def generate_bqm(graph, table, decision_variables,
 
     # Linear programming matrix for spins states that were not specified by 'table'
     spin_states = product([-1, 1], repeat=m_linear)
-    unnoted_states = [state for state in spin_states if state not in noted_states]  # Spin states unspecified by table
+    unnoted_states = [state for state in spin_states if state not in noted_states]
     unnoted_matrix = _get_lp_matrix(np.asarray(unnoted_states), nodes, edges, 1, -1)
     if unnoted_matrix is not None:
         unnoted_matrix *= -1   # Taking negative in order to flip the inequality
@@ -103,8 +104,8 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Returns a Scipy OptimizeResult
-    result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound, A_ub=unnoted_matrix,
-                     b_ub=unnoted_bound, bounds=bounds)
+    result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
+                     A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
 
     # Split result
     x = result.x
@@ -122,7 +123,7 @@ def generate_bqm(graph, table, decision_variables,
         raise ValueError('Gap is not a positive value') # TODO: Should compare with min gap
     """
     #TODO: Provide more detailed error?
-    if not result.success or gap <= 0:
+    if not result.success or gap <= min_gap:
         raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
     # Create BQM
