@@ -3,6 +3,7 @@ from itertools import product
 import numpy as np
 from scipy.optimize import linprog
 
+#TODO: put these values in a common penaltymodel folder
 MIN_LINEAR_BIAS = -2
 MAX_LINEAR_BIAS = 2
 MIN_QUADRATIC_BIAS = -1
@@ -47,9 +48,12 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     return matrix
 
 
-#TODO: check table is not empty
+#TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
+# penaltymodel check)
+#TODO: Adding min_gap into code
+#TODO: Checking min_gap < max_gap (occurs at bqm.stitch or penaltymodel?)
 def generate_bqm(graph, table, decision_variables,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_gap=DEFAULT_GAP):
+                 linear_energy_ranges=None, quadratic_energy_ranges=None):
 
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
@@ -97,7 +101,7 @@ def generate_bqm(graph, table, decision_variables,
     bounds = [linear_energy_ranges.get(node, (-2, 2)) for node in nodes]
     bounds += [quadratic_energy_ranges.get(edge, (-1, 1)) for edge in edges]
     bounds.append((None, None))     # for offset
-    bounds.append((0, max_gap))     # for gap
+    bounds.append((0, max_gap))     # for gap. TODO: bound with min_gap as well
 
     # Cost function
     cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
@@ -114,16 +118,8 @@ def generate_bqm(graph, table, decision_variables,
     offset = x[-2]
     gap = x[-1]
 
-    """
-    if not result.success:
-        #TODO: Should I be propagating this error?
-        raise ValueError(result.message)
-
-    if gap <= 0:
-        raise ValueError('Gap is not a positive value') # TODO: Should compare with min gap
-    """
-    #TODO: Provide more detailed error?
-    if not result.success or gap <= min_gap:
+    #TODO: propagate scipy.optimize.linprog's error message?
+    if not result.success or gap <= 0:
         raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
     # Create BQM

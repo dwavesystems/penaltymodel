@@ -7,6 +7,8 @@ import penaltymodel.lp as lp
 
 #TODO: need to run without truth table
 #TODO: test with binary values
+#TODO: add tests on satisfying min_gap. Currently, we're always checking that gap > 0, and passive
+# check that gap >= default 2.
 class TestPenaltyModelLinearProgramming(unittest.TestCase):
     def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2):
         """Check that all equally valid gate inputs are at ground and that invalid values meet
@@ -27,21 +29,20 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             lp.generate_bqm(nx.complete_graph([]), [], [])
 
     def test_dictionary_input(self):
-        # Make or-gate BQM
+        # Generate BQM with a dictionary
         nodes = ['a', 'b', 'c']
         ground = 0
-        min_gap = 2
         or_gate_values = {(-1, 1, 1): ground,
                           (1, -1, 1): ground,
                           (1, 1, 1): ground,
                           (-1, -1, -1): ground}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes)
 
-        self.assertGreaterEqual(gap, min_gap, "Gap is less than {}".format(min_gap))
-        self.verify_gate_bqm(bqm, nodes, max, ground_energy=ground, min_gap=min_gap)
+        self.assertGreater(gap, 0)
+        self.verify_gate_bqm(bqm, nodes, max, ground_energy=ground)
 
     def test_set_input(self):
-        # Generate BQM for a set
+        # Generate BQM with a set
         nodes = [1, 2, 3]
         and_gate_set = {(-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1)}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes)
@@ -50,7 +51,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         self.verify_gate_bqm(bqm, nodes, min)
 
     def test_list_input(self):
-        # Generate BQM for a list
+        # Generate BQM with a list
         nodes = [1, 2, 3]
         nand_gate_list = [(-1, -1, 1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)]
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), nand_gate_list, nodes)
@@ -64,6 +65,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         nodes = ['x', 'y']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
 
+        self.assertGreater(gap, 0)
+
         # Verify BQM
         for (x, y), expected_energy in configurations.items():
             energy = bqm.energy({'x': x, 'y': y})
@@ -76,6 +79,9 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         nodes = ['x', 'y', 'z']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
 
+        self.assertGreater(gap, 0)
+
+        # Verify BQM
         for i, j, k in product([-1, 1], repeat=3):
             energy = bqm.energy({'x': i, 'y': j, 'z': k})
             if (i, j, k) in configurations.keys():
