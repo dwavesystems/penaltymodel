@@ -33,6 +33,8 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     matrix = np.empty((n_states, m_linear + m_quadratic + 2))   # +2 columns for offset and gap
 
     # Populate linear terms (i.e. spin states)
+    if spin_states.ndim == 1:
+        spin_states = np.expand_dims(spin_states, 1)
     matrix[:, :m_linear] = spin_states
 
     # Populate quadratic terms
@@ -84,7 +86,8 @@ def generate_bqm(graph, table, decision_variables,
     noted_matrix = _get_lp_matrix(np.asarray(noted_states), nodes, edges, 1, 0)
 
     # Linear programming matrix for spins states that were not specified by 'table'
-    spin_states = product([-1, 1], repeat=m_linear)
+    # Note: When spin
+    spin_states = product([-1, 1], repeat=m_linear) if m_linear > 1 else [-1, 1]
     unnoted_states = [state for state in spin_states if state not in noted_states]
     unnoted_matrix = _get_lp_matrix(np.asarray(unnoted_states), nodes, edges, 1, -1)
     if unnoted_matrix is not None:
@@ -99,11 +102,18 @@ def generate_bqm(graph, table, decision_variables,
         unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
-    max_gap = m_linear * MAX_LINEAR_BIAS + m_quadratic * MAX_QUADRATIC_BIAS
-    bounds = [linear_energy_ranges.get(node, (-2, 2)) for node in nodes]
-    bounds += [quadratic_energy_ranges.get(edge, (-1, 1)) for edge in edges]
-    bounds.append((None, None))     # for offset
-    bounds.append((0, max_gap))     # for gap. TODO: bound with min_gap as well
+    # Note: max_gap's max(..or..) is to support python2.7. TODO: ideally, use max([..], default)
+    linear_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
+    quadratic_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
+
+    bounds = [linear_energy_ranges.get(node, linear_range) for node in nodes]
+    bounds += [quadratic_energy_ranges.get(edge, quadratic_range) for edge in edges]
+
+    # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
+    #   hence that 2 * sum(largest_biases)
+    max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
+    bounds.append((None, None))     # Bound for offset
+    bounds.append((0, max_gap))     # Bound for gap. TODO: bound with min_gap as well
 
     # Cost function
     cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
@@ -124,7 +134,6 @@ def generate_bqm(graph, table, decision_variables,
     offset = x[-2]
     gap = x[-1]
 
-    #TODO: propagate scipy.optimize.linprog's error message?
     if gap <= 0:
         raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
