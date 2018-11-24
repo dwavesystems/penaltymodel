@@ -67,6 +67,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                   -1: 104}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes,
                                    linear_energy_ranges=linear_energy_range)
+
+        # Verify that results match expected BQM
         self.assertEqual(100, bqm.offset)
         self.assertEqual(-4, bqm.linear['a'])   # linear bias falls within 'linear_energy_range'
 
@@ -79,10 +81,17 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                   (1, -1): 162}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes,
                                    quadratic_energy_ranges=quadratic_energy_range)
+
+        # Verify that results match expected BQM
         self.assertEqual(42, bqm.offset)
         self.assertEqual(-1, bqm.linear['a'])   # Bias within 'linear_energy_range'
         self.assertEqual(2, bqm.linear['b'])    # Bias within 'linear_energy_range'
-        self.assertEqual(-123, bqm.quadratic[('a', 'b')])   # Bias within 'quadratic_energy_range'
+
+        # Check that bias is within 'quadratic_energy_range'
+        try:
+            self.assertEqual(-123, bqm.quadratic[('a', 'b')])
+        except KeyError:
+            self.assertEqual(-123, bqm.quadratic[('b', 'a')])
 
     def test_multi_energy_bqm(self):
         # Create BQM for fully determined configuration with no ground states

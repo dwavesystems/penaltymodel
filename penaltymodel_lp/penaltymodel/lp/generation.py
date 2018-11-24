@@ -11,6 +11,26 @@ MAX_QUADRATIC_BIAS = 1
 DEFAULT_GAP = 2
 
 
+def get_item(dictionary, tuple_key, default_value):
+    """Grab values from a dictionary using an unordered tuple as a key.
+
+    Dictionary should not contain None, 0, or False as dictionary values.
+
+    Args:
+        dictionary: Dictionary that uses two-element tuple as keys
+        tuple_key: Unordered tuple of two elements
+        default_value: Value that is returned when the tuple_key is not found in the dictionary
+    """
+    u, v = tuple_key
+
+    # Grab tuple-values from dictionary
+    tuple1 = dictionary.get((u, v), None)
+    tuple2 = dictionary.get((v, u), None)
+
+    # Return the first value that is not {None, 0, False}
+    return tuple1 or tuple2 or default_value
+
+
 def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
     LP matrix:
@@ -107,7 +127,7 @@ def generate_bqm(graph, table, decision_variables,
     quadratic_range = (MIN_QUADRATIC_BIAS, MAX_QUADRATIC_BIAS)
 
     bounds = [linear_energy_ranges.get(node, linear_range) for node in nodes]
-    bounds += [quadratic_energy_ranges.get(edge, quadratic_range) for edge in edges]
+    bounds += [get_item(quadratic_energy_ranges, edge, quadratic_range) for edge in edges]
 
     # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
     #   hence that 2 * sum(largest_biases)
