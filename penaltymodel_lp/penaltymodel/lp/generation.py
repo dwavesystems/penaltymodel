@@ -104,7 +104,7 @@ def generate_bqm(graph, table, decision_variables,
     # Bounds
     # Note: max_gap's max(..or..) is to support python2.7. TODO: ideally, use max([..], default)
     linear_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
-    quadratic_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
+    quadratic_range = (MIN_QUADRATIC_BIAS, MAX_QUADRATIC_BIAS)
 
     bounds = [linear_energy_ranges.get(node, linear_range) for node in nodes]
     bounds += [quadratic_energy_ranges.get(edge, quadratic_range) for edge in edges]
