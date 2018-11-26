@@ -6,6 +6,8 @@
 
 -r penaltymodel_mip/requirements.txt
 
+-r penaltymodel_lp/requirements.txt
+
 sphinx
 sphinx_rtd_theme
 
