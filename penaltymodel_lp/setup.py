@@ -15,6 +15,7 @@ packages = ['penaltymodel',
 setup(
     name="penaltymodel-lp",
     install_requires=install_requires,
+    packages=packages,
     entry_points={
         FACTORY_ENTRYPOINT: ['lp = penaltymodel.lp:get_penalty_model']
     }
