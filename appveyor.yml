@@ -19,6 +19,7 @@ install:
   - "%PYTHON%\\python.exe -m pip install penaltymodel_cache\\"
   - "%PYTHON%\\python.exe -m pip install penaltymodel_maxgap\\"
   - "%PYTHON%\\python.exe -m pip install penaltymodel_mip\\"
+  - "%PYTHON%\\python.exe -m pip install penaltymodel_lp\\"
 
 build: off
 
@@ -27,4 +28,5 @@ test_script:
   - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_cache"
   - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_maxgap"
   - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_mip"
+  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_lp"
   - "%PYTHON%\\python.exe -m unittest discover tests/"
