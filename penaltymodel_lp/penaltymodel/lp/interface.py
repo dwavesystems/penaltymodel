@@ -9,7 +9,7 @@ from penaltymodel.lp.generation import generate_bqm
 __all__ = ['get_penalty_model']
 
 
-@pm.penaltymodel_factory(100)
+@pm.penaltymodel_factory(50)
 def get_penalty_model(specification):
     """Factory function for penaltymodel-lp.
 
