@@ -5,8 +5,6 @@ import unittest
 import penaltymodel.lp as lp
 
 
-#TODO: need to run without truth table
-#TODO: test with binary values
 #TODO: add tests on satisfying min_gap. Currently, we're always checking that gap > 0, and passive
 # check that gap >= default 2.
 class TestPenaltyModelLinearProgramming(unittest.TestCase):
