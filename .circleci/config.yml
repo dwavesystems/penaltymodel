@@ -52,6 +52,12 @@ jobs:
             . env/bin/activate
             pip install penaltymodel_mip/
 
+      - run: &install-lp-template
+          name: install penaltymodel-lp
+          command: |
+            . env/bin/activate
+            pip install penaltymodel_lp/
+
       - run: &core-tests-template
           name: core tests
           command: |
@@ -69,6 +75,12 @@ jobs:
           command: |
             . env/bin/activate
             coverage run -a -m unittest discover -s penaltymodel_maxgap/
+
+      - run: &lp-tests-template
+          name: lp tests
+          command: |
+            . env/bin/activate
+            coverage run -a -m unittest discover -s penaltymodel_lp/
 
       - run: &mip-tests-template
           name: mip tests
@@ -172,6 +184,8 @@ jobs:
 
       - run: *install-mip-template
 
+      - run: *install-lp-template
+
       - run: *core-tests-template
 
       - run: *cache-tests-template
@@ -179,6 +193,8 @@ jobs:
       - run: *maxgap-tests-template
 
       - run: *mip-tests-template
+
+      - run: *lp-tests-template
 
       - run: *integration-tests-template
 
@@ -350,6 +366,40 @@ jobs:
 
       - run: *twine-template
 
+  deploy-lp:
+    docker:
+      - image: circleci/python:3.6-jessie
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run: *create-virtualenv-template
+
+      - run: *install-core-template
+
+      - run: *install-lp-template
+
+      - run:
+          name: verify version matches tag
+          command: |
+            . env/bin/activate
+            [[ "$(pip show penaltymodel-lp 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/lp-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+
+      - run: *pypirc-file-template
+
+      - run:
+          name: build bdist and sdist
+          command: |
+            . env/bin/activate
+            cd penaltymodel_lp
+            python setup.py sdist
+            python setup.py bdist_wheel
+            mv dist/* ../dist/
+
+      - run: *twine-template
+
 workflows:
   version: 2
   test:
@@ -386,5 +436,11 @@ workflows:
           filters:
             tags:
               only: /^mip-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+            branches:
+              ignore: /.*/
+      - deploy-lp:
+          filters:
+            tags:
+              only: /^lp-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
               ignore: /.*/
