@@ -120,7 +120,7 @@ class Specification(object):
 
     """
     @dimod.decorators.vartype_argument('vartype')
-    def __init__(self, graph, decision_variables, feasible_configurations, vartype,
+    def __init__(self, graph, decision_variables, feasible_configurations, vartype, min_classical_gap,
                  ising_linear_ranges=None,
                  ising_quadratic_ranges=None):
 
@@ -169,6 +169,13 @@ class Specification(object):
         #
         self.ising_linear_ranges = self._check_ising_linear_ranges(ising_linear_ranges, graph)
         self.ising_quadratic_ranges = self._check_ising_quadratic_ranges(ising_quadratic_ranges, graph)
+
+        #
+        # min_classical_gap
+        #
+        if min_classical_gap <= 0:
+            raise ValueError("min_classical_gap must be a positive number")
+        self.min_classical_gap = min_classical_gap
 
         #
         # vartype
