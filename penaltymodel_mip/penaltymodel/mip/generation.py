@@ -12,6 +12,7 @@ import penaltymodel.core as pm
 
 
 def generate_bqm(graph, table, decision,
+                 min_classical_gap=2,
                  linear_energy_ranges=None, quadratic_energy_ranges=None,
                  precision=7, max_decision=8, max_variables=10,
                  return_auxiliary=False):
@@ -106,11 +107,11 @@ def generate_bqm(graph, table, decision,
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
     if return_auxiliary:
-        h, J, offset, gap, aux = _generate_ising(graph, table, decision,
+        h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
                                                  linear_energy_ranges, quadratic_energy_ranges,
                                                  return_auxiliary)
     else:
-        h, J, offset, gap = _generate_ising(graph, table, decision,
+        h, J, offset, gap = _generate_ising(graph, table, decision, min_classical_gap,
                                             linear_energy_ranges, quadratic_energy_ranges,
                                             return_auxiliary)
 
@@ -125,8 +126,8 @@ def generate_bqm(graph, table, decision,
         return bqm, round(gap, precision)
 
 
-def _generate_ising(graph, table, decision, linear_energy_ranges, quadratic_energy_ranges,
-                    return_auxiliary):
+def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ranges,
+                    quadratic_energy_ranges, return_auxiliary):
 
     if not table:
         # if there are no feasible configurations then the gap is 0 and the model is empty
@@ -157,7 +158,7 @@ def _generate_ising(graph, table, decision, linear_energy_ranges, quadratic_ener
 
     offset = solver.NumVar(-solver.infinity(), solver.infinity(), 'offset')
 
-    gap = solver.NumVar(0, solver.infinity(), 'classical_gap')
+    gap = solver.NumVar(min_classical_gap, solver.infinity(), 'classical_gap')
 
     # Let x, a be the decision, auxiliary variables respectively
     # Let E(x, a) be the energy of x and a
