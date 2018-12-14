@@ -135,6 +135,7 @@ class PenaltyModel(Specification):
 
         Specification.__init__(self, graph, decision_variables, feasible_configurations,
                                vartype=vartype,
+                               min_classical_gap=classical_gap,
                                ising_linear_ranges=ising_linear_ranges,
                                ising_quadratic_ranges=ising_quadratic_ranges)
 
