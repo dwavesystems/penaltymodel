@@ -303,7 +303,7 @@ class Table(object):
         return Plus(energy_sources)
 
     def set_energy(self, spins, target_energy):
-        """Set the energy of Theta with spins fixed to taget_energy.
+        """Set the energy of Theta with spins fixed to target_energy.
 
         Args:
             spins (dict): Spin values for a subset of the variables in Theta.

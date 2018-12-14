@@ -60,6 +60,10 @@ def generate(graph, feasible_configurations, decision_variables,
     Returns:
         tuple: A 4-tuple containing:
 
+            dict: The linear biases of the Ising problem.
+
+            dict: The quadratic biases of the Ising problem.
+
             :obj:`dimod.BinaryQuadraticModel`
 
             float: The classical energy gap between ground and the first
