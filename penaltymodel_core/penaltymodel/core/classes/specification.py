@@ -120,7 +120,8 @@ class Specification(object):
 
     """
     @dimod.decorators.vartype_argument('vartype')
-    def __init__(self, graph, decision_variables, feasible_configurations, vartype, min_classical_gap,
+    def __init__(self, graph, decision_variables, feasible_configurations, vartype,
+                 min_classical_gap=2.0,
                  ising_linear_ranges=None,
                  ising_quadratic_ranges=None):
 
