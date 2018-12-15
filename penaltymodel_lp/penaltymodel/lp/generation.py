@@ -73,11 +73,8 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 #TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
 # penaltymodel check)
 #TODO: Check if len(table.keys()[0]) == len(decision_variables)
-
-#TODO: Adding min_gap into code
-#TODO: Checking min_gap < max_gap (occurs at bqm.stitch or penaltymodel?)
 def generate_bqm(graph, table, decision_variables,
-                 min_classical_gap=2, linear_energy_ranges=None, quadratic_energy_ranges=None):
+                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2):
 
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
