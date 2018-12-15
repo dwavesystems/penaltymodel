@@ -8,7 +8,6 @@
 """
 
 import itertools
-from collections import defaultdict
 
 from six import iteritems
 import penaltymodel.core as pm
@@ -20,7 +19,7 @@ __all__ = ['generate_ising']
 
 
 def generate_ising(graph, feasible_configurations, decision_variables,
-                   linear_energy_ranges, quadratic_energy_ranges,
+                   linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
                    smt_solver_name):
     """Generates the Ising model that induces the given feasible configurations.
 
@@ -41,7 +40,7 @@ def generate_ising(graph, feasible_configurations, decision_variables,
             be a solver available to pysmt. If None, uses the pysmt default.
 
     Returns:
-        tuple: A 4-tuple contiaing:
+        tuple: A 4-tuple containing:
 
             dict: The linear biases of the Ising problem.
 
@@ -63,11 +62,11 @@ def generate_ising(graph, feasible_configurations, decision_variables,
     # iterate over every possible configuration of the decision variables.
     for config in itertools.product((-1, 1), repeat=len(decision_variables)):
 
-        # determine the spin associated with each varaible in decision variables.
+        # determine the spin associated with each variable in decision variables.
         spins = dict(zip(decision_variables, config))
 
         if config in feasible_configurations:
-            # if the configuration is feasible, we require that the mininum energy over all
+            # if the configuration is feasible, we require that the minimum energy over all
             # possible aux variable settings be exactly its target energy (given by the value)
             table.set_energy(spins, feasible_configurations[config])
         else:
@@ -86,13 +85,13 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         if solver.solve():
 
             # we want to increase the gap until we have found the max classical gap
-            gmin = 0
+            gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
 
             # 2 is a good target gap
-            g = 2.
+            g = max(2., gmin)
 
             while abs(gmax - gmin) >= .01:
                 solver.push()
