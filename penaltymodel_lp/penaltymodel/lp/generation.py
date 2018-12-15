@@ -75,7 +75,19 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 #TODO: Check if len(table.keys()[0]) == len(decision_variables)
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2):
-
+    """
+    Args:
+        graph: A networkx.Graph
+        table: An iterable of valid spin configurations. Each configuration is a tuple of
+            variable assignments ordered by `decision`.
+        decision_variables: An ordered iterable of the variables in the binary quadratic model.
+        linear_energy_ranges: Dictionary of the form {v: (min, max), ...} where min and
+            max are the range of values allowed to v. The default range is [-2, 2].
+        quadratic_energy_ranges: Dict of the form {(u, v): (min, max), ...} where min and max are
+            the range of values allowed to (u, v). The default range is [-1, 1].
+        min_classical_gap: A float. The minimum energy gap between the highest feasible state and
+            the lowest infeasible state.
+    """
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')

@@ -36,6 +36,8 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         quadratic_energy_ranges (dict): A dict of the form
             {(u, v): (min, max), ...} where min and max are the range
             of values allowed to (u, v).
+        min_classical_gap (float): The minimum energy gap between the highest feasible state and the
+            lowest infeasible state.
         smt_solver_name (str/None): The name of the smt solver. Must
             be a solver available to pysmt. If None, uses the pysmt default.
 

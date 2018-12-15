@@ -36,6 +36,10 @@ def generate_bqm(graph, table, decision,
             Dict of the form {(u, v): (min, max), ...} where min and max are the range of values
             allowed to (u, v). The default range is [-1, 1].
 
+        min_classical_gap (float):
+            The minimum energy gap between the highest feasible state and the lowest infeasible
+            state.
+
         precision (int, optional, default=7):
             Values returned by the optimization solver are rounded to `precision` digits of
             precision.

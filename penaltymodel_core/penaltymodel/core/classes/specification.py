@@ -117,6 +117,9 @@ class Specification(object):
             u and v are variables in the desired penalty model and u, v have an
             interaction - there is an edge between nodes u, v in `graph`.
 
+        min_classical_gap (float): The minimum energy gap between the highest feasible state and
+            the lowest infeasible state. Default value is 2.
+
     """
     @dimod.decorators.vartype_argument('vartype')
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
