@@ -5,9 +5,8 @@ PenaltyModel
 from __future__ import absolute_import
 
 from numbers import Number
-import itertools
 
-from six import itervalues, iteritems
+from six import iteritems
 import networkx as nx
 
 from dimod import BinaryQuadraticModel, Vartype

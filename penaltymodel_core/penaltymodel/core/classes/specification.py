@@ -10,7 +10,6 @@ import itertools
 import networkx as nx
 
 import dimod
-from dimod import BinaryQuadraticModel
 from six import itervalues, iteritems, iterkeys
 
 
