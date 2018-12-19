@@ -72,7 +72,6 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 
 #TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
 # penaltymodel check)
-#TODO: Check if len(table.keys()[0]) == len(decision_variables)
 def generate_bqm(graph, table, decision_variables,
                  linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2):
     """
@@ -131,7 +130,6 @@ def generate_bqm(graph, table, decision_variables,
         unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
-    # Note: max_gap's max(..or..) is to support python2.7. TODO: ideally, use max([..], default)
     linear_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
     quadratic_range = (MIN_QUADRATIC_BIAS, MAX_QUADRATIC_BIAS)
 
@@ -142,7 +140,7 @@ def generate_bqm(graph, table, decision_variables,
     #   hence that 2 * sum(largest_biases)
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))     # Bound for offset
-    bounds.append((min_classical_gap, max_gap))     # Bound for gap. TODO: bound with min_gap as well
+    bounds.append((min_classical_gap, max_gap))     # Bound for gap.
 
     # Cost function
     cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
