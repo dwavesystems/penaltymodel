@@ -57,6 +57,23 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         self.assertGreater(gap, 0)
         self.verify_gate_bqm(bqm, nodes, lambda x, y: -1 * min(x, y))
 
+    def test_min_gap(self):
+        def run_same_problem(min_gap):
+            nodes = ['a', 'b']
+            states = {(-1, -1): -1,
+                      (-1, 1): -1,
+                      (1, -1): -1}
+            return lp.generate_bqm(nx.complete_graph(nodes), states, nodes,
+                                   min_classical_gap=min_gap)
+
+        with self.assertRaises(ValueError):
+            large_min_gap = 5
+            run_same_problem(large_min_gap)
+
+        smaller_min_gap = 4
+        bqm, gap = run_same_problem(smaller_min_gap)
+        self.assertEqual(smaller_min_gap, gap)
+
     def test_linear_energy_range(self):
         # Test linear energy range
         nodes = ['a']
