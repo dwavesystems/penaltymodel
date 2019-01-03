@@ -119,7 +119,7 @@ class Specification(object):
             interaction - there is an edge between nodes u, v in `graph`.
 
     """
-    @dimod.vartype_argument('vartype')
+    @dimod.decorators.vartype_argument('vartype')
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
                  ising_linear_ranges=None,
                  ising_quadratic_ranges=None):

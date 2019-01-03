@@ -14,7 +14,7 @@ else:
 install_requires = ['penaltymodel>=0.15.0,<0.16.0',
                     'six>=1.11.0,<2.0.0',
                     'homebase>=1.0.0,<2.0.0',
-                    'dimod>=0.6.0,<0.8.0'
+                    'dimod>=0.6.0,<0.9.0'
                     ]
 
 extras_require = {}
