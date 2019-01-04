@@ -264,6 +264,9 @@ class TestGeneration(unittest.TestCase):
             self.assertAlmostEqual(bqm.energy(sample), 0.0)
 
     def test_min_gap_no_aux(self):
+        # Verify min_classical_gap parameter works.
+        # Note: test will run the problem with a gap of 5, where the gap is too high. Lowering
+        #   gap to 4 should produce a BQM.
         def run_same_problem(min_gap):
             nodes = ['a', 'b']
             states = {(-1, -1): 0,
@@ -277,5 +280,24 @@ class TestGeneration(unittest.TestCase):
             run_same_problem(large_min_gap)
 
         smaller_min_gap = 4
+        bqm, gap = run_same_problem(smaller_min_gap)
+        self.assertEqual(smaller_min_gap, gap)
+
+    def test_min_gap_with_auxiliary(self):
+        # Verify min_classical_gap parameter works.
+        # Note: test will run the problem with a gap of 7, where the gap is too high. Lowering
+        #   gap to 6 should produce a BQM.
+        def run_same_problem(min_gap):
+            nodes = ['a']
+            states = {(-1,): 0}
+            graph = nx.complete_graph(nodes + ['aux0'])
+
+            return mip.generate_bqm(graph, states, nodes, min_classical_gap=min_gap)
+
+        with self.assertRaises(pm.ImpossiblePenaltyModel):
+            large_min_gap = 7
+            run_same_problem(large_min_gap)
+
+        smaller_min_gap = 6
         bqm, gap = run_same_problem(smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)
