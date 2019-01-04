@@ -84,7 +84,8 @@ def generate_bqm(graph, table, decision,
 
     if not set().union(*table).issubset({-1, 1}):
         raise ValueError("expected table to be spin-valued")
-    elif isinstance(table, Mapping) and any(table.values()):
+
+    if isinstance(table, Mapping) and any(table.values()):
         raise ValueError("cannot handle non-zero target energy levels")
 
     if not isinstance(decision, list):
