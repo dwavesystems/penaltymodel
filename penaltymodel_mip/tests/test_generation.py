@@ -285,8 +285,6 @@ class TestGeneration(unittest.TestCase):
 
     def test_min_gap_with_auxiliary(self):
         # Verify min_classical_gap parameter works.
-        # Note: test will run the problem with a gap of 7, where the gap is too high. Lowering
-        #   gap to 6 should produce a BQM.
         def run_same_problem(min_gap):
             nodes = ['a']
             states = {(-1,): 0}
@@ -294,10 +292,12 @@ class TestGeneration(unittest.TestCase):
 
             return mip.generate_bqm(graph, states, nodes, min_classical_gap=min_gap)
 
+        # min_classical_gap should be too large for this problem
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 7
             run_same_problem(large_min_gap)
 
+        # Lowering the min_classical_gap should result to a bqm being found
         smaller_min_gap = 6
         bqm, gap = run_same_problem(smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)

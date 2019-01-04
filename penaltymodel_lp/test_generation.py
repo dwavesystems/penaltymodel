@@ -58,6 +58,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         self.verify_gate_bqm(bqm, nodes, lambda x, y: -1 * min(x, y))
 
     def test_min_gap(self):
+        # Testing that min_classical_gap parameter works
         def run_same_problem(min_gap):
             nodes = ['a', 'b']
             states = {(-1, -1): -1,
@@ -66,10 +67,12 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             return lp.generate_bqm(nx.complete_graph(nodes), states, nodes,
                                    min_classical_gap=min_gap)
 
+        # min_classical_gap=5 should be too large for the problem
         with self.assertRaises(ValueError):
             large_min_gap = 5
             run_same_problem(large_min_gap)
 
+        # Lowering the min_classical_gap should allow a bqm to be found
         smaller_min_gap = 4
         bqm, gap = run_same_problem(smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)

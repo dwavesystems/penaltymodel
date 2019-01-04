@@ -26,11 +26,13 @@ class TestGeneration(unittest.TestCase):
         decision_variables = (0, 1, 2)
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             maxgap.generate_ising(graph, configurations, decision_variables,
                                   linear_energy_ranges,
                                   quadratic_energy_ranges,
+                                  min_classical_gap,
                                   None)
 
     def check_linear_energy_ranges(self, linear, linear_energy_ranges):
@@ -92,10 +94,12 @@ class TestGeneration(unittest.TestCase):
         decision_variables = (0, 1, 2)
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -111,10 +115,12 @@ class TestGeneration(unittest.TestCase):
         decision_variables = (0, 1, 2)
         linear_energy_ranges = {v: (-1., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., .5) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -130,10 +136,12 @@ class TestGeneration(unittest.TestCase):
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -148,10 +156,12 @@ class TestGeneration(unittest.TestCase):
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -165,10 +175,12 @@ class TestGeneration(unittest.TestCase):
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -182,10 +194,12 @@ class TestGeneration(unittest.TestCase):
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
         decision_variables = [0, 1]
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
@@ -219,10 +233,12 @@ class TestGeneration(unittest.TestCase):
         decision_variables = [0, 1]
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   'z3')
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
 
@@ -234,11 +250,42 @@ class TestGeneration(unittest.TestCase):
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        min_classical_gap = 2
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
                                                   quadratic_energy_ranges,
+                                                  min_classical_gap,
                                                   None)
         self.check_generated_ising_model(configurations, decision_variables, h, J, offset, gap)
         self.check_linear_energy_ranges(h, linear_energy_ranges)
         self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
+
+    def test_min_gap_no_aux(self):
+        # Verify min_classical_gap parameter works
+        def run_same_problem(min_classical_gap):
+            decision_variables = ['a', 'b']
+            configurations = {(-1, -1): 0,
+                              (-1, 1): 0,
+                              (1, -1): 0}
+            graph = nx.complete_graph(decision_variables)
+
+            linear_energy_ranges = {v: (-2., 2.) for v in graph}
+            quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+
+            return maxgap.generate_ising(graph, configurations, decision_variables,
+                                         linear_energy_ranges,
+                                         quadratic_energy_ranges,
+                                         min_classical_gap,
+                                         None)
+
+        # Run problem with a min_classical_gap that is too large
+        with self.assertRaises(pm.ImpossiblePenaltyModel):
+            large_min_gap = 5
+            run_same_problem(large_min_gap)
+
+        # Lowering min_classical_gap should lead to a bqm being found
+        smaller_min_gap = 4
+        _, _, _, gap = run_same_problem(smaller_min_gap)
+        self.assertEqual(smaller_min_gap, gap)
+
