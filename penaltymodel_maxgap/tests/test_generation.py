@@ -250,7 +250,7 @@ class TestGeneration(unittest.TestCase):
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
+        min_classical_gap = 1
 
         h, J, offset, gap = maxgap.generate_ising(graph, configurations, decision_variables,
                                                   linear_energy_ranges,
