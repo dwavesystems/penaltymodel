@@ -264,16 +264,17 @@ class TestGeneration(unittest.TestCase):
     def test_min_gap_no_aux(self):
         # Verify min_classical_gap parameter works
         def run_same_problem(min_classical_gap):
-            decision_variables = ['a', 'b']
-            configurations = {(-1, -1): 0,
-                              (-1, 1): 0,
-                              (1, -1): 0}
+            decision_variables = ['a', 'b', 'c']
+            or_gate = {(-1, -1, -1): 0,
+                       (-1, 1, 1): 0,
+                       (1, -1, 1): 0,
+                       (1, 1, 1): 0}
             graph = nx.complete_graph(decision_variables)
 
             linear_energy_ranges = {v: (-2., 2.) for v in graph}
             quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
-            return maxgap.generate_ising(graph, configurations, decision_variables,
+            return maxgap.generate_ising(graph, or_gate, decision_variables,
                                          linear_energy_ranges,
                                          quadratic_energy_ranges,
                                          min_classical_gap,
@@ -281,11 +282,11 @@ class TestGeneration(unittest.TestCase):
 
         # Run problem with a min_classical_gap that is too large
         with self.assertRaises(pm.ImpossiblePenaltyModel):
-            large_min_gap = 5
+            large_min_gap = 3
             run_same_problem(large_min_gap)
 
         # Lowering min_classical_gap should lead to a bqm being found
-        smaller_min_gap = 4
+        smaller_min_gap = 1.5
         _, _, _, gap = run_same_problem(smaller_min_gap)
-        self.assertEqual(smaller_min_gap, gap)
+        self.assertGreaterEqual(gap, smaller_min_gap)
 
