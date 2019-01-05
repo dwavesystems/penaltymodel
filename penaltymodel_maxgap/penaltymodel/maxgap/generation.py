@@ -83,9 +83,12 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         for assertion in table.assertions:
             solver.add_assertion(assertion)
 
+        # add min classical gap assertion
+        gap_assertion = table.gap_bound_assertion(min_classical_gap)
+        solver.add_assertion(gap_assertion)
+
         # check if the model is feasible at all.
         if solver.solve():
-
             # we want to increase the gap until we have found the max classical gap
             gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
