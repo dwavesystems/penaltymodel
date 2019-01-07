@@ -89,6 +89,9 @@ def generate_ising(graph, feasible_configurations, decision_variables,
 
         # check if the model is feasible at all.
         if solver.solve():
+            # since we know the current model is feasible, grab the initial model.
+            model = solver.get_model()
+
             # we want to increase the gap until we have found the max classical gap
             gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
