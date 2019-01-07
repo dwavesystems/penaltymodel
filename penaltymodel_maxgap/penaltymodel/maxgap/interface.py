@@ -41,6 +41,7 @@ def get_penalty_model(specification):
                                                     specification.decision_variables,
                                                     specification.ising_linear_ranges,
                                                     quadratic_ranges,
+                                                    specification.min_classical_gap,
                                                     None)  # unspecified smt solver
 
     # set of the model with 0.0 offset
