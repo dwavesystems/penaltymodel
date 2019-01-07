@@ -359,3 +359,25 @@ class TestGeneration(unittest.TestCase):
         smaller_min_gap = 0.5
         _, _, _, gap = run_same_problem(smaller_min_gap)
         self.assertGreaterEqual(gap, smaller_min_gap)
+
+    def test_min_gap_equals_max_gap(self):
+        # Make sure that a model is always grabbed, even when min_gap == max_gap
+        min_gap = 2     # This value is also the max classical gap
+        decision_variables = ['a']
+        config = {(-1,): -1}
+        graph = nx.complete_graph(decision_variables)
+
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+
+        h, J, offset, gap = maxgap.generate_ising(graph, config, decision_variables,
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  min_gap,
+                                                  None)
+
+        # Check that a model was found
+        self.assertIsNotNone(h)
+        self.assertIsNotNone(J)
+        self.assertIsNotNone(offset)
+        self.assertEqual(min_gap, gap)  # Min gap is also the max classical gap in this case
