@@ -264,40 +264,41 @@ class TestGeneration(unittest.TestCase):
             self.assertAlmostEqual(bqm.energy(sample), 0.0)
 
     def test_min_gap_no_aux(self):
-        # Verify min_classical_gap parameter works.
+        # Verify min_classical_gap parameter works
         # Note: test will run the problem with a gap of 5, where the gap is too high. Lowering
         #   gap to 4 should produce a BQM.
-        def run_same_problem(min_gap):
-            nodes = ['a', 'b']
-            states = {(-1, -1): 0,
-                      (-1, 1): 0,
-                      (1, -1): 0}
-            return mip.generate_bqm(nx.complete_graph(nodes), states, nodes,
-                                    min_classical_gap=min_gap)
 
+        # Set up problem
+        nodes = ['a', 'b']
+        states = {(-1, -1): 0,
+                  (-1, 1): 0,
+                  (1, -1): 0}
+        graph = nx.complete_graph(nodes)
+        bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
+        # Run problem with a min_classical_gap that is set too high
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 5
-            run_same_problem(large_min_gap)
+            mip.generate_bqm(graph, states, nodes, min_classical_gap=large_min_gap)
 
+        # Run same problem with the min_classical_gap set to a lower threshold
         smaller_min_gap = 4
-        bqm, gap = run_same_problem(smaller_min_gap)
+        bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)
+        self.check_bqm_table(bqm, gap, states, nodes)
 
     def test_min_gap_with_auxiliary(self):
         # Verify min_classical_gap parameter works.
-        def run_same_problem(min_gap):
-            nodes = ['a']
-            states = {(-1,): 0}
-            graph = nx.complete_graph(nodes + ['aux0'])
-
-            return mip.generate_bqm(graph, states, nodes, min_classical_gap=min_gap)
+        nodes = ['a']
+        states = {(-1,): 0}
+        graph = nx.complete_graph(nodes + ['aux0'])
 
         # min_classical_gap should be too large for this problem
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 7
-            run_same_problem(large_min_gap)
+            mip.generate_bqm(graph, states, nodes, min_classical_gap=large_min_gap)
 
         # Lowering the min_classical_gap should result to a bqm being found
         smaller_min_gap = 6
-        bqm, gap = run_same_problem(smaller_min_gap)
+        bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)
+        self.check_bqm_table(bqm, gap, states, nodes)
