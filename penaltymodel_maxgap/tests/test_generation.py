@@ -262,8 +262,9 @@ class TestGeneration(unittest.TestCase):
         self.check_quadratic_energy_ranges(J, quadratic_energy_ranges)
 
     def test_negative_min_gap_impossible_bqm(self):
-        # XOR Gate problem without auxiliary variables
-        # Note: Regardless of the negative gap, this BQM should remain impossible.
+        """XOR Gate problem without auxiliary variables
+        Note: Regardless of the negative gap, this BQM should remain impossible.
+        """
         negative_gap = -3
         decision_variables = ['a', 'b', 'c']
         xor_gate = {(-1, -1, -1): 0,
@@ -287,78 +288,86 @@ class TestGeneration(unittest.TestCase):
         # max classical gap.
         negative_gap = -2
         decision_variables = ['a']
-        config = {(-1,): -1}
+        config = {(-1,): 0}
         graph = nx.complete_graph(decision_variables)
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
-        _, _, _, gap = maxgap.generate_ising(graph, config, decision_variables,
-                                             linear_energy_ranges,
-                                             quadratic_energy_ranges,
-                                             negative_gap,
-                                             None)
+        h, J, offset, gap = maxgap.generate_ising(graph, config, decision_variables,
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  negative_gap,
+                                                  None)
 
         expected_gap = 2
         self.assertEqual(expected_gap, gap)
+        self.check_generated_ising_model(config, decision_variables, h, J, offset, gap)
 
     def test_min_gap_no_aux(self):
-        # Verify min_classical_gap parameter works
-        def run_same_problem(min_classical_gap):
-            decision_variables = ['a', 'b', 'c']
-            or_gate = {(-1, -1, -1): 0,
-                       (-1, 1, 1): 0,
-                       (1, -1, 1): 0,
-                       (1, 1, 1): 0}
-            graph = nx.complete_graph(decision_variables)
+        """Verify min_classical_gap parameter works
+        """
+        # Set up problem
+        decision_variables = ['a', 'b', 'c']
+        or_gate = {(-1, -1, -1): 0,
+                   (-1, 1, 1): 0,
+                   (1, -1, 1): 0,
+                   (1, 1, 1): 0}
+        graph = nx.complete_graph(decision_variables)
 
-            linear_energy_ranges = {v: (-2., 2.) for v in graph}
-            quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
-            return maxgap.generate_ising(graph, or_gate, decision_variables,
-                                         linear_energy_ranges,
-                                         quadratic_energy_ranges,
-                                         min_classical_gap,
-                                         None)
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
         # Run problem with a min_classical_gap that is too large
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 3
-            run_same_problem(large_min_gap)
+            maxgap.generate_ising(graph, or_gate, decision_variables,
+                                  linear_energy_ranges,
+                                  quadratic_energy_ranges,
+                                  large_min_gap,
+                                  None)
 
         # Lowering min_classical_gap should lead to a bqm being found
         smaller_min_gap = 1.5
-        _, _, _, gap = run_same_problem(smaller_min_gap)
+        h, J, offset, gap = maxgap.generate_ising(graph, or_gate, decision_variables,
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  smaller_min_gap,
+                                                  None)
         self.assertGreaterEqual(gap, smaller_min_gap)
+        self.check_generated_ising_model(or_gate, decision_variables, h, J, offset, gap)
 
     def test_min_gap_with_aux(self):
-        # Verify min_classical_gap parameter works
-        def run_same_problem(min_classical_gap):
-            decision_variables = ['a', 'b', 'c']
-            xor_gate = {(-1, -1, -1): 0,
-                        (-1, 1, 1): 0,
-                        (1, -1, 1): 0,
-                        (1, 1, -1): 0}
-            graph = nx.complete_graph(decision_variables + ['aux0'])
+        """Verify min_classical_gap parameter works
+        """
+        decision_variables = ['a', 'b', 'c']
+        xor_gate = {(-1, -1, -1): 0,
+                    (-1, 1, 1): 0,
+                    (1, -1, 1): 0,
+                    (1, 1, -1): 0}
+        graph = nx.complete_graph(decision_variables + ['aux0'])
 
-            linear_energy_ranges = {v: (-2., 2.) for v in graph}
-            quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
-            return maxgap.generate_ising(graph, xor_gate, decision_variables,
-                                         linear_energy_ranges,
-                                         quadratic_energy_ranges,
-                                         min_classical_gap,
-                                         None)
+        linear_energy_ranges = {v: (-2., 2.) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
 
         # Run problem with a min_classical_gap that is too large
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 2
-            run_same_problem(large_min_gap)
+            maxgap.generate_ising(graph, xor_gate, decision_variables,
+                                  linear_energy_ranges,
+                                  quadratic_energy_ranges,
+                                  large_min_gap,
+                                  None)
 
         # Lowering min_classical_gap should lead to a bqm being found
         smaller_min_gap = 0.5
-        _, _, _, gap = run_same_problem(smaller_min_gap)
+        h, J, offset, gap = maxgap.generate_ising(graph, xor_gate, decision_variables,
+                                                  linear_energy_ranges,
+                                                  quadratic_energy_ranges,
+                                                  smaller_min_gap,
+                                                  None)
         self.assertGreaterEqual(gap, smaller_min_gap)
+        self.check_generated_ising_model(xor_gate, decision_variables, h, J, offset, gap)
 
     def test_min_gap_equals_max_gap(self):
         # Make sure that a model is always grabbed, even when min_gap == max_gap

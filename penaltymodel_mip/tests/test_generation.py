@@ -274,7 +274,7 @@ class TestGeneration(unittest.TestCase):
                   (-1, 1): 0,
                   (1, -1): 0}
         graph = nx.complete_graph(nodes)
-        bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
+
         # Run problem with a min_classical_gap that is set too high
         with self.assertRaises(pm.ImpossiblePenaltyModel):
             large_min_gap = 5
