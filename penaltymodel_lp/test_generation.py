@@ -142,5 +142,16 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         energy = bqm.energy({'a': 1, 'b': -1})
         self.assertEqual(8, energy)
 
+    def test_impossible_bqm(self):
+        # Set up xor-gate
+        # Note: penaltymodel-lp would need an auxiliary variable in order to handle this;
+        #   however, no auxiliaries are provided, hence, it raise an error
+        nodes = ['a', 'b', 'c']
+        xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
+
+        # penaltymodel-lp should not be able to handle an xor-gate
+        with self.assertRaises(ValueError):
+            lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
+
 if __name__ == "__main__":
     unittest.main()
