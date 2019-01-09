@@ -11,6 +11,15 @@ from ortools.linear_solver import pywraplp
 import penaltymodel.core as pm
 
 
+#TODO: think of a more elegant way to support both dict and lists
+def get(iterable, key, default_value):
+    """This is a helper function to assist with supporting both dictionary and list functionality.
+    """
+    if isinstance(iterable, dict):
+        return iterable.get(key, default_value)
+    return default_value
+
+
 def generate_bqm(graph, table, decision,
                  linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2,
                  precision=7, max_decision=8, max_variables=10,
@@ -168,12 +177,15 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     # Let a*(x) be argmin_a E(x, a) - the config of aux variables that minimizes the energy with x fixed
 
     # We want:
-    #   E(x, a) >= 0  forall x in F, forall a
-    #   E(x, a) - g >= 0  forall x not in F, forall a
+    #   E(x, a) >= target_energy  forall x in F, forall a
+    #   E(x, a) - g >= highest_target_energy  forall x not in F, forall a
+    highest_target_energy = max(table.values()) if isinstance(table, dict) else 0
+
     for config in itertools.product((-1, 1), repeat=len(variables)):
         spins = dict(zip(variables, config))
 
-        const = solver.Constraint(0.0, solver.infinity())
+        lower_bound = get(table, config, highest_target_energy)
+        const = solver.Constraint(lower_bound, solver.infinity())
 
         if tuple(spins[v] for v in decision) not in table:
             # we want energy greater than gap for decision configs not in feasible
@@ -188,11 +200,12 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
 
     if not auxiliary:
         # We have no auxiliary variables. We want:
-        #   E(x) <= 0 forall x in F
+        #   E(x) <= target_energy forall x in F
         for decision_config in table:
             spins = dict(zip(decision, decision_config))
 
-            const = solver.Constraint(-solver.infinity(), 0.0)
+            upper_bound = get(table, decision_config, highest_target_energy)
+            const = solver.Constraint(-solver.infinity(), upper_bound)
 
             # add the energy for the configuration
             for v, bias in h.items():
@@ -240,7 +253,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         # one of the feasible configurations. Do so randomly.
         for var in next(iter(a_star.values())).values():
             val = random.randint(0, 1)
-            const = solver.Constraint(val, val)  # equality constrait
+            const = solver.Constraint(val, val)  # equality constraint
             const.SetCoefficient(var, 1)
 
     objective = solver.Objective()
