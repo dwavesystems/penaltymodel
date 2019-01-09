@@ -1,5 +1,4 @@
 from itertools import product
-import dwavebinarycsp as dbc
 import networkx as nx
 import unittest
 import penaltymodel.lp as lp
@@ -143,24 +142,16 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         energy = bqm.energy({'a': 1, 'b': -1})
         self.assertEqual(8, energy)
 
-    def test_attempt_on_difficult_problem(self):
+    def test_impossible_bqm(self):
         # Set up xor-gate
         # Note: penaltymodel-lp would need an auxiliary variable in order to handle this;
-        #   however, no auxiliaries are provided, hence, it should pass the problem to another
-        #   penalty model.
+        #   however, no auxiliaries are provided, hence, it raise an error
         nodes = ['a', 'b', 'c']
         xor_gate_values = {(-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)}
 
         # penaltymodel-lp should not be able to handle an xor-gate
         with self.assertRaises(ValueError):
             lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
-
-        # Check that penaltymodel-lp is able to pass the problem to another penaltymodel
-        csp = dbc.ConstraintSatisfactionProblem(dbc.SPIN)
-        csp.add_constraint(xor_gate_values, ('a', 'b', 'c'))
-        bqm = dbc.stitch(csp)   # BQM created by a penaltymodel that is not penaltymodel-lp
-        self.assertGreaterEqual(len(bqm.linear) + len(bqm.quadratic), 1)    # Check BQM exists
-
 
 if __name__ == "__main__":
     unittest.main()
