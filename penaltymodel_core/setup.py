@@ -15,8 +15,9 @@ install_requires = ['dimod>=0.6.3,<0.9.0',
                     ]
 
 extras_require = {'all': ['penaltymodel_cache>=0.3.0,<0.4.0',
-                          'penaltymodel_maxgap>=0.4.0,<0.5.0',
-                          "penaltymodel_mip>=0.1.0,<0.2.0; platform_machine!='x86' and python_version!='3.4'"
+                          'penaltymodel_lp>=0.0.0,<0.1.0',
+                          'penaltymodel_maxgap>=0.5.0,<0.6.0',
+                          "penaltymodel_mip>=0.2.0,<0.3.0; platform_machine!='x86' and python_version!='3.4'"
                           ]
                   }
 
