@@ -524,7 +524,7 @@ def iter_penalty_model_from_specification(cur, specification):
     Args:
         cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
             is meant to be run within a :obj:`with` statement.
-        penalty_model (:class:`penaltymodel.Specification`): A specification
+        specification (:class:`penaltymodel.Specification`): A specification
             for a penalty model.
 
     Yields:
@@ -535,23 +535,19 @@ def iter_penalty_model_from_specification(cur, specification):
 
     nodelist = sorted(specification.graph)
     edgelist = sorted(sorted(edge) for edge in specification.graph.edges)
-    if 'num_nodes' not in encoded_data:
-        encoded_data['num_nodes'] = len(nodelist)
-    if 'num_edges' not in encoded_data:
-        encoded_data['num_edges'] = len(edgelist)
-    if 'edges' not in encoded_data:
-        encoded_data['edges'] = json.dumps(edgelist, separators=(',', ':'))
-    if 'num_variables' not in encoded_data:
-        encoded_data['num_variables'] = len(next(iter(specification.feasible_configurations)))
-    if 'num_feasible_configurations' not in encoded_data:
-        encoded_data['num_feasible_configurations'] = len(specification.feasible_configurations)
-    if 'feasible_configurations' not in encoded_data or 'energies' not in encoded_data:
-        encoded = {_serialize_config(config): en for config, en in specification.feasible_configurations.items()}
-        configs, energies = zip(*sorted(encoded.items()))
-        encoded_data['feasible_configurations'] = json.dumps(configs, separators=(',', ':'))
-        encoded_data['energies'] = json.dumps(energies, separators=(',', ':'))
-    if 'decision_variables' not in encoded_data:
-        encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
+    encoded_data['num_nodes'] = len(nodelist)
+    encoded_data['num_edges'] = len(edgelist)
+    encoded_data['edges'] = json.dumps(edgelist, separators=(',', ':'))
+    encoded_data['num_variables'] = len(next(iter(specification.feasible_configurations)))
+    encoded_data['num_feasible_configurations'] = len(specification.feasible_configurations)
+
+    encoded = {_serialize_config(config): en for config, en in specification.feasible_configurations.items()}
+    configs, energies = zip(*sorted(encoded.items()))
+    encoded_data['feasible_configurations'] = json.dumps(configs, separators=(',', ':'))
+    encoded_data['energies'] = json.dumps(energies, separators=(',', ':'))
+
+    encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
+    encoded_data['classical_gap'] = json.dumps(specification.min_classical_gap, separators=(',', ':'))
 
     select = \
         """
@@ -574,8 +570,9 @@ def iter_penalty_model_from_specification(cur, specification):
             feasible_configurations = :feasible_configurations AND
             energies = :energies AND
             -- decision variables:
-            decision_variables = :decision_variables
+            decision_variables = :decision_variables AND
             -- we could apply filters based on the energy ranges but in practice this seems slower
+            classical_gap >= :classical_gap
         ORDER BY classical_gap DESC;
         """
 
