@@ -479,12 +479,9 @@ def insert_penalty_model(cur, penalty_model):
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
     insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data)
 
-    if 'decision_variables' not in encoded_data:
-        encoded_data['decision_variables'] = json.dumps(penalty_model.decision_variables, separators=(',', ':'))
-    if 'classical_gap' not in encoded_data:
-        encoded_data['classical_gap'] = penalty_model.classical_gap
-    if 'ground_energy' not in encoded_data:
-        encoded_data['ground_energy'] = penalty_model.ground_energy
+    encoded_data['decision_variables'] = json.dumps(penalty_model.decision_variables, separators=(',', ':'))
+    encoded_data['classical_gap'] = penalty_model.classical_gap
+    encoded_data['ground_energy'] = penalty_model.ground_energy
 
     insert = \
         """
