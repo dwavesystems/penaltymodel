@@ -1,3 +1,18 @@
+# Copyright 2019 D-Wave Systems Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+# ================================================================================================
 """All functions relating to defining the SMT problem.
 
 All calls to pysmt live in this sub module.
@@ -5,8 +20,6 @@ All calls to pysmt live in this sub module.
 
 import itertools
 from fractions import Fraction
-
-from six import iteritems, itervalues
 
 import dwave_networkx as dnx
 
@@ -166,7 +179,7 @@ class Table(object):
         if break_aux_symmetry and av == 0:
             # without loss of generality, we can assume that the aux variables are all
             # spin-up for one configuration
-            self.assertions.update(set(itervalues(auxvars)))
+            self.assertions.update(set(auxvars.values()))
 
         trees = self._trees
 
@@ -194,7 +207,7 @@ class Table(object):
 
         """
         energy_sources = set()
-        for v, children in iteritems(tree):
+        for v, children in tree.items():
             aux = auxvars[v]
 
             assert all(u in spins for u in self._ancestors[v])
@@ -205,7 +218,7 @@ class Table(object):
             def energy_contributions():
                 yield subtheta.linear[v]
 
-                for u, bias in iteritems(subtheta.adj[v]):
+                for u, bias in subtheta.adj[v].items():
                     if u in spins:
                         yield SpinTimes(spins[u], bias)
 
@@ -252,7 +265,7 @@ class Table(object):
 
         """
         energy_sources = set()
-        for v, subtree in iteritems(tree):
+        for v, subtree in tree.items():
 
             assert all(u in spins for u in self._ancestors[v])
 
@@ -262,7 +275,7 @@ class Table(object):
             def energy_contributions():
                 yield subtheta.linear[v]
 
-                for u, bias in iteritems(subtheta.adj[v]):
+                for u, bias in subtheta.adj[v].items():
                     if u in spins:
                         yield Times(limitReal(spins[u]), bias)
 

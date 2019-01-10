@@ -84,3 +84,12 @@ class Theta(dimod.BinaryQuadraticModel):
             theta.add_interaction(u, v, Quadratic(u, v))
 
         return theta
+
+    def to_bqm(self, model):
+        linear = ((v, float(model.get_py_value(bias)))
+                  for v, bias in self.linear.items())
+        quadratic = ((u, v, float(model.get_py_value(bias)))
+                     for (u, v), bias in self.quadratic.items())
+        offset = float(model.get_py_value(self.offset))
+
+        return dimod.BinaryQuadraticModel(linear, quadratic, offset, dimod.SPIN)
