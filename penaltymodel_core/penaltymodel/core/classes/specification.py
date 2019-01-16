@@ -10,7 +10,6 @@ import itertools
 import networkx as nx
 
 import dimod
-from dimod import BinaryQuadraticModel
 from six import itervalues, iteritems, iterkeys
 
 
@@ -118,11 +117,14 @@ class Specification(object):
             u and v are variables in the desired penalty model and u, v have an
             interaction - there is an edge between nodes u, v in `graph`.
 
+        min_classical_gap (float):
+            This is a threshold value for the classical gap. It describes the minimum energy gap
+            between the highest feasible state and the lowest infeasible state. Default value is 2.
+
     """
     @dimod.decorators.vartype_argument('vartype')
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
-                 ising_linear_ranges=None,
-                 ising_quadratic_ranges=None):
+                 ising_linear_ranges=None, ising_quadratic_ranges=None, min_classical_gap=2):
 
         #
         # graph
@@ -169,6 +171,13 @@ class Specification(object):
         #
         self.ising_linear_ranges = self._check_ising_linear_ranges(ising_linear_ranges, graph)
         self.ising_quadratic_ranges = self._check_ising_quadratic_ranges(ising_quadratic_ranges, graph)
+
+        #
+        # min_classical_gap
+        #
+        if min_classical_gap <= 0:
+            raise ValueError("min_classical_gap must be a positive number")
+        self.min_classical_gap = min_classical_gap
 
         #
         # vartype

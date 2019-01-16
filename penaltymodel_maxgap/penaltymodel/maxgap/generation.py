@@ -8,7 +8,6 @@
 """
 
 import itertools
-from collections import defaultdict
 
 from six import iteritems
 import penaltymodel.core as pm
@@ -20,7 +19,7 @@ __all__ = ['generate_ising']
 
 
 def generate_ising(graph, feasible_configurations, decision_variables,
-                   linear_energy_ranges, quadratic_energy_ranges,
+                   linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
                    smt_solver_name):
     """Generates the Ising model that induces the given feasible configurations.
 
@@ -37,11 +36,13 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         quadratic_energy_ranges (dict): A dict of the form
             {(u, v): (min, max), ...} where min and max are the range
             of values allowed to (u, v).
+        min_classical_gap (float): The minimum energy gap between the highest feasible state and the
+            lowest infeasible state.
         smt_solver_name (str/None): The name of the smt solver. Must
             be a solver available to pysmt. If None, uses the pysmt default.
 
     Returns:
-        tuple: A 4-tuple contiaing:
+        tuple: A 4-tuple containing:
 
             dict: The linear biases of the Ising problem.
 
@@ -63,11 +64,11 @@ def generate_ising(graph, feasible_configurations, decision_variables,
     # iterate over every possible configuration of the decision variables.
     for config in itertools.product((-1, 1), repeat=len(decision_variables)):
 
-        # determine the spin associated with each varaible in decision variables.
+        # determine the spin associated with each variable in decision variables.
         spins = dict(zip(decision_variables, config))
 
         if config in feasible_configurations:
-            # if the configuration is feasible, we require that the mininum energy over all
+            # if the configuration is feasible, we require that the minimum energy over all
             # possible aux variable settings be exactly its target energy (given by the value)
             table.set_energy(spins, feasible_configurations[config])
         else:
@@ -82,17 +83,23 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         for assertion in table.assertions:
             solver.add_assertion(assertion)
 
+        # add min classical gap assertion
+        gap_assertion = table.gap_bound_assertion(min_classical_gap)
+        solver.add_assertion(gap_assertion)
+
         # check if the model is feasible at all.
         if solver.solve():
+            # since we know the current model is feasible, grab the initial model.
+            model = solver.get_model()
 
             # we want to increase the gap until we have found the max classical gap
-            gmin = 0
+            gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
 
             # 2 is a good target gap
-            g = 2.
+            g = max(2., gmin)
 
             while abs(gmax - gmin) >= .01:
                 solver.push()

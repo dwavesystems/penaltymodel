@@ -41,7 +41,8 @@ def get_penalty_model(specification):
         bqm, gap = generate_bqm(specification.graph, feasible_configurations,
                                 specification.decision_variables,
                                 linear_energy_ranges=specification.ising_linear_ranges,
-                                quadratic_energy_ranges=quadratic_ranges)
+                                quadratic_energy_ranges=quadratic_ranges,
+                                min_classical_gap=specification.min_classical_gap)
     except ValueError:
         raise pm.exceptions.FactoryException("Specification is for too large of a model")
 

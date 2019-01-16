@@ -5,9 +5,8 @@ PenaltyModel
 from __future__ import absolute_import
 
 from numbers import Number
-import itertools
 
-from six import itervalues, iteritems
+from six import iteritems
 import networkx as nx
 
 from dimod import BinaryQuadraticModel, Vartype
@@ -135,6 +134,7 @@ class PenaltyModel(Specification):
 
         Specification.__init__(self, graph, decision_variables, feasible_configurations,
                                vartype=vartype,
+                               min_classical_gap=classical_gap,
                                ising_linear_ranges=ising_linear_ranges,
                                ising_quadratic_ranges=ising_quadratic_ranges)
 

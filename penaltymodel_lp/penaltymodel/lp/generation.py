@@ -72,13 +72,21 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 
 #TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
 # penaltymodel check)
-#TODO: Check if len(table.keys()[0]) == len(decision_variables)
-
-#TODO: Adding min_gap into code
-#TODO: Checking min_gap < max_gap (occurs at bqm.stitch or penaltymodel?)
 def generate_bqm(graph, table, decision_variables,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None):
-
+                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2):
+    """
+    Args:
+        graph: A networkx.Graph
+        table: An iterable of valid spin configurations. Each configuration is a tuple of
+            variable assignments ordered by `decision`.
+        decision_variables: An ordered iterable of the variables in the binary quadratic model.
+        linear_energy_ranges: Dictionary of the form {v: (min, max), ...} where min and
+            max are the range of values allowed to v. The default range is [-2, 2].
+        quadratic_energy_ranges: Dict of the form {(u, v): (min, max), ...} where min and max are
+            the range of values allowed to (u, v). The default range is [-1, 1].
+        min_classical_gap: A float. The minimum energy gap between the highest feasible state and
+            the lowest infeasible state.
+    """
     # Check for auxiliary variables in the graph
     if len(graph) != len(decision_variables):
         raise ValueError('Penaltymodel-lp does not handle problems with auxiliary variables')
@@ -122,7 +130,6 @@ def generate_bqm(graph, table, decision_variables,
         unnoted_bound = np.zeros((n_unnoted, 1))
 
     # Bounds
-    # Note: max_gap's max(..or..) is to support python2.7. TODO: ideally, use max([..], default)
     linear_range = (MIN_LINEAR_BIAS, MAX_LINEAR_BIAS)
     quadratic_range = (MIN_QUADRATIC_BIAS, MAX_QUADRATIC_BIAS)
 
@@ -133,7 +140,7 @@ def generate_bqm(graph, table, decision_variables,
     #   hence that 2 * sum(largest_biases)
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))     # Bound for offset
-    bounds.append((0, max_gap))     # Bound for gap. TODO: bound with min_gap as well
+    bounds.append((min_classical_gap, max_gap))     # Bound for gap.
 
     # Cost function
     cost_weights = np.zeros((1, m_linear + m_quadratic + 2))

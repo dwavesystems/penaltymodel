@@ -12,7 +12,7 @@ import penaltymodel.core as pm
 
 
 def generate_bqm(graph, table, decision,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None,
+                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2,
                  precision=7, max_decision=8, max_variables=10,
                  return_auxiliary=False):
     """Get a binary quadratic model with specific ground states.
@@ -35,6 +35,10 @@ def generate_bqm(graph, table, decision,
         quadratic_energy_ranges (dict, optional):
             Dict of the form {(u, v): (min, max), ...} where min and max are the range of values
             allowed to (u, v). The default range is [-1, 1].
+
+        min_classical_gap (float):
+            The minimum energy gap between the highest feasible state and the lowest infeasible
+            state.
 
         precision (int, optional, default=7):
             Values returned by the optimization solver are rounded to `precision` digits of
@@ -80,7 +84,8 @@ def generate_bqm(graph, table, decision,
 
     if not set().union(*table).issubset({-1, 1}):
         raise ValueError("expected table to be spin-valued")
-    elif isinstance(table, Mapping) and any(table.values()):
+
+    if isinstance(table, Mapping) and any(table.values()):
         raise ValueError("cannot handle non-zero target energy levels")
 
     if not isinstance(decision, list):
@@ -106,11 +111,11 @@ def generate_bqm(graph, table, decision,
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
     if return_auxiliary:
-        h, J, offset, gap, aux = _generate_ising(graph, table, decision,
+        h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
                                                  linear_energy_ranges, quadratic_energy_ranges,
                                                  return_auxiliary)
     else:
-        h, J, offset, gap = _generate_ising(graph, table, decision,
+        h, J, offset, gap = _generate_ising(graph, table, decision, min_classical_gap,
                                             linear_energy_ranges, quadratic_energy_ranges,
                                             return_auxiliary)
 
@@ -125,8 +130,8 @@ def generate_bqm(graph, table, decision,
         return bqm, round(gap, precision)
 
 
-def _generate_ising(graph, table, decision, linear_energy_ranges, quadratic_energy_ranges,
-                    return_auxiliary):
+def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ranges,
+                    quadratic_energy_ranges, return_auxiliary):
 
     if not table:
         # if there are no feasible configurations then the gap is 0 and the model is empty
@@ -157,7 +162,7 @@ def _generate_ising(graph, table, decision, linear_energy_ranges, quadratic_ener
 
     offset = solver.NumVar(-solver.infinity(), solver.infinity(), 'offset')
 
-    gap = solver.NumVar(0, solver.infinity(), 'classical_gap')
+    gap = solver.NumVar(min_classical_gap, solver.infinity(), 'classical_gap')
 
     # Let x, a be the decision, auxiliary variables respectively
     # Let E(x, a) be the energy of x and a
