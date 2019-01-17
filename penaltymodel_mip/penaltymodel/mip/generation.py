@@ -184,8 +184,8 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     for config in itertools.product((-1, 1), repeat=len(variables)):
         spins = dict(zip(variables, config))
 
-        lower_bound = get(table, config, highest_target_energy)
-        const = solver.Constraint(lower_bound, solver.infinity())
+        target_energy = get(table, config, highest_target_energy)
+        const = solver.Constraint(target_energy, solver.infinity())
 
         if tuple(spins[v] for v in decision) not in table:
             # we want energy greater than gap for decision configs not in feasible
@@ -216,16 +216,18 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
 
     else:
         # We have auxiliary variables. So that each feasible config has at least one ground we want:
-        #   E(x, a) - 100*|| a - a*(x) || <= 0  forall x in F, forall a
+        #   E(x, a) - 100*|| a - a*(x) || <= target_energy  forall x in F, forall a
 
         # we need a*(x) forall x in F
         a_star = {config: {v: solver.IntVar(0, 1, 'a*(%s)_%s' % (config, v)) for v in auxiliary} for config in table}
 
         for decision_config in table:
+            target_energy = get(table, decision_config, 0)
+
             for aux_config in itertools.product((-1, 1), repeat=len(variables) - len(decision)):
                 spins = dict(zip(variables, decision_config+aux_config))
 
-                ub = 0
+                ub = target_energy
 
                 # the E(x, a) term
                 coefficients = {bias: spins[v] for v, bias in h.items()}
