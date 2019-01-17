@@ -41,6 +41,11 @@ def limitReal(x, max_denominator=1000000):
 
 class Theta(dimod.BinaryQuadraticModel):
     def __init__(self, linear, quadratic, offset, vartype):
+        """Theta is a BQM where the biases are pysmt Symbols.
+
+        Theta is normally constructed using :meth:`.Theta.from_graph`.
+
+        """
         dimod.BinaryQuadraticModel.__init__(self, linear, quadratic, offset, vartype)
 
         # add additional assertions tab
@@ -48,6 +53,23 @@ class Theta(dimod.BinaryQuadraticModel):
 
     @classmethod
     def from_graph(cls, graph, linear_energy_ranges, quadratic_energy_ranges):
+        """Create Theta from a graph and energy ranges.
+
+        Args:
+            graph (:obj:`networkx.Graph`):
+                Provides the structure for Theta.
+
+            linear_energy_ranges (dict):
+                A dict of the form {v: (min, max, ...} where min and max are the
+                range of values allowed to v.
+            quadratic_energy_ranges (dict):
+                A dict of the form {(u, v): (min, max), ...} where min and max
+                are the range of values allowed to (u, v).
+
+        Returns:
+            :obj:`.Theta`
+
+        """
         get_env().enable_infix_notation = True  # not sure why we need this here
 
         theta = cls.empty(dimod.SPIN)
@@ -55,6 +77,8 @@ class Theta(dimod.BinaryQuadraticModel):
         theta.add_offset(Symbol('offset', REAL))
 
         def Linear(v):
+            """Create a Symbol for the linear bias including the energy range
+            constraints."""
             bias = Symbol('h_{}'.format(v), REAL)
 
             min_, max_ = linear_energy_ranges[v]
@@ -64,10 +88,9 @@ class Theta(dimod.BinaryQuadraticModel):
 
             return bias
 
-        for v in graph.nodes:
-            theta.add_variable(v, Linear(v))
-
         def Quadratic(u, v):
+            """Create a Symbol for the quadratic bias including the energy range
+            constraints."""
             bias = Symbol('J_{},{}'.format(u, v), REAL)
 
             if (v, u) in quadratic_energy_ranges:
@@ -80,12 +103,26 @@ class Theta(dimod.BinaryQuadraticModel):
 
             return bias
 
+        for v in graph.nodes:
+            theta.add_variable(v, Linear(v))
+
         for u, v in graph.edges:
             theta.add_interaction(u, v, Quadratic(u, v))
 
         return theta
 
     def to_bqm(self, model):
+        """Given a pysmt model, return a bqm.
+
+        Adds the values of the biases as determined by the SMT solver to a bqm.
+
+        Args:
+            model: A pysmt model.
+
+        Returns:
+            :obj:`dimod.BinaryQuadraticModel`
+
+        """
         linear = ((v, float(model.get_py_value(bias)))
                   for v, bias in self.linear.items())
         quadratic = ((u, v, float(model.get_py_value(bias)))
