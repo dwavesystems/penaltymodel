@@ -47,7 +47,7 @@ def generate(graph, feasible_configurations, decision_variables,
         decision_variables (list/tuple): Which variables in the graph are
             assigned as decision variables.
         linear_energy_ranges (dict, optional): A dict of the form
-            {v: (min, max, ...} where min and max are the range
+            {v: (min, max), ...} where min and max are the range
             of values allowed to v.
         quadratic_energy_ranges (dict): A dict of the form
             {(u, v): (min, max), ...} where min and max are the range

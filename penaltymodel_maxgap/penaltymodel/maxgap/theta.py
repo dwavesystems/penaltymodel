@@ -60,7 +60,7 @@ class Theta(dimod.BinaryQuadraticModel):
                 Provides the structure for Theta.
 
             linear_energy_ranges (dict):
-                A dict of the form {v: (min, max, ...} where min and max are the
+                A dict of the form {v: (min, max), ...} where min and max are the
                 range of values allowed to v.
             quadratic_energy_ranges (dict):
                 A dict of the form {(u, v): (min, max), ...} where min and max
