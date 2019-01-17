@@ -1,3 +1,18 @@
+# Copyright 2019 D-Wave Systems Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+# ================================================================================================
 """All functions relating to defining the SMT problem.
 
 All calls to pysmt live in this sub module.
@@ -6,29 +21,13 @@ All calls to pysmt live in this sub module.
 import itertools
 from fractions import Fraction
 
-from six import iteritems, itervalues
-
 import dwave_networkx as dnx
 
 from pysmt.shortcuts import Symbol, FreshSymbol, Real
 from pysmt.shortcuts import LE, GE, Plus, Times, Implies, Not, And, Equals, GT
 from pysmt.typing import REAL, BOOL
 
-
-def limitReal(x, max_denominator=1000000):
-    """Creates an pysmt Real constant from x.
-
-    Args:
-        x (number): A number to be cast to a pysmt constant.
-        max_denominator (int, optional): The maximum size of the denominator.
-            Default 1000000.
-
-    Returns:
-        A Real constant with the given value and the denominator limited.
-
-    """
-    f = Fraction(x).limit_denominator(max_denominator)
-    return Real((f.numerator, f.denominator))
+from penaltymodel.maxgap.theta import Theta, limitReal
 
 
 def SpinTimes(spin, bias):
@@ -52,163 +51,6 @@ def SpinTimes(spin, bias):
         return bias
     else:
         raise ValueError('expected spins to be -1., or 1.')
-
-
-class Theta(object):
-    """Represents the Binary Quadratic Model with smt Symbols.
-
-    Theta is the collection of linear and quadratic biases and the offset that together
-    define a binary quadratic program.
-
-    Args:
-        linear (dict[variable, Symbol]): A dict mapping variables to their
-            associated linear bias represented by a Symbol.
-        quadratic (dict[edge, Symbol]): A dict mapping pairs of variables
-            (called an edge here) to their associated quadratic bias represented
-            as a Symbol.
-        adj (dict[variable, dict[variable, Symbol]]): The adjacency dict for Theta.
-        offset (Symbol): The offset for theta represented by a Symbol.
-        assertions (set, optional): The set of smt assertions over the set of all
-            Symbols associated with theta.
-
-    Notes:
-        No input checking is applied to linear, quadratic, offset or assertions.
-
-    """
-    def __init__(self, linear, quadratic, offset, assertions=None):
-        if assertions is None:
-            assertions = set()
-        elif not isinstance(assertions, set):
-            raise TypeError("expected input 'assertions' to be a set")
-        self.assertions = assertions
-
-        self.offset = offset
-        self.linear = linear
-        self.quadratic = quadratic
-
-        # build adj from quadratic
-        self.adj = adj = {v: dict() for v in linear}
-        for (u, v), bias in iteritems(quadratic):
-            adj[u][v] = bias
-            adj[v][u] = bias
-
-    @classmethod
-    def from_graph(cls, graph, linear_energy_ranges, quadratic_energy_ranges):
-        """Derives Theta from a graph.
-
-        Args:
-            graph (:class:`networkx.Graph`): A graph.
-            linear_energy_ranges (dict): The linear energy range for each
-                linear bias.
-            quadratic_energy_ranges (dict): The quadratic energy range for each
-                quadratic bias.
-
-        Returns:
-            :class:`.Theta`
-
-        """
-        assertions = set()
-
-        #
-        # there is a real-valued offset
-        #
-        offset = Symbol('offset', REAL)
-
-        #
-        # linear
-        #
-        def linear_bias(v):
-            bias = Symbol('h_{}'.format(v), REAL)
-
-            min_, max_ = linear_energy_ranges[v]
-
-            assertions.add(LE(bias, limitReal(max_)))
-            assertions.add(GE(bias, limitReal(min_)))
-
-            return bias
-
-        linear = {v: linear_bias(v) for v in graph}
-
-        #
-        # quadratic
-        #
-        def quadratic_bias(u, v):
-            bias = Symbol('J_{},{}'.format(u, v), REAL)
-
-            if (v, u) in quadratic_energy_ranges:
-                min_, max_ = quadratic_energy_ranges[(v, u)]
-            else:
-                min_, max_ = quadratic_energy_ranges[(u, v)]
-
-            assertions.add(LE(bias, limitReal(max_)))
-            assertions.add(GE(bias, limitReal(min_)))
-
-            return bias
-
-        quadratic = {(u, v): quadratic_bias(u, v) for u, v in graph.edges}
-
-        return cls(linear, quadratic, offset, assertions)
-
-    def fix_variables(self, spins):
-        """Create a new theta for which some spins are fixed.
-
-        Args:
-            spins (dict[hash, int])
-
-        Returns:
-            :class:`.Theta`: Another Theta that has some spins fixed.
-
-        """
-        if not isinstance(spins, dict):
-            raise TypeError("expected input 'spins' to be a dict")
-        # spins type-checking is handled by SpinTimes
-
-        # offset is initially the same
-        offset = self.offset
-
-        # linear
-        linear = {}
-        for v, bias in iteritems(self.linear):
-            if v in spins:
-                # fixed linear biases get added to offset
-                offset = Plus(offset, Times(limitReal(spins[v]), bias))
-            else:
-                linear[v] = bias
-
-        # quadratic
-        quadratic = {}
-        for (u, v), bias in iteritems(self.quadratic):
-            if u in spins and v in spins:
-                # when we know both values for a quadratic bias, it becomes an offset
-                offset = Plus(offset, SpinTimes(spins[v] * spins[u], bias))
-            elif u in spins:
-                # when we know one value of a quadratic bias, it becomes linear
-                linear[v] = Plus(linear[v], SpinTimes(spins[u], bias))
-            elif v in spins:
-                # when we know one value of a quadratic bias, it becomes linear
-                linear[u] = Plus(linear[u], SpinTimes(spins[v], bias))
-            else:
-                # nothing has changed
-                quadratic[(u, v)] = bias
-
-        return Theta(linear, quadratic, offset, self.assertions)
-
-    def energy(self, spins):
-        """The formula that calculates the energy of theta.
-
-        Args:
-            spins (dict): A dict of the form {v: s, ...} where v is
-                every variable in theta and s is -.0 or 1.0.
-
-        Returns:
-            The formula for the energy of theta given spins.
-
-        """
-        # get the energy of theta with every variable set in spins
-        linear_energy = (SpinTimes(spins[v], bias) for v, bias in iteritems(self.linear))
-        quadratic_energy = (SpinTimes(spins[v] * spins[u], bias)
-                            for (u, v), bias in iteritems(self.quadratic))
-        return Plus(itertools.chain(linear_energy, quadratic_energy, [self.offset]))
 
 
 def _elimination_trees(theta, decision_variables):
@@ -298,7 +140,8 @@ class Table(object):
             Formula that upper bounds the energy with spins fixed.
 
         """
-        subtheta = self.theta.fix_variables(spins)
+        subtheta = self.theta.copy()
+        subtheta.fix_variables(spins)
 
         # ok, let's start eliminating variables
         trees = self._trees
@@ -327,7 +170,8 @@ class Table(object):
             Formula for the exact energy of Theta with spins fixed.
 
         """
-        subtheta = self.theta.fix_variables(spins)
+        subtheta = self.theta.copy()
+        subtheta.fix_variables(spins)
 
         # we need aux variables
         av = next(self._auxvar_counter)
@@ -335,7 +179,7 @@ class Table(object):
         if break_aux_symmetry and av == 0:
             # without loss of generality, we can assume that the aux variables are all
             # spin-up for one configuration
-            self.assertions.update(set(itervalues(auxvars)))
+            self.assertions.update(set(auxvars.values()))
 
         trees = self._trees
 
@@ -363,7 +207,7 @@ class Table(object):
 
         """
         energy_sources = set()
-        for v, children in iteritems(tree):
+        for v, children in tree.items():
             aux = auxvars[v]
 
             assert all(u in spins for u in self._ancestors[v])
@@ -374,7 +218,7 @@ class Table(object):
             def energy_contributions():
                 yield subtheta.linear[v]
 
-                for u, bias in iteritems(subtheta.adj[v]):
+                for u, bias in subtheta.adj[v].items():
                     if u in spins:
                         yield SpinTimes(spins[u], bias)
 
@@ -421,7 +265,7 @@ class Table(object):
 
         """
         energy_sources = set()
-        for v, subtree in iteritems(tree):
+        for v, subtree in tree.items():
 
             assert all(u in spins for u in self._ancestors[v])
 
@@ -431,7 +275,7 @@ class Table(object):
             def energy_contributions():
                 yield subtheta.linear[v]
 
-                for u, bias in iteritems(subtheta.adj[v]):
+                for u, bias in subtheta.adj[v].items():
                     if u in spins:
                         yield Times(limitReal(spins[u]), bias)
 

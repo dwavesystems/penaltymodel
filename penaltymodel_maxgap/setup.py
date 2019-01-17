@@ -46,11 +46,10 @@ class PysmtSolverInstall(install):
 
 setup_requires = ['pysmt==0.7.0']
 
-install_requires = ['dimod>=0.6.3,<0.9.0',
-                    'dwave_networkx>=0.6.0,<0.7.0',
+install_requires = ['dimod>=0.8.0,<0.9.0',
+                    'dwave-networkx>=0.6.0,<0.7.0',
                     'penaltymodel>=0.16.0,<0.17.0',
                     'pysmt==0.7.0',
-                    'six>=1.11.0,<2.0.0',
                     ]
 
 extras_require = {}

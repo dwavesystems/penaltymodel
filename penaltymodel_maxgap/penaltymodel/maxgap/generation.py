@@ -1,3 +1,18 @@
+# Copyright 2019 D-Wave Systems Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+# ================================================================================================
 """
 .. [DO] Bian et al., "Discrete optimization using quantum annealing on sparse Ising models",
         https://www.frontiersin.org/articles/10.3389/fphy.2014.00056/full
@@ -9,18 +24,19 @@
 
 import itertools
 
-from six import iteritems
-import penaltymodel.core as pm
+import dimod
+
 from pysmt.shortcuts import Solver
 
+from penaltymodel.core import ImpossiblePenaltyModel
 from penaltymodel.maxgap.smt import Table
 
-__all__ = ['generate_ising']
+__all__ = 'generate',
 
 
-def generate_ising(graph, feasible_configurations, decision_variables,
-                   linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
-                   smt_solver_name):
+def generate(graph, feasible_configurations, decision_variables,
+             linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
+             smt_solver_name=None):
     """Generates the Ising model that induces the given feasible configurations.
 
     Args:
@@ -31,7 +47,7 @@ def generate_ising(graph, feasible_configurations, decision_variables,
         decision_variables (list/tuple): Which variables in the graph are
             assigned as decision variables.
         linear_energy_ranges (dict, optional): A dict of the form
-            {v: (min, max, ...} where min and max are the range
+            {v: (min, max), ...} where min and max are the range
             of values allowed to v.
         quadratic_energy_ranges (dict): A dict of the form
             {(u, v): (min, max), ...} where min and max are the range
@@ -44,11 +60,7 @@ def generate_ising(graph, feasible_configurations, decision_variables,
     Returns:
         tuple: A 4-tuple containing:
 
-            dict: The linear biases of the Ising problem.
-
-            dict: The quadratic biases of the Ising problem.
-
-            float: The ground energy of the Ising problem.
+            :obj:`dimod.BinaryQuadraticModel`
 
             float: The classical energy gap between ground and the first
             excited state.
@@ -58,6 +70,9 @@ def generate_ising(graph, feasible_configurations, decision_variables,
             to a non-zero infeasible gap.
 
     """
+    if len(graph) == 0:
+        return dimod.BinaryQuadraticModel.empty(dimod.SPIN), float('inf')
+
     # we need to build a Table. The table encodes all of the information used by the smt solver
     table = Table(graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges)
 
@@ -118,16 +133,16 @@ def generate_ising(graph, feasible_configurations, decision_variables,
                 g = min(gmin + .1, (gmax + gmin) / 2)
 
         else:
-            raise pm.ImpossiblePenaltyModel("Model cannot be built")
+            raise ImpossiblePenaltyModel("Model cannot be built")
 
     # finally we need to convert our values back into python floats.
 
-    theta = table.theta
-    linear = {v: float(model.get_py_value(bias))
-              for v, bias in iteritems(theta.linear)}
-    quadratic = {(u, v): float(model.get_py_value(bias))
-                 for (u, v), bias in iteritems(theta.quadratic)}
-    ground_energy = -float(model.get_py_value(theta.offset))
     classical_gap = float(model.get_py_value(table.gap))
 
-    return linear, quadratic, ground_energy, classical_gap
+    # if the problem is fully specified (or empty) it has infinite gap
+    if (len(decision_variables) == len(graph) and
+            decision_variables and  # at least one variable
+            len(feasible_configurations) == 2*len(decision_variables)):
+        classical_gap = float('inf')
+
+    return table.theta.to_bqm(model), classical_gap

@@ -1,10 +1,24 @@
-from six import iteritems
+# Copyright 2019 D-Wave Systems Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+# ================================================================================================
 import penaltymodel.core as pm
 import dimod
 
-from penaltymodel.maxgap.generation import generate_ising
+from penaltymodel.maxgap.generation import generate
 
-__all__ = ['get_penalty_model']
+__all__ = 'get_penalty_model',
 
 
 @pm.penaltymodel_factory(-100)  # set the priority to low
@@ -30,21 +44,23 @@ def get_penalty_model(specification):
     feasible_configurations = specification.feasible_configurations
     if specification.vartype is dimod.BINARY:
         feasible_configurations = {tuple(2 * v - 1 for v in config): en
-                                   for config, en in iteritems(feasible_configurations)}
+                                   for config, en in feasible_configurations.items()}
 
     # convert ising_quadratic_ranges to the form we expect
     ising_quadratic_ranges = specification.ising_quadratic_ranges
     quadratic_ranges = {(u, v): ising_quadratic_ranges[u][v] for u, v in specification.graph.edges}
 
-    linear, quadratic, ground, gap = generate_ising(specification.graph,
-                                                    feasible_configurations,
-                                                    specification.decision_variables,
-                                                    specification.ising_linear_ranges,
-                                                    quadratic_ranges,
-                                                    specification.min_classical_gap,
-                                                    None)  # unspecified smt solver
+    bqm, gap = generate(specification.graph,
+                        feasible_configurations,
+                        specification.decision_variables,
+                        specification.ising_linear_ranges,
+                        quadratic_ranges,
+                        specification.min_classical_gap,
+                        None)  # unspecified smt solver
 
-    # set of the model with 0.0 offset
-    model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, dimod.SPIN)
+    try:
+        ground = min(feasible_configurations.values())
+    except ValueError:
+        ground = 0.0  # if empty
 
-    return pm.PenaltyModel.from_specification(specification, model, gap, ground)
+    return pm.PenaltyModel.from_specification(specification, bqm, gap, ground)
