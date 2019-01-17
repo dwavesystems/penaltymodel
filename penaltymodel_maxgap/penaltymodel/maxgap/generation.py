@@ -139,4 +139,10 @@ def generate(graph, feasible_configurations, decision_variables,
 
     classical_gap = float(model.get_py_value(table.gap))
 
+    # if the problem is fully specified (or empty) it has infinite gap
+    if (len(decision_variables) == len(graph) and
+            decision_variables and  # at least one variable
+            len(feasible_configurations) == 2*len(decision_variables)):
+        classical_gap = float('inf')
+
     return table.theta.to_bqm(model), classical_gap

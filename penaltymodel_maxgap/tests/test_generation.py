@@ -67,6 +67,8 @@ class TestGeneration(unittest.TestCase):
             self.assertGreaterEqual(bias, min_)
             self.assertLessEqual(bias, max_)
 
+        self.assertAlmostEqual(best_gap, gap)
+
     def test_disjoint(self):
         graph = dnx.chimera_graph(1, 1, 3)
         graph.add_edge(8, 9)
