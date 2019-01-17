@@ -21,6 +21,8 @@ class TestGeneration(unittest.TestCase):
         """check that the bqm has ground states matching table"""
         response = dimod.ExactSolver().sample(bqm)
 
+        ground = min(table.values()) if isinstance(table, dict) else 0
+
         seen_gap = float('inf')
         seen_table = set()
         for sample, energy in response.data(['sample', 'energy']):
@@ -37,7 +39,7 @@ class TestGeneration(unittest.TestCase):
                 seen_table.add(config)
 
             elif config not in table:
-                seen_gap = min(seen_gap, energy)
+                seen_gap = min(seen_gap, energy - ground)
 
         for config in table:
             self.assertIn(config, seen_table)
@@ -308,4 +310,6 @@ class TestGeneration(unittest.TestCase):
         graph = nx.complete_graph(decision_variables)
         configurations = {(-1,): -1}
 
-        bqm, gap = mip.generate_bqm(graph, configurations, decision_variables)
+        bqm, gap = mip.generate_bqm(graph, configurations, decision_variables, min_classical_gap=2)
+
+        self.check_bqm_table(bqm, gap, configurations, decision_variables)
