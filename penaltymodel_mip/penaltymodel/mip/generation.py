@@ -11,9 +11,9 @@ from ortools.linear_solver import pywraplp
 import penaltymodel.core as pm
 
 
-#TODO: think of a more elegant way to support both dict and lists
 def get(iterable, key, default_value):
-    """This is a helper function to assist with supporting both dictionary and list functionality.
+    """This is a helper function to assist with supporting both dictionary and list/set
+    functionality.
     """
     if isinstance(iterable, dict):
         return iterable.get(key, default_value)
@@ -235,7 +235,6 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
                 coefficients[offset] = 1
 
                 # # the -100*|| a - a*(x) || term
-                auxiliary_coefficients = {}
                 for v in auxiliary:
                     # we don't have absolute value, so we check what a is and order the subtraction accordingly
                     if spins[v] == -1:
@@ -262,7 +261,8 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     objective.SetCoefficient(gap, 1)
     objective.SetMaximization()
 
-    result_status = solver.Solve()
+    # run solver
+    solver.Solve()
 
     # read everything back into floats
     h = {v: bias.solution_value() for v, bias in h.items()}
