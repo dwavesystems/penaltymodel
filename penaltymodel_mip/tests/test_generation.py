@@ -302,3 +302,10 @@ class TestGeneration(unittest.TestCase):
         bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)
         self.check_bqm_table(bqm, gap, states, nodes)
+
+    def test_nonzero_ground_state(self):
+        decision_variables = ('a',)
+        graph = nx.complete_graph(decision_variables)
+        configurations = {(-1,): -1}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, decision_variables)
