@@ -204,8 +204,8 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         for decision_config in table:
             spins = dict(zip(decision, decision_config))
 
-            upper_bound = get(table, decision_config, highest_target_energy)
-            const = solver.Constraint(-solver.infinity(), upper_bound)
+            target_energy = get(table, decision_config, highest_target_energy)
+            const = solver.Constraint(-solver.infinity(), target_energy)
 
             # add the energy for the configuration
             for v, bias in h.items():
