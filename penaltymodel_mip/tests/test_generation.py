@@ -328,3 +328,39 @@ class TestGeneration(unittest.TestCase):
 
         self.check_bqm_table(bqm, gap, configurations, nodes)
         self.check_bqm_graph(bqm, graph)
+
+    def test_multiple_nonzero_feasible_states_with_aux(self):
+        """
+        nodes = ['a', 'b', 'c']
+        graph = nx.complete_graph(nodes)
+        configurations = {(+1, +1, -1): -3,
+                          (+1, -1, +1): -2,
+                          (+1, -1, -1): -6,
+                          (-1, +1, -1): 0,
+                          (-1, -1, +1): -1,
+                          (-1, -1, -1): -1}
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        """
+
+        nodes = ['a', 'b']
+        graph = nx.complete_graph(nodes + ['aux0'])
+        configurations = {(+1, +1): -3,
+                          (+1, -1): -6,
+                          (-1, +1): 0,
+                          (-1, -1): -1}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_silly(self):
+        nodes = ['a']
+        graph = nx.complete_graph(nodes + ['aux'])
+        configurations = {(-1,): -5,
+                          (+1,): 3}
+        """
+        configurations = {(-1,): -5,
+                          (+1,): 1}
+        """
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
