@@ -21,7 +21,7 @@ class TestGeneration(unittest.TestCase):
         """check that the bqm has ground states matching table"""
         response = dimod.ExactSolver().sample(bqm)
 
-        ground = min(table.values()) if isinstance(table, dict) else 0
+        highest_feasible_energy = max(table.values()) if isinstance(table, dict) else 0
 
         seen_gap = float('inf')
         seen_table = set()
@@ -30,7 +30,7 @@ class TestGeneration(unittest.TestCase):
 
             config = tuple(sample[v] for v in decision)
 
-            if energy < .001:
+            if energy < highest_feasible_energy + .001:
                 self.assertIn(config, table)
 
                 if isinstance(table, dict):
@@ -39,7 +39,7 @@ class TestGeneration(unittest.TestCase):
                 seen_table.add(config)
 
             elif config not in table:
-                seen_gap = min(seen_gap, energy - ground)
+                seen_gap = min(seen_gap, energy - highest_feasible_energy)
 
         for config in table:
             self.assertIn(config, seen_table)
@@ -305,7 +305,7 @@ class TestGeneration(unittest.TestCase):
         self.assertEqual(smaller_min_gap, gap)
         self.check_bqm_table(bqm, gap, states, nodes)
 
-    def test_nonzero_ground_state(self):
+    def test_nonzero_ground_state_no_aux(self):
         decision_variables = ('a',)
         graph = nx.complete_graph(decision_variables)
         configurations = {(-1,): -1}
@@ -313,3 +313,18 @@ class TestGeneration(unittest.TestCase):
         bqm, gap = mip.generate_bqm(graph, configurations, decision_variables, min_classical_gap=2)
 
         self.check_bqm_table(bqm, gap, configurations, decision_variables)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_multiple_nonzero_feasible_states_no_aux(self):
+        nodes = [0, 1, 2]
+        graph = nx.complete_graph(nodes)
+        configurations = {(+1, +1, -1): -1.5,
+                          (+1, -1, +1): -2.5,
+                          (+1, -1, -1): -4.5,
+                          (-1, -1, +1): -1.5,
+                          (-1, -1, -1): 0.5}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes, min_classical_gap=0.75)
+
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
