@@ -222,7 +222,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         a_star = {config: {v: solver.IntVar(0, 1, 'a*(%s)_%s' % (config, v)) for v in auxiliary} for config in table}
 
         for decision_config in table:
-            target_energy = get(table, decision_config, 0)
+            target_energy = get(table, decision_config, highest_target_energy)
 
             for aux_config in itertools.product((-1, 1), repeat=len(variables) - len(decision)):
                 spins = dict(zip(variables, decision_config+aux_config))
