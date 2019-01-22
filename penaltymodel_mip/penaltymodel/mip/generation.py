@@ -116,14 +116,8 @@ def generate_bqm(graph, table, decision,
     if quadratic_energy_ranges is None:
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
-    if return_auxiliary:
-        h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
-                                                 linear_energy_ranges, quadratic_energy_ranges,
-                                                 return_auxiliary)
-    else:
-        h, J, offset, gap = _generate_ising(graph, table, decision, min_classical_gap,
-                                            linear_energy_ranges, quadratic_energy_ranges,
-                                            return_auxiliary)
+    h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
+                                             linear_energy_ranges, quadratic_energy_ranges)
 
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
     bqm.add_variables_from((v, round(bias, precision)) for v, bias in h.items())
@@ -137,7 +131,7 @@ def generate_bqm(graph, table, decision,
 
 
 def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ranges,
-                    quadratic_energy_ranges, return_auxiliary):
+                    quadratic_energy_ranges):
 
     if not table:
         # if there are no feasible configurations then the gap is 0 and the model is empty
@@ -145,10 +139,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         J = {edge: 0.0 for edge in graph.edges}
         offset = 0.0
         gap = 0.0
-        if return_auxiliary:
-            return h, J, offset, gap, {}
-        else:
-            return h, J, offset, gap
+        return h, J, offset, gap, {}
 
     auxiliary = [v for v in graph if v not in decision]
     variables = decision + auxiliary
@@ -276,12 +267,10 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     if not gap:
         raise pm.ImpossiblePenaltyModel("No positive gap can be found for the given model")
 
-    if return_auxiliary:
-        if auxiliary:
-            aux_configs = {config: {v: val.solution_value()*2 - 1 for v, val in a_star[config].items()}
-                           for config in table}
-        else:
-            aux_configs = {config: dict() for config in table}
-        return h, J, offset, gap, aux_configs
+    if auxiliary:
+        aux_configs = {config: {v: val.solution_value()*2 - 1 for v, val in a_star[config].items()}
+                       for config in table}
     else:
-        return h, J, offset, gap
+        aux_configs = {config: dict() for config in table}
+
+    return h, J, offset, gap, aux_configs
