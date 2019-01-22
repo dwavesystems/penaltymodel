@@ -345,7 +345,7 @@ class TestGeneration(unittest.TestCase):
         nodes = ['a', 'b']
         graph = nx.complete_graph(nodes + ['aux0'])
         configurations = {(+1, +1): -3,
-                          (+1, -1): -6}
+                          (+1, -1): -4}
 
         bqm, gap = mip.generate_bqm(graph, configurations, nodes, min_classical_gap=0)
         self.check_bqm_graph(bqm, graph)

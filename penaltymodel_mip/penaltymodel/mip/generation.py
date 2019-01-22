@@ -270,6 +270,9 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     offset = offset.solution_value()
     gap = gap.solution_value()
 
+    if decision and not auxiliary and len(table) == 2*len(decision):
+        gap = float('inf')
+
     if not gap:
         raise pm.ImpossiblePenaltyModel("No positive gap can be found for the given model")
 
