@@ -11,15 +11,6 @@ from ortools.linear_solver import pywraplp
 import penaltymodel.core as pm
 
 
-def get(iterable, key, default_value):
-    """This is a helper function to assist with supporting both dictionary and list/set
-    functionality.
-    """
-    if isinstance(iterable, dict):
-        return iterable.get(key, default_value)
-    return default_value
-
-
 def generate_bqm(graph, table, decision,
                  linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2,
                  precision=7, max_decision=8, max_variables=10,
@@ -116,6 +107,9 @@ def generate_bqm(graph, table, decision,
     if quadratic_energy_ranges is None:
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
+    if not isinstance(table, Mapping):
+        table = {config: 0. for config in table}
+
     h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
                                              linear_energy_ranges, quadratic_energy_ranges)
 
@@ -177,7 +171,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
 
         decision_config = tuple(spins[v] for v in decision)
 
-        target_energy = get(table, decision_config, highest_target_energy)
+        target_energy = table.get(decision_config, highest_target_energy)
 
         # the E(x, a) term
         coefficients = {bias: spins[v] for v, bias in h.items()}
@@ -188,8 +182,6 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
             # we want energy greater than gap for decision configs not in feasible
             coefficients[gap] = -1
 
-        # print(coefficients, 'in', '[{}, {}]'.format(target_energy, float('inf')))
-
         const = solver.Constraint(target_energy, solver.infinity())
         for var, coef in coefficients.items():
             const.SetCoefficient(var, coef)
@@ -197,18 +189,17 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     if not auxiliary:
         # We have no auxiliary variables. We want:
         #   E(x) <= target_energy forall x in F
-        for decision_config in table:
+        for decision_config, target_energy in table.items():
             spins = dict(zip(decision, decision_config))
 
-            target_energy = get(table, decision_config, highest_target_energy)
-            const = solver.Constraint(-solver.infinity(), target_energy)
+            # the E(x, a) term
+            coefficients = {bias: spins[v] for v, bias in h.items()}
+            coefficients.update({bias: spins[u] * spins[v] for (u, v), bias in J.items()})
+            coefficients[offset] = 1
 
-            # add the energy for the configuration
-            for v, bias in h.items():
-                const.SetCoefficient(bias, spins[v])
-            for (u, v), bias in J.items():
-                const.SetCoefficient(bias, spins[u] * spins[v])
-            const.SetCoefficient(offset, 1)
+            const = solver.Constraint(-solver.infinity(), target_energy)
+            for var, coef in coefficients.items():
+                const.SetCoefficient(var, coef)
 
     else:
         # We have auxiliary variables. So that each feasible config has at least one ground we want:
@@ -217,8 +208,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         # we need a*(x) forall x in F
         a_star = {config: {v: solver.IntVar(0, 1, 'a*(%s)_%s' % (config, v)) for v in auxiliary} for config in table}
 
-        for decision_config in table:
-            target_energy = get(table, decision_config, highest_target_energy)
+        for decision_config, target_energy in table.items():
 
             for aux_config in itertools.product((-1, 1), repeat=len(variables) - len(decision)):
                 spins = dict(zip(variables, decision_config+aux_config))
@@ -242,8 +232,6 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
                         coefficients[a_star[decision_config][v]] = +200
                         ub += 200
 
-                # print(coefficients, 'in', '[{}, {}]'.format(-float('inf'), ub))
-
                 const = solver.Constraint(-solver.infinity(), ub)
                 for var, coef in coefficients.items():
                     const.SetCoefficient(var, coef)
@@ -255,9 +243,13 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
             const = solver.Constraint(val, val)  # equality constraint
             const.SetCoefficient(var, 1)
 
-    objective = solver.Objective()
-    objective.SetCoefficient(gap, 1)
-    objective.SetMaximization()
+    if auxiliary or len(table) != 2*len(decision):
+        objective = solver.Objective()
+        objective.SetCoefficient(gap, 1)
+        objective.SetMaximization()
+        _inf_gap = False
+    else:
+        _inf_gap = True
 
     # run solver
     solver.Solve()
@@ -266,10 +258,11 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     h = {v: bias.solution_value() for v, bias in h.items()}
     J = {(u, v): bias.solution_value() for (u, v), bias in J.items()}
     offset = offset.solution_value()
-    gap = gap.solution_value()
 
-    if decision and not auxiliary and len(table) == 2*len(decision):
+    if _inf_gap:
         gap = float('inf')
+    else:
+        gap = gap.solution_value()
 
     if not gap:
         raise pm.ImpossiblePenaltyModel("No positive gap can be found for the given model")
