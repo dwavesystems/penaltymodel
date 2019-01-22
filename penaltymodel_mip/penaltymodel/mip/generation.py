@@ -175,19 +175,24 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     for config in itertools.product((-1, 1), repeat=len(variables)):
         spins = dict(zip(variables, config))
 
-        target_energy = get(table, config, highest_target_energy)
-        const = solver.Constraint(target_energy, solver.infinity())
+        decision_config = tuple(spins[v] for v in decision)
 
-        if tuple(spins[v] for v in decision) not in table:
+        target_energy = get(table, decision_config, highest_target_energy)
+
+        # the E(x, a) term
+        coefficients = {bias: spins[v] for v, bias in h.items()}
+        coefficients.update({bias: spins[u] * spins[v] for (u, v), bias in J.items()})
+        coefficients[offset] = 1
+
+        if decision_config not in table:
             # we want energy greater than gap for decision configs not in feasible
-            const.SetCoefficient(gap, -1)
+            coefficients[gap] = -1
 
-        # add the energy for the configuration
-        for v, bias in h.items():
-            const.SetCoefficient(bias, spins[v])
-        for (u, v), bias in J.items():
-            const.SetCoefficient(bias, spins[u] * spins[v])
-        const.SetCoefficient(offset, 1)
+        # print(coefficients, 'in', '[{}, {}]'.format(target_energy, float('inf')))
+
+        const = solver.Constraint(target_energy, solver.infinity())
+        for var, coef in coefficients.items():
+            const.SetCoefficient(var, coef)
 
     if not auxiliary:
         # We have no auxiliary variables. We want:
@@ -236,6 +241,8 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
                         assert spins[v] == 1  # sanity check
                         coefficients[a_star[decision_config][v]] = +200
                         ub += 200
+
+                # print(coefficients, 'in', '[{}, {}]'.format(-float('inf'), ub))
 
                 const = solver.Constraint(-solver.infinity(), ub)
                 for var, coef in coefficients.items():

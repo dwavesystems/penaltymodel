@@ -343,11 +343,13 @@ class TestGeneration(unittest.TestCase):
         """
 
         nodes = ['a', 'b']
-        graph = nx.complete_graph(nodes + ['aux0'])
+        graph = nx.complete_graph(nodes + ['c'])
         configurations = {(+1, +1): -3,
                           (+1, -1): -6}
 
         bqm, gap = mip.generate_bqm(graph, configurations, nodes, min_classical_gap=0)
+
+        self.check_bqm_table(bqm, gap, configurations, nodes)
         self.check_bqm_graph(bqm, graph)
 
     def test_all_possible_config(self):
