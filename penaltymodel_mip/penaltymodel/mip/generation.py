@@ -243,7 +243,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
             const = solver.Constraint(val, val)  # equality constraint
             const.SetCoefficient(var, 1)
 
-    if auxiliary or len(table) != 2*len(decision):
+    if auxiliary or len(table) != 2**len(decision):
         objective = solver.Objective()
         objective.SetCoefficient(gap, 1)
         objective.SetMaximization()
