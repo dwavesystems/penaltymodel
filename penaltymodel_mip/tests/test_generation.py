@@ -21,6 +21,9 @@ class TestGeneration(unittest.TestCase):
         """check that the bqm has ground states matching table"""
         response = dimod.ExactSolver().sample(bqm)
 
+        highest_feasible_energy = max(table.values()) if isinstance(table, dict) else 0
+
+        # Looping though ExactSolver results and comparing with BQM
         seen_gap = float('inf')
         seen_table = set()
         for sample, energy in response.data(['sample', 'energy']):
@@ -28,7 +31,8 @@ class TestGeneration(unittest.TestCase):
 
             config = tuple(sample[v] for v in decision)
 
-            if energy < .001:
+            # Configurations with energies < highest feasible energy
+            if energy < highest_feasible_energy + .001:
                 self.assertIn(config, table)
 
                 if isinstance(table, dict):
@@ -36,9 +40,11 @@ class TestGeneration(unittest.TestCase):
 
                 seen_table.add(config)
 
+            # Get smallest gap among non-table configurations
             elif config not in table:
-                seen_gap = min(seen_gap, energy)
+                seen_gap = min(seen_gap, energy - highest_feasible_energy)
 
+        # Verify that all table configurations have been accounted for
         for config in table:
             self.assertIn(config, seen_table)
 
@@ -302,3 +308,50 @@ class TestGeneration(unittest.TestCase):
         bqm, gap = mip.generate_bqm(graph, states, nodes, min_classical_gap=smaller_min_gap)
         self.assertEqual(smaller_min_gap, gap)
         self.check_bqm_table(bqm, gap, states, nodes)
+
+    def test_nonzero_ground_state_no_aux(self):
+        decision_variables = ('a',)
+        graph = nx.complete_graph(decision_variables)
+        configurations = {(-1,): -1}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, decision_variables, min_classical_gap=2)
+
+        self.check_bqm_table(bqm, gap, configurations, decision_variables)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_multiple_nonzero_feasible_states_no_aux(self):
+        nodes = [0, 1, 2]
+        graph = nx.complete_graph(nodes)
+        configurations = {(+1, +1, -1): -1.5,
+                          (+1, -1, +1): -2.5,
+                          (+1, -1, -1): -4.5,
+                          (-1, -1, +1): -1.5,
+                          (-1, -1, -1): 0.5}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes, min_classical_gap=0.75)
+
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_multiple_nonzero_feasible_states_with_aux(self):
+        nodes = ['a', 'b']
+        graph = nx.complete_graph(nodes + ['c'])
+        configurations = {(+1, +1): -3,
+                          (+1, -1): -6}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_all_possible_config(self):
+        """Test when all possible configurations for the decision variable is defined
+        """
+        nodes = ['a']
+        graph = nx.complete_graph(nodes)
+        configurations = {(-1,): -1,
+                          (+1,): 1}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)

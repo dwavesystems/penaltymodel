@@ -85,9 +85,6 @@ def generate_bqm(graph, table, decision,
     if not set().union(*table).issubset({-1, 1}):
         raise ValueError("expected table to be spin-valued")
 
-    if isinstance(table, Mapping) and any(table.values()):
-        raise ValueError("cannot handle non-zero target energy levels")
-
     if not isinstance(decision, list):
         decision = list(decision)  # handle iterables
     if not all(v in graph for v in decision):
@@ -110,14 +107,11 @@ def generate_bqm(graph, table, decision,
     if quadratic_energy_ranges is None:
         quadratic_energy_ranges = defaultdict(lambda: (-1, 1))
 
-    if return_auxiliary:
-        h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
-                                                 linear_energy_ranges, quadratic_energy_ranges,
-                                                 return_auxiliary)
-    else:
-        h, J, offset, gap = _generate_ising(graph, table, decision, min_classical_gap,
-                                            linear_energy_ranges, quadratic_energy_ranges,
-                                            return_auxiliary)
+    if not isinstance(table, Mapping):
+        table = {config: 0. for config in table}
+
+    h, J, offset, gap, aux = _generate_ising(graph, table, decision, min_classical_gap,
+                                             linear_energy_ranges, quadratic_energy_ranges)
 
     bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
     bqm.add_variables_from((v, round(bias, precision)) for v, bias in h.items())
@@ -131,7 +125,7 @@ def generate_bqm(graph, table, decision,
 
 
 def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ranges,
-                    quadratic_energy_ranges, return_auxiliary):
+                    quadratic_energy_ranges):
 
     if not table:
         # if there are no feasible configurations then the gap is 0 and the model is empty
@@ -139,10 +133,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         J = {edge: 0.0 for edge in graph.edges}
         offset = 0.0
         gap = 0.0
-        if return_auxiliary:
-            return h, J, offset, gap, {}
-        else:
-            return h, J, offset, gap
+        return h, J, offset, gap, {}
 
     auxiliary = [v for v in graph if v not in decision]
     variables = decision + auxiliary
@@ -171,51 +162,58 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     # Let a*(x) be argmin_a E(x, a) - the config of aux variables that minimizes the energy with x fixed
 
     # We want:
-    #   E(x, a) >= 0  forall x in F, forall a
-    #   E(x, a) - g >= 0  forall x not in F, forall a
+    #   E(x, a) >= target_energy  forall x in F, forall a
+    #   E(x, a) - g >= highest_target_energy  forall x not in F, forall a
+    highest_target_energy = max(table.values()) if isinstance(table, dict) else 0
+
     for config in itertools.product((-1, 1), repeat=len(variables)):
         spins = dict(zip(variables, config))
 
-        const = solver.Constraint(0.0, solver.infinity())
+        decision_config = tuple(spins[v] for v in decision)
 
-        if tuple(spins[v] for v in decision) not in table:
+        target_energy = table.get(decision_config, highest_target_energy)
+
+        # the E(x, a) term
+        coefficients = {bias: spins[v] for v, bias in h.items()}
+        coefficients.update({bias: spins[u] * spins[v] for (u, v), bias in J.items()})
+        coefficients[offset] = 1
+
+        if decision_config not in table:
             # we want energy greater than gap for decision configs not in feasible
-            const.SetCoefficient(gap, -1)
+            coefficients[gap] = -1
 
-        # add the energy for the configuration
-        for v, bias in h.items():
-            const.SetCoefficient(bias, spins[v])
-        for (u, v), bias in J.items():
-            const.SetCoefficient(bias, spins[u] * spins[v])
-        const.SetCoefficient(offset, 1)
+        const = solver.Constraint(target_energy, solver.infinity())
+        for var, coef in coefficients.items():
+            const.SetCoefficient(var, coef)
 
     if not auxiliary:
         # We have no auxiliary variables. We want:
-        #   E(x) <= 0 forall x in F
-        for decision_config in table:
+        #   E(x) <= target_energy forall x in F
+        for decision_config, target_energy in table.items():
             spins = dict(zip(decision, decision_config))
 
-            const = solver.Constraint(-solver.infinity(), 0.0)
+            # the E(x, a) term
+            coefficients = {bias: spins[v] for v, bias in h.items()}
+            coefficients.update({bias: spins[u] * spins[v] for (u, v), bias in J.items()})
+            coefficients[offset] = 1
 
-            # add the energy for the configuration
-            for v, bias in h.items():
-                const.SetCoefficient(bias, spins[v])
-            for (u, v), bias in J.items():
-                const.SetCoefficient(bias, spins[u] * spins[v])
-            const.SetCoefficient(offset, 1)
+            const = solver.Constraint(-solver.infinity(), target_energy)
+            for var, coef in coefficients.items():
+                const.SetCoefficient(var, coef)
 
     else:
         # We have auxiliary variables. So that each feasible config has at least one ground we want:
-        #   E(x, a) - 100*|| a - a*(x) || <= 0  forall x in F, forall a
+        #   E(x, a) - 100*|| a - a*(x) || <= target_energy  forall x in F, forall a
 
         # we need a*(x) forall x in F
         a_star = {config: {v: solver.IntVar(0, 1, 'a*(%s)_%s' % (config, v)) for v in auxiliary} for config in table}
 
-        for decision_config in table:
+        for decision_config, target_energy in table.items():
+
             for aux_config in itertools.product((-1, 1), repeat=len(variables) - len(decision)):
                 spins = dict(zip(variables, decision_config+aux_config))
 
-                ub = 0
+                ub = target_energy
 
                 # the E(x, a) term
                 coefficients = {bias: spins[v] for v, bias in h.items()}
@@ -223,7 +221,6 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
                 coefficients[offset] = 1
 
                 # # the -100*|| a - a*(x) || term
-                auxiliary_coefficients = {}
                 for v in auxiliary:
                     # we don't have absolute value, so we check what a is and order the subtraction accordingly
                     if spins[v] == -1:
@@ -243,30 +240,37 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         # one of the feasible configurations. Do so randomly.
         for var in next(iter(a_star.values())).values():
             val = random.randint(0, 1)
-            const = solver.Constraint(val, val)  # equality constrait
+            const = solver.Constraint(val, val)  # equality constraint
             const.SetCoefficient(var, 1)
 
-    objective = solver.Objective()
-    objective.SetCoefficient(gap, 1)
-    objective.SetMaximization()
+    if auxiliary or len(table) != 2**len(decision):
+        objective = solver.Objective()
+        objective.SetCoefficient(gap, 1)
+        objective.SetMaximization()
+        _inf_gap = False
+    else:
+        _inf_gap = True
 
-    result_status = solver.Solve()
+    # run solver
+    solver.Solve()
 
     # read everything back into floats
     h = {v: bias.solution_value() for v, bias in h.items()}
     J = {(u, v): bias.solution_value() for (u, v), bias in J.items()}
     offset = offset.solution_value()
-    gap = gap.solution_value()
+
+    if _inf_gap:
+        gap = float('inf')
+    else:
+        gap = gap.solution_value()
 
     if not gap:
         raise pm.ImpossiblePenaltyModel("No positive gap can be found for the given model")
 
-    if return_auxiliary:
-        if auxiliary:
-            aux_configs = {config: {v: val.solution_value()*2 - 1 for v, val in a_star[config].items()}
-                           for config in table}
-        else:
-            aux_configs = {config: dict() for config in table}
-        return h, J, offset, gap, aux_configs
+    if auxiliary:
+        aux_configs = {config: {v: val.solution_value()*2 - 1 for v, val in a_star[config].items()}
+                       for config in table}
     else:
-        return h, J, offset, gap
+        aux_configs = {config: dict() for config in table}
+
+    return h, J, offset, gap, aux_configs
