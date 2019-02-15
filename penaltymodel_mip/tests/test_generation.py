@@ -339,7 +339,7 @@ class TestGeneration(unittest.TestCase):
         configurations = {(+1, +1): -3,
                           (+1, -1): -6}
 
-        bqm, gap = mip.generate_bqm(graph, configurations, nodes, min_classical_gap=0)
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
 
         self.check_bqm_table(bqm, gap, configurations, nodes)
         self.check_bqm_graph(bqm, graph)
