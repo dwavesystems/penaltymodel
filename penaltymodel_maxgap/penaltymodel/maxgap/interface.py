@@ -59,7 +59,7 @@ def get_penalty_model(specification):
                         None)  # unspecified smt solver
 
     try:
-        ground = min(feasible_configurations.values())
+        ground = max(feasible_configurations.values())
     except ValueError:
         ground = 0.0  # if empty
 
