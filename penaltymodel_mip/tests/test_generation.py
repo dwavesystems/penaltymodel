@@ -23,6 +23,7 @@ class TestGeneration(unittest.TestCase):
 
         highest_feasible_energy = max(table.values()) if isinstance(table, dict) else 0
 
+        # Looping though ExactSolver results and comparing with BQM
         seen_gap = float('inf')
         seen_table = set()
         for sample, energy in response.data(['sample', 'energy']):
@@ -30,6 +31,7 @@ class TestGeneration(unittest.TestCase):
 
             config = tuple(sample[v] for v in decision)
 
+            # Configurations with energies < highest feasible energy
             if energy < highest_feasible_energy + .001:
                 self.assertIn(config, table)
 
@@ -38,9 +40,11 @@ class TestGeneration(unittest.TestCase):
 
                 seen_table.add(config)
 
+            # Get smallest gap among non-table configurations
             elif config not in table:
                 seen_gap = min(seen_gap, energy - highest_feasible_energy)
 
+        # Verify that all table configurations have been accounted for
         for config in table:
             self.assertIn(config, seen_table)
 
@@ -330,18 +334,6 @@ class TestGeneration(unittest.TestCase):
         self.check_bqm_graph(bqm, graph)
 
     def test_multiple_nonzero_feasible_states_with_aux(self):
-        """
-        nodes = ['a', 'b', 'c']
-        graph = nx.complete_graph(nodes)
-        configurations = {(+1, +1, -1): -3,
-                          (+1, -1, +1): -2,
-                          (+1, -1, -1): -6,
-                          (-1, +1, -1): 0,
-                          (-1, -1, +1): -1,
-                          (-1, -1, -1): -1}
-        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
-        """
-
         nodes = ['a', 'b']
         graph = nx.complete_graph(nodes + ['c'])
         configurations = {(+1, +1): -3,
