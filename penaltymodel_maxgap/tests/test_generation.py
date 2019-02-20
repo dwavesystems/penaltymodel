@@ -1,11 +1,10 @@
 import unittest
-import itertools
 
 import dimod
 import dwave_networkx as dnx
 import networkx as nx
 
-from pysmt.environment import get_env, reset_env
+from pysmt.environment import reset_env
 
 import penaltymodel.core as pm
 import penaltymodel.maxgap as maxgap
@@ -214,7 +213,7 @@ class TestGeneration(unittest.TestCase):
 
     def test_min_gap_equals_max_gap(self):
         # Make sure that a model is always grabbed, even when min_gap == max_gap
-        min_gap = 2     # This value is also the max classical gap
+        min_gap = 4     # This value is also the max classical gap
         decision_variables = ['a']
         config = {(-1,): -1}
         graph = nx.complete_graph(decision_variables)
