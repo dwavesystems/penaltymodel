@@ -77,6 +77,12 @@ def generate(graph, feasible_configurations, decision_variables,
     if len(graph) == 0:
         return dimod.BinaryQuadraticModel.empty(dimod.SPIN), float('inf')
 
+    # Currently, min_classical_gap is calculated with respect to zero. Here, we are adjusting the
+    # min_classical_gap to be calculated with respect to the energy of the highest feasible state.
+    # Note: In the future, we would want this adjustment made within the SMT solver.
+    if isinstance(feasible_configurations, dict):
+        min_classical_gap += max(feasible_configurations.values())
+
     # we need to build a Table. The table encodes all of the information used by the smt solver
     table = Table(graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges)
 
@@ -142,6 +148,12 @@ def generate(graph, feasible_configurations, decision_variables,
     # finally we need to convert our values back into python floats.
 
     classical_gap = float(model.get_py_value(table.gap))
+
+    # Currently, classical_gap is calculated with respect to zero. The code below will adjust the
+    # classical_gap to be calculated with respect to the energy of the highest feasible state.
+    # Note: In the future, we would want this adjustment made within the SMT solver.
+    if isinstance(feasible_configurations, dict):
+        classical_gap -= max(feasible_configurations.values())
 
     # if the problem is fully specified (or empty) it has infinite gap
     if (len(decision_variables) == len(graph) and
