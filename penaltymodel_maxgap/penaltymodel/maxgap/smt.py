@@ -330,12 +330,17 @@ class Table(object):
         spin_energy = self.energy_upperbound(spins)
         self.assertions.add(GE(spin_energy, self.gap))
 
-    def gap_bound_assertion(self, gap_lowerbound):
-        """The formula that lower bounds the gap.
+    def gap_bound_assertion(self, gap_bound, is_lowerbound=True):
+        """Returns a formula that sets a bound on the gap. By default, this bound is a lower bound
+        on the gap.
 
         Args:
-            gap_lowerbound (float): Return the formula that sets a lower
-                bound on the gap.
+            gap_bound (float): the value in which the gap is bounded by
+            is_lowerbound (bool): if True, 'gap_bound' is interpreted as a lower bound. Otherwise,
+              'gap_bound' is interpreted as an upper bound.
 
         """
-        return GE(self.gap, limitReal(gap_lowerbound))
+        if is_lowerbound:
+            return GE(self.gap, limitReal(gap_bound))
+
+        return LE(self.gap, limitReal(gap_bound))
