@@ -367,3 +367,31 @@ class TestGeneration(unittest.TestCase):
                                 linear_energy_ranges,
                                 quadratic_energy_ranges,
                                 min_classical_gap)
+
+    def test_positive_feasible_positive_infeasible(self):
+        min_classical_gap = 0.5
+        decision_variables = ['a']
+        configurations = {(1,): 5}
+        graph = nx.complete_graph(decision_variables)
+
+        linear_energy_ranges = {v: (-2, 2) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
+
+        self.generate_and_check(graph, configurations, decision_variables,
+                                linear_energy_ranges,
+                                quadratic_energy_ranges,
+                                min_classical_gap)
+
+    def test_negative_feasible_negative_infeasible(self):
+        min_classical_gap = 0.5
+        decision_variables = ['a']
+        configurations = {(1,): -10}
+        graph = nx.complete_graph(decision_variables)
+
+        linear_energy_ranges = {v: (-2, 2) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
+
+        self.generate_and_check(graph, configurations, decision_variables,
+                                linear_energy_ranges,
+                                quadratic_energy_ranges,
+                                min_classical_gap)
