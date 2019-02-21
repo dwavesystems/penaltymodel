@@ -123,6 +123,7 @@ def generate(graph, feasible_configurations, decision_variables,
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
             gmax *= 2   # since we are dealing with -1, +1 spins
+            gmax += max(feasible_configurations.values())   # Since gap is calculated wrt 0
 
             # 2 is a good target gap
             g = max(2., gmin)
