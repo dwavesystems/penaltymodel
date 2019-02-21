@@ -43,6 +43,7 @@ class TestGeneration(unittest.TestCase):
         # check gap and other energies
         best_gap = float('inf')
         seen = set()
+        highest_feasible_energy = max(configurations.values(), default=0)
         for sample, energy in sampleset.data(['sample', 'energy']):
             config = tuple(sample[v] for v in decision_variables)
 
@@ -55,7 +56,7 @@ class TestGeneration(unittest.TestCase):
                 self.assertAlmostEqual(energy, configurations[config])
                 seen.add(config)
             else:
-                best_gap = min(best_gap, energy)
+                best_gap = min(best_gap, energy - highest_feasible_energy)
 
         # check energy ranges
         for v, bias in bqm.linear.items():
@@ -342,6 +343,25 @@ class TestGeneration(unittest.TestCase):
         linear_energy_ranges = {v: (-1., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., .5) for u, v in graph.edges}
         min_classical_gap = 2
+
+        self.generate_and_check(graph, configurations, decision_variables,
+                                linear_energy_ranges,
+                                quadratic_energy_ranges,
+                                min_classical_gap)
+
+    def test_negative_feasible_positive_infeasible(self):
+        """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
+
+        Case where highest feasible state has negative energy and the gap is set high enough that
+        the infeasible states must have positive energy.
+        """
+        min_classical_gap = 0.5
+        decision_variables = ['a']
+        configurations = {(1,): -0.5}
+        graph = nx.complete_graph(decision_variables)
+
+        linear_energy_ranges = {v: (-2, 2) for v in graph}
+        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
         self.generate_and_check(graph, configurations, decision_variables,
                                 linear_energy_ranges,
