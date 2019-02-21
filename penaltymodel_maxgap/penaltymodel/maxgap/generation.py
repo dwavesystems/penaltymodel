@@ -112,14 +112,6 @@ def generate(graph, feasible_configurations, decision_variables,
         gap_assertion = table.gap_bound_assertion(min_classical_gap)
         solver.add_assertion(gap_assertion)
 
-        # add max possible classical gap assertion
-        gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
-        gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
-                    for (u, v) in graph.edges)
-        gmax *= 2   # since we are dealing with -1, +1 spins
-        gap_upper_assertion = table.gap_bound_assertion(gmax, is_lowerbound=False)
-        solver.add_assertion(gap_upper_assertion)
-
         # check if the model is feasible at all.
         if solver.solve():
             # since we know the current model is feasible, grab the initial model.
@@ -127,6 +119,10 @@ def generate(graph, feasible_configurations, decision_variables,
 
             # we want to increase the gap until we have found the max classical gap
             gmin = min_classical_gap
+            gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
+            gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
+                        for (u, v) in graph.edges)
+            gmax *= 2   # since we are dealing with -1, +1 spins
 
             # 2 is a good target gap
             g = max(2., gmin)
