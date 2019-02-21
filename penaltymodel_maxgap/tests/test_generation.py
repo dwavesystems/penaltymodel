@@ -369,10 +369,16 @@ class TestGeneration(unittest.TestCase):
                                 min_classical_gap)
 
     def test_positive_feasible_positive_infeasible(self):
-        min_classical_gap = 0.5
-        decision_variables = ['a']
-        configurations = {(1,): 5}
-        graph = nx.complete_graph(decision_variables)
+        """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
+
+        Case where highest feasible state and the infeasible states must have positive energy.
+        """
+        min_classical_gap = 3
+        decision_variables = ['a', 'b']
+        configurations = {(1, -1): -2.5,
+                          (-1, 1): -2.5,
+                          (-1, -1): 0.5}
+        graph = nx.complete_graph(decision_variables + ['c'])
 
         linear_energy_ranges = {v: (-2, 2) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
