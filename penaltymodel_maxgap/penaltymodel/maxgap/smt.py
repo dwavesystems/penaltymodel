@@ -316,19 +316,19 @@ class Table(object):
         spin_energy = self.energy(spins)
         self.assertions.add(Equals(spin_energy, limitReal(target_energy)))
 
-    def set_energy_upperbound(self, spins):
-        """Upper bound the energy of Theta with spins fixed to be greater than gap.
+    def set_energy_upperbound(self, spins, offset=0):
+        """Upper bound the energy of Theta with spins fixed to be greater than (gap + offset).
 
         Args:
             spins (dict): Spin values for a subset of the variables in Theta.
-            target_energy (float): The desired energy for Theta with spins fixed.
+            offset (float): A value that is added to the upper bound. Default value is 0.
 
         Notes:
             Add equality constraint to assertions.
 
         """
         spin_energy = self.energy_upperbound(spins)
-        self.assertions.add(GE(spin_energy, self.gap))
+        self.assertions.add(GE(spin_energy, self.gap + offset))
 
     def gap_bound_assertion(self, gap_lowerbound):
         """The formula that lower bounds the gap.
