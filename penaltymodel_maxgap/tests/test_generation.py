@@ -14,6 +14,9 @@ class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
+    # TODO: add a check for gap against EXPECTED gap. min_classical_gap is merely a lower bound, and
+    #  the gap found by ExactSolver is dependent on the MaxGap's bqm. If the bqm is bad, you could
+    #  still end up with a gap such that min_classical_gap <= gap < EXPECTED_gap.
     def generate_and_check(self, graph, configurations, decision_variables,
                            linear_energy_ranges, quadratic_energy_ranges,
                            min_classical_gap):
