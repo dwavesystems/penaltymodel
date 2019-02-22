@@ -93,7 +93,9 @@ def generate(graph, feasible_configurations, decision_variables,
         else:
             # if the configuration is infeasible, we simply want its minimum energy over all
             # possible aux variable settings to be an upper bound on the classical gap.
-            table.set_energy_upperbound(spins, max(feasible_configurations.values(), default=0))
+            highest_feasible_energy = (0 if not isinstance(feasible_configurations, dict) else
+                                       max(feasible_configurations.values()))
+            table.set_energy_upperbound(spins, highest_feasible_energy)
 
     # now we just need to get a solver
     with Solver(smt_solver_name) as solver:
