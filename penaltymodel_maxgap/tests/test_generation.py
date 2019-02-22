@@ -14,13 +14,17 @@ class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
-    # TODO: add a check for gap against EXPECTED gap. min_classical_gap is merely a lower bound, and
-    #  the gap found by ExactSolver is dependent on the MaxGap's bqm. If the bqm is bad, you could
-    #  still end up with a gap such that min_classical_gap <= gap < EXPECTED_gap.
     def generate_and_check(self, graph, configurations, decision_variables,
                            linear_energy_ranges, quadratic_energy_ranges,
                            min_classical_gap):
+        """Checks that MaxGap's BQM and gap obeys the constraints set by configurations,
+        linear and quadratic energy ranges, and min classical gap.
 
+        Note: The gap is checked for whether it obeys the min classical gap constraint, and whether
+        it is the largest gap for a given BQM. However, this gap may not necessarily be the largest
+        gap for the given set of constraints (i.e. configurations, energy ranges), and this is not
+        checked for in this function.
+        """
         bqm, gap = maxgap.generate(graph, configurations, decision_variables,
                                    linear_energy_ranges,
                                    quadratic_energy_ranges,
@@ -46,11 +50,12 @@ class TestGeneration(unittest.TestCase):
         # check gap and other energies
         best_gap = float('inf')
         seen = set()
-        highest_feasible_energy = max(configurations.values(), default=0)
+        highest_feasible_energy = (max(configurations.values()) if isinstance(configurations, dict)
+                                   else 0)
         for sample, energy in sampleset.data(['sample', 'energy']):
             config = tuple(sample[v] for v in decision_variables)
 
-            # we want the minimum energy for each config of the decisison variables,
+            # we want the minimum energy for each config of the decision variables,
             # so once we've seen it once we can skip
             if config in seen:
                 continue
