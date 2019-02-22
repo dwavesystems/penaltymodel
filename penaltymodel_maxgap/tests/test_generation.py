@@ -50,11 +50,15 @@ class TestGeneration(unittest.TestCase):
         if len(sampleset):
             self.assertAlmostEqual(sampleset.first.energy, min(configurations.values()))
 
+        # Get highest feasible energy
+        if isinstance(configurations, dict) and configurations:
+            highest_feasible_energy = max(configurations.values())
+        else:
+            highest_feasible_energy = 0
+
         # check gap and other energies
         best_gap = float('inf')
         seen = set()
-        highest_feasible_energy = (max(configurations.values()) if isinstance(configurations, dict)
-                                   else 0)
         for sample, energy in sampleset.data(['sample', 'energy']):
             config = tuple(sample[v] for v in decision_variables)
 
