@@ -14,6 +14,9 @@ class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
+    # TODO: Want to give access to the bqm and gap; either split the generate part from the check
+    #   part, or have the function return the bqm and gap. Want to add a check in some unit tests
+    #   that compares the gap with the expected gap (see note in docstring)
     def generate_and_check(self, graph, configurations, decision_variables,
                            linear_energy_ranges, quadratic_energy_ranges,
                            min_classical_gap):
