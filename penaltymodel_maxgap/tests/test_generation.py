@@ -299,11 +299,10 @@ class TestGeneration(unittest.TestCase):
     def test_negative_min_gap_feasible_bqm(self):
         # Regardless of the negative min classical gap, this feasible BQM should return its usual
         # max classical gap.
-        negative_gap = -2
         decision_variables = ['a']
         configurations = {(-1,): 0}
         graph = nx.complete_graph(decision_variables)
-        min_classical_gap = 2
+        min_classical_gap = -2
 
         linear_energy_ranges = {v: (-2., 2.) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
