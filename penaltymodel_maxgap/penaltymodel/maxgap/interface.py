@@ -16,6 +16,7 @@
 import penaltymodel.core as pm
 import dimod
 
+from penaltymodel.core import ImpossiblePenaltyModel
 from penaltymodel.maxgap.generation import generate
 
 __all__ = 'get_penalty_model',
@@ -45,6 +46,11 @@ def get_penalty_model(specification):
     if specification.vartype is dimod.BINARY:
         feasible_configurations = {tuple(2 * v - 1 for v in config): en
                                    for config, en in feasible_configurations.items()}
+
+    # MaxGap does not always return the maximum possible gap for non-zero feasible states; this is
+    # a known bug, issue #84. For the moment, we are only allowing feasible states with energy = 0.
+    if isinstance(feasible_configurations, dict) and any(feasible_configurations.values()):
+        raise ImpossiblePenaltyModel("Model cannot be built")
 
     # convert ising_quadratic_ranges to the form we expect
     ising_quadratic_ranges = specification.ising_quadratic_ranges
