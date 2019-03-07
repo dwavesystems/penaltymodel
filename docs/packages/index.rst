@@ -12,3 +12,5 @@ Packages
    core/index
    cache/index
    maxgap/index
+   mip/index
+   lp/index
