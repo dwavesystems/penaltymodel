@@ -117,11 +117,18 @@ def generate(graph, feasible_configurations, decision_variables,
             model = solver.get_model()
 
             # we want to increase the gap until we have found the max classical gap
+            # note: gmax is the maximum possible gap for a particular set of variables. To find it,
+            #   we take the sum of the largest coefficients possible and double it. We double it
+            #   because in Ising, the largest gap possible from the largest coefficient is the
+            #   negative of said coefficient. Example: consider a graph with one node A, with a
+            #   energy range of [-2, 1]. The largest energy gap between spins +1 and -1 is 4;
+            #   namely, the largest absolute coefficient -2 with the ising spins results to
+            #   gap = (-2)(-1) - (-2)(1) = 4.
             gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
-            gmax *= 2   # since we are dealing with -1, +1 spins
+            gmax *= 2
 
             # 2 is a good target gap
             g = max(2., gmin)
