@@ -60,6 +60,10 @@ def generate(graph, feasible_configurations, decision_variables,
     Returns:
         tuple: A 4-tuple containing:
 
+            dict: The linear biases of the Ising problem.
+
+            dict: The quadratic biases of the Ising problem.
+
             :obj:`dimod.BinaryQuadraticModel`
 
             float: The classical energy gap between ground and the first
@@ -89,7 +93,12 @@ def generate(graph, feasible_configurations, decision_variables,
         else:
             # if the configuration is infeasible, we simply want its minimum energy over all
             # possible aux variable settings to be an upper bound on the classical gap.
-            table.set_energy_upperbound(spins)
+            if isinstance(feasible_configurations, dict) and feasible_configurations:
+                highest_feasible_energy = max(feasible_configurations.values())
+            else:
+                highest_feasible_energy = 0
+
+            table.set_energy_upperbound(spins, highest_feasible_energy)
 
     # now we just need to get a solver
     with Solver(smt_solver_name) as solver:
@@ -108,10 +117,18 @@ def generate(graph, feasible_configurations, decision_variables,
             model = solver.get_model()
 
             # we want to increase the gap until we have found the max classical gap
+            # note: gmax is the maximum possible gap for a particular set of variables. To find it,
+            #   we take the sum of the largest coefficients possible and double it. We double it
+            #   because in Ising, the largest gap possible from the largest coefficient is the
+            #   negative of said coefficient. Example: consider a graph with one node A, with a
+            #   energy range of [-2, 1]. The largest energy gap between spins +1 and -1 is 4;
+            #   namely, the largest absolute coefficient -2 with the ising spins results to
+            #   gap = (-2)(-1) - (-2)(1) = 4.
             gmin = min_classical_gap
             gmax = sum(max(abs(r) for r in linear_energy_ranges[v]) for v in graph)
             gmax += sum(max(abs(r) for r in quadratic_energy_ranges[(u, v)])
                         for (u, v) in graph.edges)
+            gmax *= 2
 
             # 2 is a good target gap
             g = max(2., gmin)
@@ -142,7 +159,7 @@ def generate(graph, feasible_configurations, decision_variables,
     # if the problem is fully specified (or empty) it has infinite gap
     if (len(decision_variables) == len(graph) and
             decision_variables and  # at least one variable
-            len(feasible_configurations) == 2*len(decision_variables)):
+            len(feasible_configurations) == 2**len(decision_variables)):
         classical_gap = float('inf')
 
     return table.theta.to_bqm(model), classical_gap

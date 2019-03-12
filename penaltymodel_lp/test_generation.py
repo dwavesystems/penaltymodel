@@ -141,14 +141,13 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                 self.assertGreaterEqual(energy, 2)
 
     def test_gap_energy_level(self):
-        """Check that gap is with respect to the lowest energy level provided by user.
-        Note: In the future, gap should be with respect to the highest energy level provided
+        """Check that gap is with respect to the highest energy level provided by user.
         """
-        config = {(1, 1): 3, (-1, -1): 9, (-1, 1): 8}
+        config = {(1, 1): 1, (-1, 1): 0, (1, -1): 0}
         nodes = ['a', 'b']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes)
 
-        self.assertGreater(gap, 0)
+        self.assertEqual(gap, 2)
 
         # Check specified config
         for a, b in config.keys():
@@ -157,10 +156,10 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             self.assertEqual(expected_energy, energy)
 
         # Check unspecified configuration
-        # Namely, threshold is gap + min-config-energy (i.e. 3). Threshold should not be based on
-        # gap + 0, nor gap + largest-config-energy (i.e. 9).
-        energy = bqm.energy({'a': 1, 'b': -1})
-        self.assertEqual(8, energy)
+        # Namely, threshold is gap + max-config-energy (i.e. 2 + 1). Threshold should not be based
+        # on gap + smallest-config-energy (i.e. 2 + 0).
+        energy = bqm.energy({'a': -1, 'b': -1})
+        self.assertEqual(3, energy)
 
     def test_impossible_bqm(self):
         # Set up xor-gate

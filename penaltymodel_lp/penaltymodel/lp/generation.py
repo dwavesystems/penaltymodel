@@ -114,7 +114,6 @@ def generate_bqm(graph, table, decision_variables,
     noted_matrix = _get_lp_matrix(np.asarray(noted_states), nodes, edges, 1, 0)
 
     # Linear programming matrix for spins states that were not specified by 'table'
-    # Note: When spin
     spin_states = product([-1, 1], repeat=m_linear) if m_linear > 1 else [-1, 1]
     unnoted_states = [state for state in spin_states if state not in noted_states]
     unnoted_matrix = _get_lp_matrix(np.asarray(unnoted_states), nodes, edges, 1, -1)
@@ -124,7 +123,7 @@ def generate_bqm(graph, table, decision_variables,
     # Constraints
     if isinstance(table, dict):
         noted_bound = np.asarray([table[state] for state in noted_states])
-        unnoted_bound = np.full((n_unnoted, 1), -1 * min(table.values()))  # -1 for flipped inequality
+        unnoted_bound = np.full((n_unnoted, 1), -1 * max(table.values()))  # -1 for flipped inequality
     else:
         noted_bound = np.zeros((n_noted, 1))
         unnoted_bound = np.zeros((n_unnoted, 1))
