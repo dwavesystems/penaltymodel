@@ -13,15 +13,6 @@
 #    limitations under the License.
 #
 # ================================================================================================
-"""
-.. [DO] Bian et al., "Discrete optimization using quantum annealing on sparse Ising models",
-        https://www.frontiersin.org/articles/10.3389/fphy.2014.00056/full
-
-.. [MC] Z. Bian, F. Chudak, R. Israel, B. Lackey, W. G. Macready, and A. Roy
-        "Mapping constrained optimization problems to quantum annealing with application to fault diagnosis"
-        https://arxiv.org/pdf/1603.03111.pdf
-"""
-
 import itertools
 
 import dimod
@@ -37,7 +28,8 @@ __all__ = 'generate',
 def generate(graph, feasible_configurations, decision_variables,
              linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
              smt_solver_name=None):
-    """Generates the Ising model that induces the given feasible configurations.
+    """Generates the Ising model that induces the given feasible configurations. The code is based
+    on the papers [#do]_ and [#mc]_.
 
     Args:
         graph (nx.Graph): The target graph on which the Ising model is to be built.
@@ -72,6 +64,13 @@ def generate(graph, feasible_configurations, decision_variables,
     Raises:
         ImpossiblePenaltyModel: If the penalty model cannot be built. Normally due
             to a non-zero infeasible gap.
+
+    .. [#do] Bian et al., "Discrete optimization using quantum annealing on sparse Ising models",
+        https://www.frontiersin.org/articles/10.3389/fphy.2014.00056/full
+
+    .. [#mc] Z. Bian, F. Chudak, R. Israel, B. Lackey, W. G. Macready, and A. Roy
+        "Mapping constrained optimization problems to quantum annealing with application to fault diagnosis"
+        https://arxiv.org/pdf/1603.03111.pdf
 
     """
     if len(graph) == 0:
@@ -163,3 +162,4 @@ def generate(graph, feasible_configurations, decision_variables,
         classical_gap = float('inf')
 
     return table.theta.to_bqm(model), classical_gap
+

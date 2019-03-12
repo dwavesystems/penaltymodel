@@ -21,11 +21,15 @@ home_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 core_path = os.path.join(home_path, 'penaltymodel_core')
 cache_path = os.path.join(home_path, 'penaltymodel_cache')
 maxgap_path = os.path.join(home_path, 'penaltymodel_maxgap')
+mip_path = os.path.join(home_path, 'penaltymodel_mip')
+lp_path = os.path.join(home_path, 'penaltymodel_lp')
 
 sys.path.insert(0, home_path)
 sys.path.insert(0, core_path)
 sys.path.insert(0, cache_path)
 sys.path.insert(0, maxgap_path)
+sys.path.insert(0, mip_path)
+sys.path.insert(0, lp_path)
 
 
 # -- General configuration ------------------------------------------------
@@ -105,6 +109,8 @@ doctest_global_setup = \
 import penaltymodel.core as pm
 import penaltymodel.cache as pmc
 import penaltymodel.maxgap as maxgap
+import penaltymodel.mip as mip
+import penaltymodel.lp as lp
     """
 
 

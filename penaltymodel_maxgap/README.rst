@@ -44,6 +44,7 @@ In development mode (``pip install -e`` or ``setup.py develop``) solvers are not
 Check pysmt_ documentation to see how to do it manually.
 
 .. _pysmt: https://github.com/pysmt/pysmt
+.. _Z3: https://github.com/Z3Prover/z3
 
 .. installation-end-marker
 
@@ -54,4 +55,3 @@ Released under the Apache License 2.0. See LICENSE
 
 The bundled Z3_ solver used by pysmt_ is licensed under the MIT license.
 
-.. _Z3: https://github.com/Z3Prover/z3
