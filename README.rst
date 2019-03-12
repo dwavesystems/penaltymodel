@@ -22,7 +22,7 @@ Included Packages
 +---------------------------------+---------------------------------+
 | penaltymodel-mip                | |mip|                           |
 +---------------------------------+---------------------------------+
-| penaltymodel-lp                 | |lp|                           |
+| penaltymodel-lp                 | |lp|                            |
 +---------------------------------+---------------------------------+
 
 .. |core| image:: https://img.shields.io/pypi/v/penaltymodel.svg
