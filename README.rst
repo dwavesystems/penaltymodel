@@ -18,9 +18,11 @@ Included Packages
 +---------------------------------+---------------------------------+
 | penaltymodel-cache              | |cache|                         |
 +---------------------------------+---------------------------------+
-| penatlymodel-maxgap             | |maxgap|                        |
+| penaltymodel-maxgap             | |maxgap|                        |
 +---------------------------------+---------------------------------+
-| penatlymodel-mip                | |mip|                           |
+| penaltymodel-mip                | |mip|                           |
++---------------------------------+---------------------------------+
+| penaltymodel-lp                 | |lp|                            |
 +---------------------------------+---------------------------------+
 
 .. |core| image:: https://img.shields.io/pypi/v/penaltymodel.svg
@@ -31,6 +33,8 @@ Included Packages
 .. _maxgap: https://pypi.python.org/pypi/penaltymodel-maxgap
 .. |mip| image:: https://img.shields.io/pypi/v/penaltymodel-mip.svg
 .. _mip: https://pypi.python.org/pypi/penaltymodel-mip
+.. |lp| image:: https://img.shields.io/pypi/v/penaltymodel-lp.svg
+.. _lp: https://pypi.python.org/pypi/penaltymodel-lp
 
 .. index-start-marker
 
