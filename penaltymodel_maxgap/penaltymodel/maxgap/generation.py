@@ -24,6 +24,8 @@ from penaltymodel.maxgap.smt import Table
 
 __all__ = 'generate',
 
+MAX_GAP_DELTA = 0.01
+
 
 def generate(graph, feasible_configurations, decision_variables,
              linear_energy_ranges, quadratic_energy_ranges, min_classical_gap,
@@ -132,7 +134,7 @@ def generate(graph, feasible_configurations, decision_variables,
             # 2 is a good target gap
             g = max(2., gmin)
 
-            while abs(gmax - gmin) >= .01:
+            while abs(gmax - gmin) >= MAX_GAP_DELTA:
                 solver.push()
 
                 gap_assertion = table.gap_bound_assertion(g)
