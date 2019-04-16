@@ -420,12 +420,16 @@ class TestGeneration(unittest.TestCase):
         min_classical_gap = 0.5
         decision_variables = ['a']
         configurations = {(1,): -10}
-        graph = nx.complete_graph(decision_variables)
+        graph = nx.complete_graph(decision_variables + ['b', 'c'])
 
         linear_energy_ranges = {v: (-2, 2) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
+        # Known solution: -2*a - 2*b - 2*c - a*b - a*c - b*c - 1
+        known_classical_gap = 8
+
         self.generate_and_check(graph, configurations, decision_variables,
                                 linear_energy_ranges,
                                 quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap,
+                                known_classical_gap)
