@@ -9,31 +9,33 @@ from pysmt.environment import reset_env
 import penaltymodel.core as pm
 import penaltymodel.maxgap as maxgap
 
+from penaltymodel.maxgap.generation import MAX_GAP_DELTA
+
 
 class TestGeneration(unittest.TestCase):
     def setUp(self):
         self.env = reset_env()
 
-    # TODO: Want to give access to the bqm and gap; either split the generate part from the check
-    #   part, or have the function return the bqm and gap. Want to add a check in some unit tests
-    #   that compares the gap with the expected gap (see note in docstring)
     def generate_and_check(self, graph, configurations, decision_variables,
                            linear_energy_ranges, quadratic_energy_ranges,
-                           min_classical_gap):
+                           min_classical_gap, known_classical_gap=0):
         """Checks that MaxGap's BQM and gap obeys the constraints set by configurations,
         linear and quadratic energy ranges, and min classical gap.
 
-        Note: The gap is checked for whether it obeys the min classical gap constraint, and whether
-        it is the largest gap for a given BQM. However, this gap may not necessarily be the largest
-        gap for the given set of constraints (i.e. configurations, energy ranges), and this is not
-        checked for in this function.
+        Args:
+            known_classical_gap: a known gap for this graph and configuration
         """
         bqm, gap = maxgap.generate(graph, configurations, decision_variables,
                                    linear_energy_ranges,
                                    quadratic_energy_ranges,
                                    min_classical_gap)
 
+        # Check gap
+        # Note: Due to the way MaxGap searches for the maximum gap, if
+        #   known_classical_gap == "maximum possible gap", then `gap` can be
+        #   slightly smaller than known_classical_gap.
         self.assertGreaterEqual(gap, min_classical_gap)
+        self.assertGreaterEqual(gap, known_classical_gap - MAX_GAP_DELTA)
 
         # check that the bqm/graph have the same structure
         self.assertEqual(len(bqm.linear), len(graph.nodes))
@@ -377,36 +379,38 @@ class TestGeneration(unittest.TestCase):
         linear_energy_ranges = {v: (-2, 2) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
+        # Known solution: -2*a + 1.5
+        known_classical_gap = 4
+
         self.generate_and_check(graph, configurations, decision_variables,
                                 linear_energy_ranges,
                                 quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap,
+                                known_classical_gap)
 
     def test_positive_feasible_positive_infeasible(self):
         """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
 
         Case where highest feasible state and the infeasible states must have positive energy.
         """
-        # Note: I expect the gap produced to be >= 4 because the objective function,
-        #   2*a + 2*b -2*c + 0.5*a*b + a*c + b*c, produces such a solution. However, there is a bug
-        #   that is preventing the following unit test (with min_classical_gap = 3) from running,
-        #   which is why a lower min_classical_gap is used instead. This has been documented in a
-        #   GitHub issue.
-        # min_classical_gap = 3
         min_classical_gap = 1
         decision_variables = ['a', 'b']
-        configurations = {(1, -1): -2.5,
-                          (-1, 1): -2.5,
-                          (-1, -1): 0.5}
+        configurations = {(1, -1): 4,
+                          (-1, 1): 4,
+                          (-1, -1): 0}
         graph = nx.complete_graph(decision_variables + ['c'])
 
         linear_energy_ranges = {v: (-2, 2) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
+        # Known solution: 2*a + 2*b -2*c + a*b + a*c + b*c + 7
+        known_classical_gap = 8
+
         self.generate_and_check(graph, configurations, decision_variables,
                                 linear_energy_ranges,
                                 quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap,
+                                known_classical_gap)
 
     def test_negative_feasible_negative_infeasible(self):
         """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
@@ -416,12 +420,16 @@ class TestGeneration(unittest.TestCase):
         min_classical_gap = 0.5
         decision_variables = ['a']
         configurations = {(1,): -10}
-        graph = nx.complete_graph(decision_variables)
+        graph = nx.complete_graph(decision_variables + ['b', 'c'])
 
         linear_energy_ranges = {v: (-2, 2) for v in graph}
         quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
+        # Known solution: -2*a - 2*b - 2*c - a*b - a*c - b*c - 1
+        known_classical_gap = 8
+
         self.generate_and_check(graph, configurations, decision_variables,
                                 linear_energy_ranges,
                                 quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap,
+                                known_classical_gap)

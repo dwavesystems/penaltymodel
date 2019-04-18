@@ -56,12 +56,3 @@ class TestInterface(unittest.TestCase):
             else:
                 self.assertGreaterEqual(energy, widget.ground_energy + widget.classical_gap - 10**-6)
 
-    def test_nonzero_configuration(self):
-        """MaxGap is currently not supporting non-zero feasible states. This is checking that
-        non-zero feasible state problems don't get run.
-        """
-        graph = nx.complete_graph(3)
-        spec = pm.Specification(graph, [0, 1], {(-1, 1): 0, (-1, -1): -2}, dimod.SPIN)
-
-        with self.assertRaises(ImpossiblePenaltyModel):
-            maxgap.get_penalty_model(spec)
