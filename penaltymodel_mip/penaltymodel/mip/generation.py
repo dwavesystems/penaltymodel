@@ -254,7 +254,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     # run solver
     result_status = solver.Solve()
 
-    if result_status != 0:
+    if result_status not in [solver.OPTIMAL, solver.FEASIBLE]:
         raise pm.ImpossiblePenaltyModel("No solution was found")
 
     # read everything back into floats
