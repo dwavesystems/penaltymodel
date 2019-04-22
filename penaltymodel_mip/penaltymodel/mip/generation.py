@@ -252,7 +252,10 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
         _inf_gap = True
 
     # run solver
-    solver.Solve()
+    result_status = solver.Solve()
+
+    if result_status != 0:
+        raise pm.ImpossiblePenaltyModel("No solution was found")
 
     # read everything back into floats
     h = {v: bias.solution_value() for v, bias in h.items()}
