@@ -258,11 +258,7 @@ def _generate_ising(graph, table, decision, min_classical_gap, linear_energy_ran
     h = {v: bias.solution_value() for v, bias in h.items()}
     J = {(u, v): bias.solution_value() for (u, v), bias in J.items()}
     offset = offset.solution_value()
-
-    if _inf_gap:
-        gap = float('inf')
-    else:
-        gap = gap.solution_value()
+    gap = float('inf') if _inf_gap else gap.solution_value()
 
     if not gap:
         raise pm.ImpossiblePenaltyModel("No positive gap can be found for the given model")
