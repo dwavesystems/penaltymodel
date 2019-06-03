@@ -139,6 +139,9 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'penaltymodeldoc'
 
+def setup(app):
+   app.add_stylesheet('cookie_notice.css')
+   app.add_javascript('cookie_notice.js')
 
 # -- Options for LaTeX output ---------------------------------------------
 
