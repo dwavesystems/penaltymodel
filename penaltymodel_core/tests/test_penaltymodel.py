@@ -149,3 +149,28 @@ class TestPenaltyModel(unittest.TestCase):
             pm.PenaltyModel(g1, ['a'], {(0, )}, vartype, bqm, 2, 0)
 
         pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
+
+    def test_balance_penaltymodel(self):
+        # Constructing three-input AND-gate
+        g = nx.complete_bipartite_graph(3, 3)
+        decision_variables = ['in0', 'in1', 'in2', 'out']
+        feasible_config = {(0, 0, 0, 0),
+                           (0, 0, 1, 0),
+                           (0, 1, 0, 0),
+                           (0, 1, 1, 0),
+                           (1, 0, 0, 0),
+                           (1, 0, 1, 0),
+                           (1, 1, 0, 0),
+                           (1, 1, 1, 1)}
+        classical_gap = 2
+        ground_energy = 0
+        vartype = dimod.SPIN
+
+        # Construct a bqm that is an imbalanced penaltymodel
+        linear_biases = {'in0': -1, 'in1': -.5, 'in2': 0,       # Shore 0
+                         'out': 2, 'aux0': .5, 'aux1': 1}       # Shore 1
+        quadratic_biases = \
+            {('in0', 'out'): -1, ('in0', 'aux0'): -.5, ('in0', 'aux1'): -.5,
+             ('in1', 'out'): -1, ('in1', 'aux0'): 1, ('in1', 'aux1'): -.5,
+             ('in2', 'out'): -1, ('in2', 'aux0'): 0, ('in2', 'aux1'): 1}
+        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases)
