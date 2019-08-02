@@ -22,9 +22,9 @@ from numbers import Number
 
 from six import iteritems
 import networkx as nx
+import itertools
 
-from dimod import BinaryQuadraticModel, Vartype
-
+from dimod import BinaryQuadraticModel, Vartype, ExactSolver
 from penaltymodel.core.classes.specification import Specification
 
 
@@ -267,3 +267,16 @@ class PenaltyModel(Specification):
             spec = Specification.relabel_variables(self, mapping, inplace=False)
             model = self.model.relabel_variables(mapping, inplace=False)
             return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
+
+    def balance_penaltymodel(self):
+        #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
+        #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
+
+        # Find all ground states
+        # TODO: Should I be checking them? Probably not
+        samples = ExactSolver().sample(self.model).lowest()
+
+        # Store duplicates
+
+        # Pick a set of states and solve
+        pass

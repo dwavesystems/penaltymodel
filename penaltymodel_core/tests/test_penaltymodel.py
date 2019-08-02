@@ -167,6 +167,7 @@ class TestPenaltyModel(unittest.TestCase):
         vartype = dimod.SPIN
 
         # Construct a bqm that is an imbalanced penaltymodel
+        # Note: the following imbalanced penaltymodel has 12 ground states
         linear_biases = {'in0': -1, 'in1': -.5, 'in2': 0,       # Shore 0
                          'out': 2, 'aux0': .5, 'aux1': 1}       # Shore 1
         quadratic_biases = \
@@ -174,3 +175,5 @@ class TestPenaltyModel(unittest.TestCase):
              ('in1', 'out'): -1, ('in1', 'aux0'): 1, ('in1', 'aux1'): -.5,
              ('in2', 'out'): -1, ('in2', 'aux0'): 0, ('in2', 'aux1'): 1}
         model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases)
+
+        #TODO test QUBO case
