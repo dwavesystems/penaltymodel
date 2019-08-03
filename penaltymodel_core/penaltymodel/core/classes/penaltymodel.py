@@ -22,7 +22,8 @@ from numbers import Number
 
 from six import iteritems
 import networkx as nx
-import itertools
+import numpy as np
+import re
 
 from dimod import BinaryQuadraticModel, Vartype, ExactSolver
 from penaltymodel.core.classes.specification import Specification
@@ -272,11 +273,32 @@ class PenaltyModel(Specification):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
 
-        # Find all ground states
+        # Generate all possible states and their corresponding energies
         # TODO: Should I be checking them? Probably not
-        samples = ExactSolver().sample(self.model).lowest()
+        sampleset = ExactSolver().sample(self.model)
+        sample_mat = sampleset.record['sample']
+        energies = sampleset.record['energy']
+        labels = sampleset.variables
+        min_energy = min(energies)
 
-        # Store duplicates
+        # Determine indices
+        gnd_ind = [i for i, energy in enumerate(energies) if energy == min_energy]
+        not_gnd_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
+
+        aux_ind = [i for i, label in enumerate(labels) if label not in self.decision_variables]
+        decision_ind = [i for i, label in enumerate(labels) if label in self.decision_variables]
+
+        # Determine unique and duplicate ground indices
+        all_ground_states = sample_mat[gnd_ind, :]
+        gnd_states, indices, counts = np.unique(all_ground_states[:, decision_ind],
+                                                return_index=True, return_counts=True)
+        unique_gnd_ind = [gnd_ind[i] for i, c in zip(indices, counts) if c == 1]
+        duplicate_gnd_ind = [gnd_ind[i] for i, c in zip(indices, counts) if c != 1]
+
+        
+
+
+
 
         # Pick a set of states and solve
         pass
