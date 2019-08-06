@@ -20,10 +20,12 @@ from __future__ import absolute_import
 
 from numbers import Number
 
-from six import iteritems
+from collections import defaultdict
 import networkx as nx
 import numpy as np
 import re
+from scipy.optimize import linprog
+from six import iteritems
 
 from dimod import BinaryQuadraticModel, Vartype, ExactSolver
 from penaltymodel.core.classes.specification import Specification
@@ -274,6 +276,7 @@ class PenaltyModel(Specification):
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
 
         # Generate all possible states and their corresponding energies
+        # Note: I want both the linear and quadratic values
         # TODO: Should I be checking them? Probably not
         sampleset = ExactSolver().sample(self.model)
         sample_mat = sampleset.record['sample']
@@ -281,20 +284,43 @@ class PenaltyModel(Specification):
         labels = sampleset.variables
         min_energy = min(energies)
 
+        # High energy states
+        excited_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
+        excited_mat = sample_mat(excited_ind)
+
         # Determine indices
         gnd_ind = [i for i, energy in enumerate(energies) if energy == min_energy]
-        not_gnd_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
-
         aux_ind = [i for i, label in enumerate(labels) if label not in self.decision_variables]
         decision_ind = [i for i, label in enumerate(labels) if label in self.decision_variables]
 
-        # Determine unique and duplicate ground indices
-        all_ground_states = sample_mat[gnd_ind, :]
-        gnd_states, indices, counts = np.unique(all_ground_states[:, decision_ind],
-                                                return_index=True, return_counts=True)
-        unique_gnd_ind = [gnd_ind[i] for i, c in zip(indices, counts) if c == 1]
-        duplicate_gnd_ind = [gnd_ind[i] for i, c in zip(indices, counts) if c != 1]
+        # Group ground states
+        gnd_dict = defaultdict(list)
+        for i, array in zip(gnd_ind, sample_mat[gnd_ind, :]):
+            gnd_dict[array].append(i)
 
+        # Randomly select ground states
+        unique_gnd_indices = []
+        duplicate_gnd_indices = []
+        for k, v in gnd_dict.items():
+            selected = int(np.random.random_integers(0, len(v)-1))
+            others = list(range(0, selected)) + list(range(selected+1, len(v)))
+
+            unique_gnd_indices.append(selected)
+            duplicate_gnd_indices.append(others)
+
+        # Construct matrix
+        unique_gnd_mat = np.hstack((sample_mat[unique_gnd_indices],
+                                    np.ones((len(unique_gnd_indices), 1))))
+        duplicate_gnd_mat = np.hstack((sample_mat[duplicate_gnd_indices],
+                                       np.ones((len(duplicate_gnd_indices), 1))))
+
+        # Cost function
+        cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
+        cost_weights[0, -1] = -1  # Only interested in maximizing the gap
+
+        # Returns a Scipy OptimizeResult
+        result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=unique_gnd_bounds,
+                         A_ub=excited_mat, b_ub=excited_bound, bounds=bounds)
         
 
 
