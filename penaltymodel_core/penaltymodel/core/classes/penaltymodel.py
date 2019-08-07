@@ -320,23 +320,23 @@ class PenaltyModel(Specification):
         labels = sampleset.variables
         sample_mat = sampleset.record['sample']
         energies = sampleset.record['energy']
-        g = nx.complete_graph(len(labels), labels)
+        g = nx.complete_graph(labels)
         data_mat = self._get_lp_matrix(sample_mat, g.nodes, g.edges, -1, -1)
         min_energy = min(energies)
 
         # High energy states
         excited_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
-        excited_mat = sample_mat(excited_ind)
+        excited_mat = data_mat[excited_ind, :]
 
         # Determine indices
         gnd_ind = [i for i, energy in enumerate(energies) if energy == min_energy]
-        aux_ind = [i for i, label in enumerate(labels) if label not in self.decision_variables]
         decision_ind = [i for i, label in enumerate(labels) if label in self.decision_variables]
 
         # Group ground states
+        #TODO: fix hash
         gnd_dict = defaultdict(list)
-        for i, array in zip(gnd_ind, sample_mat[gnd_ind, :]):
-            gnd_dict[array].append(i)
+        for i, array in zip(gnd_ind, sample_mat[gnd_ind, :][:, decision_ind]):
+            gnd_dict[hash(array.tostring())].append(i)
 
         # Randomly select ground states
         unique_gnd_indices = []
@@ -346,23 +346,25 @@ class PenaltyModel(Specification):
             others = list(range(0, selected)) + list(range(selected+1, len(v)))
 
             unique_gnd_indices.append(selected)
-            duplicate_gnd_indices.append(others)
+            duplicate_gnd_indices += others
 
         # Construct matrix
-        unique_gnd_mat = sample_mat[unique_gnd_indices]
-        duplicate_gnd_mat = sample_mat[duplicate_gnd_indices]
+        unique_gnd_mat = data_mat[unique_gnd_indices, :]
+        duplicate_gnd_mat = data_mat[duplicate_gnd_indices, :]
+        new_excited_mat = np.vstack((excited_mat, duplicate_gnd_mat))
 
         # Cost function
-        cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
+        cost_weights = np.zeros((1, data_mat.shape[1]))
         cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
+        # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
+        #   hence that 2 * sum(largest_biases)
+        bounds = [(-2, 2)] * len(g.nodes)
+        bounds += [(-1, 1)] * len(g.edges)
+        max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
+        bounds.append((None, None))  # Bound for offset
+        bounds.append((0, max_gap))  # Bound for gap.
+
         # Returns a Scipy OptimizeResult
-        result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=unique_gnd_bounds,
-                         A_ub=excited_mat, b_ub=excited_bound, bounds=bounds)
-        
-
-
-
-
-        # Pick a set of states and solve
-        pass
+        result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
+                         A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)), bounds=bounds)
