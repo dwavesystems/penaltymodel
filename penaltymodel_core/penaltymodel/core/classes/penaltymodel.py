@@ -271,6 +271,44 @@ class PenaltyModel(Specification):
             model = self.model.relabel_variables(mapping, inplace=False)
             return PenaltyModel.from_specification(spec, model, self.classical_gap, self.ground_energy)
 
+    def _get_lp_matrix(self, spin_states, nodes, edges, offset_weight, gap_weight):
+        """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
+        LP matrix:
+            [spin_states, corresponding states of edges, offset_weight, gap_weight]
+
+        Args:
+            spin_states: Numpy array of spin states
+            nodes: Iterable
+            edges: Iterable of tuples
+            offset_weight: Numpy 1-D array or number
+            gap_weight: Numpy 1-D array or a number
+        """
+        if len(spin_states) == 0:
+            return None
+
+        # Set up an empty matrix
+        n_states = len(spin_states)
+        m_linear = len(nodes)
+        m_quadratic = len(edges)
+        matrix = np.empty((n_states, m_linear + m_quadratic + 2))  # +2 columns for offset and gap
+
+        # Populate linear terms (i.e. spin states)
+        if spin_states.ndim == 1:
+            spin_states = np.expand_dims(spin_states, 1)
+        matrix[:, :m_linear] = spin_states
+
+        # Populate quadratic terms
+        node_indices = dict(zip(nodes, range(m_linear)))
+        for j, (u, v) in enumerate(edges):
+            u_ind = node_indices[u]
+            v_ind = node_indices[v]
+            matrix[:, j + m_linear] = np.multiply(matrix[:, u_ind], matrix[:, v_ind])
+
+        # Populate offset and gap columns, respectively
+        matrix[:, -2] = offset_weight
+        matrix[:, -1] = gap_weight
+        return matrix
+
     def balance_penaltymodel(self):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
@@ -279,9 +317,11 @@ class PenaltyModel(Specification):
         # Note: I want both the linear and quadratic values
         # TODO: Should I be checking them? Probably not
         sampleset = ExactSolver().sample(self.model)
+        labels = sampleset.variables
         sample_mat = sampleset.record['sample']
         energies = sampleset.record['energy']
-        labels = sampleset.variables
+        g = nx.complete_graph(len(labels), labels)
+        data_mat = self._get_lp_matrix(sample_mat, g.nodes, g.edges, -1, -1)
         min_energy = min(energies)
 
         # High energy states
@@ -309,10 +349,8 @@ class PenaltyModel(Specification):
             duplicate_gnd_indices.append(others)
 
         # Construct matrix
-        unique_gnd_mat = np.hstack((sample_mat[unique_gnd_indices],
-                                    np.ones((len(unique_gnd_indices), 1))))
-        duplicate_gnd_mat = np.hstack((sample_mat[duplicate_gnd_indices],
-                                       np.ones((len(duplicate_gnd_indices), 1))))
+        unique_gnd_mat = sample_mat[unique_gnd_indices]
+        duplicate_gnd_mat = sample_mat[duplicate_gnd_indices]
 
         # Cost function
         cost_weights = np.zeros((1, m_linear + m_quadratic + 2))
