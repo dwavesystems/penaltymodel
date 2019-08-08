@@ -28,6 +28,7 @@ from scipy.optimize import linprog
 from six import iteritems
 
 from dimod import BinaryQuadraticModel, Vartype, ExactSolver
+import dimod
 from penaltymodel.core.classes.specification import Specification
 
 
@@ -321,12 +322,12 @@ class PenaltyModel(Specification):
         sample_mat = sampleset.record['sample']
         energies = sampleset.record['energy']
         g = nx.complete_graph(labels)
-        data_mat = self._get_lp_matrix(sample_mat, g.nodes, g.edges, -1, -1)
         min_energy = min(energies)
 
         # High energy states
         excited_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
-        excited_mat = data_mat[excited_ind, :]
+        excited_mat = sample_mat[excited_ind, :]
+        excited_mat = self._get_lp_matrix(excited_mat, g.nodes, g.edges, 1, -1)
 
         # Determine indices
         gnd_ind = [i for i, energy in enumerate(energies) if energy == min_energy]
@@ -338,23 +339,8 @@ class PenaltyModel(Specification):
         for i, array in zip(gnd_ind, sample_mat[gnd_ind, :][:, decision_ind]):
             gnd_dict[hash(array.tostring())].append(i)
 
-        # Randomly select ground states
-        unique_gnd_indices = []
-        duplicate_gnd_indices = []
-        for k, v in gnd_dict.items():
-            selected = int(np.random.random_integers(0, len(v)-1))
-            others = list(range(0, selected)) + list(range(selected+1, len(v)))
-
-            unique_gnd_indices.append(selected)
-            duplicate_gnd_indices += others
-
-        # Construct matrix
-        unique_gnd_mat = data_mat[unique_gnd_indices, :]
-        duplicate_gnd_mat = data_mat[duplicate_gnd_indices, :]
-        new_excited_mat = np.vstack((excited_mat, duplicate_gnd_mat))
-
         # Cost function
-        cost_weights = np.zeros((1, data_mat.shape[1]))
+        cost_weights = np.zeros((1, excited_mat.shape[1]))
         cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
         # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
@@ -365,6 +351,53 @@ class PenaltyModel(Specification):
         bounds.append((None, None))  # Bound for offset
         bounds.append((0, max_gap))  # Bound for gap.
 
-        # Returns a Scipy OptimizeResult
-        result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
-                         A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)), bounds=bounds)
+        # Randomly select ground states
+        best_gap = 0
+        best_result = None
+        for _ in range(50):
+            unique_gnd_indices = []
+            duplicate_gnd_indices = []
+            for k, v in gnd_dict.items():
+                selected = int(np.random.random_integers(0, len(v)-1))
+                others = list(range(0, selected)) + list(range(selected+1, len(v)))
+
+                unique_gnd_indices.append(selected)
+                duplicate_gnd_indices += others
+
+            # Construct matrix
+            unique_gnd_mat = sample_mat[unique_gnd_indices, :]
+            unique_gnd_mat = self._get_lp_matrix(unique_gnd_mat, g.nodes, g.edges, 1, 0)
+            duplicate_gnd_mat = sample_mat[duplicate_gnd_indices, :]
+            duplicate_gnd_mat = self._get_lp_matrix(duplicate_gnd_mat, g.nodes, g.edges, 1, -1)
+            new_excited_mat = np.vstack((excited_mat, duplicate_gnd_mat))
+            new_excited_mat *= -1
+
+            # Returns a Scipy OptimizeResult
+            result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
+                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)), bounds=bounds)
+
+            # TODO: propagate scipy.optimize.linprog's error message?
+            if not result.success:
+                #raise ValueError('Penaltymodel-lp is unable to find a solution.')
+                continue
+
+            # Split result
+            gap = result.x[-1]
+            if gap > best_gap:
+                best_result = result
+
+        x = best_result.x
+        h = x[:len(g.nodes)]
+        j = x[len(g.nodes):-2]
+        offset = x[-2]
+
+        if gap <= 0:
+            raise ValueError('Penaltymodel-lp is unable to find a solution.')
+
+        # Create BQM
+        bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
+        bqm.add_variables_from((v, bias) for v, bias in zip(g.nodes, h))
+        bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(g.edges, j))
+        bqm.add_offset(offset)
+
+        self.model = bqm

@@ -184,5 +184,7 @@ class TestPenaltyModel(unittest.TestCase):
                                  vartype, model, classical_gap, ground_energy)
         pmodel.balance_penaltymodel()
 
-
-        #TODO test QUBO case
+        # Test balance
+        ss = dimod.ExactSolver().sample(pmodel.model)
+        print(ss.lowest())
+        x = 5
