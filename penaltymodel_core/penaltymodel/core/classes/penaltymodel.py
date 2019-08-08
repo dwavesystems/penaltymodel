@@ -21,6 +21,7 @@ from __future__ import absolute_import
 from numbers import Number
 
 from collections import defaultdict
+import itertools
 import networkx as nx
 import numpy as np
 import re
@@ -317,6 +318,31 @@ class PenaltyModel(Specification):
         # Generate all possible states and their corresponding energies
         # Note: I want both the linear and quadratic values
         # TODO: Should I be checking them? Probably not
+        #TODO: could use Exact Solver if it returned quadratics
+        # A*z = b, where z is [h, J]
+        model = self.model
+        m_linear = len(model.linear)
+        m_quadratic = len(model.quadratic)
+        labels = list(model.linear.keys()) + list(model.quadratic.keys())
+        indices = {k: i for i, k in enumerate(labels)}
+
+        # Construct the states matrix
+        states = np.empty((2**m_linear, m_linear + m_quadratic))
+        states[:, :m_linear] = np.array([list(x) for x in
+                                         itertools.product({-1, 1}, repeat=m_linear)])
+        for node0, node1 in model.quadratic.keys():
+            edge_ind = indices[(node0, node1)]
+            node0_ind = indices[node0]
+            node1_ind = indices[node1]
+            states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]
+
+        # Construct biases and energy vectors
+        biases = [model.linear[label] for label in labels[:m_linear]]
+        biases += [model.quadratic[label] for label in labels[m_linear:]]
+        biases = np.array(biases)
+        energy = np.matmul(states, biases)
+
+
         sampleset = ExactSolver().sample(self.model)
         labels = sampleset.variables
         sample_mat = sampleset.record['sample']
@@ -358,7 +384,7 @@ class PenaltyModel(Specification):
             unique_gnd_indices = []
             duplicate_gnd_indices = []
             for k, v in gnd_dict.items():
-                selected = int(np.random.random_integers(0, len(v)-1))
+                selected = int(np.random.random_integers(0, len(v)))
                 others = list(range(0, selected)) + list(range(selected+1, len(v)))
 
                 unique_gnd_indices.append(selected)
