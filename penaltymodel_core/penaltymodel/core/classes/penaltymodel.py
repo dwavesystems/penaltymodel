@@ -342,37 +342,26 @@ class PenaltyModel(Specification):
         biases = np.array(biases)
         energy = np.matmul(states, biases)
 
+        # TODO: remove hardcode
+        ground_threshold = 0    # Anything <= to this is feasible
+        excited_states = states[energy > ground_threshold]
+        feasible_states = states[energy <= ground_threshold]
 
-        sampleset = ExactSolver().sample(self.model)
-        labels = sampleset.variables
-        sample_mat = sampleset.record['sample']
-        energies = sampleset.record['energy']
-        g = nx.complete_graph(labels)
-        min_energy = min(energies)
-
-        # High energy states
-        excited_ind = [i for i, energy in enumerate(energies) if energy != min_energy]
-        excited_mat = sample_mat[excited_ind, :]
-        excited_mat = self._get_lp_matrix(excited_mat, g.nodes, g.edges, 1, -1)
-
-        # Determine indices
-        gnd_ind = [i for i, energy in enumerate(energies) if energy == min_energy]
-        decision_ind = [i for i, label in enumerate(labels) if label in self.decision_variables]
-
-        # Group ground states
-        #TODO: fix hash
-        gnd_dict = defaultdict(list)
-        for i, array in zip(gnd_ind, sample_mat[gnd_ind, :][:, decision_ind]):
-            gnd_dict[hash(array.tostring())].append(i)
+        # Group feasible states
+        decision_indices = [indices[label] for label in labels]
+        decision_cols = feasible_states[:, decision_indices]
+        sorted_indices = np.argsort(decision_cols)
+        decision_cols = decision_cols[sorted_indices]
+        is_same = np.equal(decision_cols[:-1], decision_cols[1:])
 
         # Cost function
-        cost_weights = np.zeros((1, excited_mat.shape[1]))
+        cost_weights = np.zeros((1, excited_states.shape[1]))
         cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
         # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
         #   hence that 2 * sum(largest_biases)
-        bounds = [(-2, 2)] * len(g.nodes)
-        bounds += [(-1, 1)] * len(g.edges)
+        bounds = [(-2, 2)] * m_linear
+        bounds += [(-1, 1)] * m_quadratic
         max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
         bounds.append((None, None))  # Bound for offset
         bounds.append((0, max_gap))  # Bound for gap.
@@ -399,8 +388,10 @@ class PenaltyModel(Specification):
             new_excited_mat *= -1
 
             # Returns a Scipy OptimizeResult
-            result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat, b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
-                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)), bounds=bounds)
+            result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat,
+                             b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
+                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
+                             bounds=bounds)
 
             # TODO: propagate scipy.optimize.linprog's error message?
             if not result.success:
@@ -413,8 +404,8 @@ class PenaltyModel(Specification):
                 best_result = result
 
         x = best_result.x
-        h = x[:len(g.nodes)]
-        j = x[len(g.nodes):-2]
+        h = x[:m_linear]
+        j = x[m_linear:-2]
         offset = x[-2]
 
         if gap <= 0:
@@ -422,8 +413,8 @@ class PenaltyModel(Specification):
 
         # Create BQM
         bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-        bqm.add_variables_from((v, bias) for v, bias in zip(g.nodes, h))
-        bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(g.edges, j))
+        bqm.add_variables_from((v, bias) for v, bias in zip(labels[:m_linear], h))
+        bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
         bqm.add_offset(offset)
 
         self.model = bqm
