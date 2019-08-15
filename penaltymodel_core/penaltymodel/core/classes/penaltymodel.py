@@ -329,9 +329,11 @@ class PenaltyModel(Specification):
 
         # Construct the states matrix
         # Construct linear portion of states matrix
-        states = np.empty((2**m_linear, m_linear + m_quadratic))
+        states = np.empty((2**m_linear, m_linear + m_quadratic + 2))    # +2 for offset and gap columns
         states[:, :m_linear] = np.array([list(x) for x in
                                          itertools.product({-1, 1}, repeat=m_linear)])
+        states[:, -2] = 1
+        states[:, -1] = -1
 
         # Construct quadratic portion of states matrix
         for node0, node1 in bqm.quadratic.keys():
@@ -344,7 +346,7 @@ class PenaltyModel(Specification):
         biases = [bqm.linear[label] for label in labels[:m_linear]]
         biases += [bqm.quadratic[label] for label in labels[m_linear:]]
         biases = np.array(biases)
-        energy = np.matmul(states, biases)
+        energy = np.matmul(states[:, :-2], biases)
 
         # TODO: remove hardcode
         ground_threshold = 0    # Anything <= to this is feasible
@@ -354,28 +356,31 @@ class PenaltyModel(Specification):
         # Determine duplicate decision states
         # Note: we are grabbing the decision states, sorting them, and
         #   determining the boundaries of each bin
+        # Note2: using lexsort so that each row of decision_cols is treated as
+        #   a single object with primary, secondary, tertiary, etc key orders
         decision_indices = [indices[label] for label in self.decision_variables]
         decision_cols = feasible_states[:, decision_indices]
-        sorted_indices = np.argsort(decision_cols)
+        sorted_indices = np.lexsort(decision_cols.T)
         decision_cols = decision_cols[sorted_indices, :]
         feasible_states = feasible_states[sorted_indices, :]
-        bins = np.argwhere(decision_cols[:-1, :] != decision_cols[1:, :])[0]
-        bins.append(bins.shape[0] - 1)     # Adding last index; end of last bin
+        bins = (decision_cols[:-1, :] != decision_cols[1:, :]).any(axis=1)
+        bins = np.append(bins, True)   # Marking the end of the last bin
+        bins = np.nonzero(bins)[0]
 
         # Make unique and duplicate state matrices
         n_uniques = bins.shape[0]
-        bin_count = np.hstack((bins[0], bins[1:] - bins[:-1]))
-        random_indices = np.random.rand(1, n_uniques) * bin_count
+        bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1])) #TODO: double check
+        random_indices = np.random.rand(n_uniques) * bin_count
+        random_indices = np.floor(random_indices).astype(np.int)
         random_indices[1:] += bins[:-1]
-        unique_indices = np.zeros(feasible_states.shape[0], 1)
+        unique_indices = np.zeros(feasible_states.shape[0], dtype=int)
         unique_indices[random_indices] = 1
 
-        unique_mat = np.hstack((feasible_states, 1, 0))  #TODO double check
-        duplicate_mat = np.hstack((feasible_states, 1, -1))  #TODO double check
-
         # Select which feasible states are unique
-        unique_states = unique_mat[unique_indices]
-        duplicate_states = duplicate_mat[np.logical_not(unique_indices)]
+        feasible_states[unique_indices, -1] = 0                     # unique states
+        feasible_states[np.logical_not(unique_indices), -1] = -1    # duplicate states
+        unique_mat = feasible_states[unique_indices]
+        duplicate_mat = feasible_states[np.logical_not(unique_indices)]
 
         # Cost function
         cost_weights = np.zeros((1, excited_states.shape[1]))
@@ -390,8 +395,7 @@ class PenaltyModel(Specification):
         bounds.append((0, max_gap))  # Bound for gap.
 
         # Returns a Scipy OptimizeResult
-        excited_mat = np.hstack((excited_states, 1, -1))
-        new_excited_mat =  np.vstack((excited_mat, duplicate_states))
+        new_excited_mat =  np.vstack((excited_states, duplicate_mat))
         result = linprog(cost_weights.flatten(), A_eq=unique_mat,
                          b_eq=np.zeros((unique_mat.shape[0], 1)),
                          A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
