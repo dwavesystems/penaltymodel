@@ -314,31 +314,35 @@ class PenaltyModel(Specification):
     def balance_penaltymodel(self):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
+        #TODO: convert state matrix to use ints rather than floats
 
         # Generate all possible states and their corresponding energies
         # Note: I want both the linear and quadratic values
         # TODO: Should I be checking them? Probably not
         #TODO: could use Exact Solver if it returned quadratics
         # A*z = b, where z is [h, J]
-        model = self.model
-        m_linear = len(model.linear)
-        m_quadratic = len(model.quadratic)
-        labels = list(model.linear.keys()) + list(model.quadratic.keys())
+        bqm = self.model
+        m_linear = len(bqm.linear)
+        m_quadratic = len(bqm.quadratic)
+        labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
         indices = {k: i for i, k in enumerate(labels)}
 
         # Construct the states matrix
+        # Construct linear portion of states matrix
         states = np.empty((2**m_linear, m_linear + m_quadratic))
         states[:, :m_linear] = np.array([list(x) for x in
                                          itertools.product({-1, 1}, repeat=m_linear)])
-        for node0, node1 in model.quadratic.keys():
+
+        # Construct quadratic portion of states matrix
+        for node0, node1 in bqm.quadratic.keys():
             edge_ind = indices[(node0, node1)]
             node0_ind = indices[node0]
             node1_ind = indices[node1]
             states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]
 
         # Construct biases and energy vectors
-        biases = [model.linear[label] for label in labels[:m_linear]]
-        biases += [model.quadratic[label] for label in labels[m_linear:]]
+        biases = [bqm.linear[label] for label in labels[:m_linear]]
+        biases += [bqm.quadratic[label] for label in labels[m_linear:]]
         biases = np.array(biases)
         energy = np.matmul(states, biases)
 
@@ -347,12 +351,31 @@ class PenaltyModel(Specification):
         excited_states = states[energy > ground_threshold]
         feasible_states = states[energy <= ground_threshold]
 
-        # Group feasible states
-        decision_indices = [indices[label] for label in labels]
+        # Determine duplicate decision states
+        # Note: we are grabbing the decision states, sorting them, and
+        #   determining the boundaries of each bin
+        decision_indices = [indices[label] for label in self.decision_variables]
         decision_cols = feasible_states[:, decision_indices]
         sorted_indices = np.argsort(decision_cols)
-        decision_cols = decision_cols[sorted_indices]
-        is_same = np.equal(decision_cols[:-1], decision_cols[1:])
+        decision_cols = decision_cols[sorted_indices, :]
+        feasible_states = feasible_states[sorted_indices, :]
+        bins = np.argwhere(decision_cols[:-1, :] != decision_cols[1:, :])[0]
+        bins.append(bins.shape[0] - 1)     # Adding last index; end of last bin
+
+        # Make unique and duplicate state matrices
+        n_uniques = bins.shape[0]
+        bin_count = np.hstack((bins[0], bins[1:] - bins[:-1]))
+        random_indices = np.random.rand(1, n_uniques) * bin_count
+        random_indices[1:] += bins[:-1]
+        unique_indices = np.zeros(feasible_states.shape[0], 1)
+        unique_indices[random_indices] = 1
+
+        unique_mat = np.hstack((feasible_states, 1, 0))  #TODO double check
+        duplicate_mat = np.hstack((feasible_states, 1, -1))  #TODO double check
+
+        # Select which feasible states are unique
+        unique_states = unique_mat[unique_indices]
+        duplicate_states = duplicate_mat[np.logical_not(unique_indices)]
 
         # Cost function
         cost_weights = np.zeros((1, excited_states.shape[1]))
@@ -366,44 +389,21 @@ class PenaltyModel(Specification):
         bounds.append((None, None))  # Bound for offset
         bounds.append((0, max_gap))  # Bound for gap.
 
-        # Randomly select ground states
-        best_gap = 0
-        best_result = None
-        for _ in range(50):
-            unique_gnd_indices = []
-            duplicate_gnd_indices = []
-            for k, v in gnd_dict.items():
-                selected = int(np.random.random_integers(0, len(v)))
-                others = list(range(0, selected)) + list(range(selected+1, len(v)))
+        # Returns a Scipy OptimizeResult
+        excited_mat = np.hstack((excited_states, 1, -1))
+        new_excited_mat =  np.vstack((excited_mat, duplicate_states))
+        result = linprog(cost_weights.flatten(), A_eq=unique_mat,
+                         b_eq=np.zeros((unique_mat.shape[0], 1)),
+                         A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
+                         bounds=bounds)
 
-                unique_gnd_indices.append(selected)
-                duplicate_gnd_indices += others
+        # TODO: propagate scipy.optimize.linprog's error message?
+        if not result.success:
+            raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
-            # Construct matrix
-            unique_gnd_mat = sample_mat[unique_gnd_indices, :]
-            unique_gnd_mat = self._get_lp_matrix(unique_gnd_mat, g.nodes, g.edges, 1, 0)
-            duplicate_gnd_mat = sample_mat[duplicate_gnd_indices, :]
-            duplicate_gnd_mat = self._get_lp_matrix(duplicate_gnd_mat, g.nodes, g.edges, 1, -1)
-            new_excited_mat = np.vstack((excited_mat, duplicate_gnd_mat))
-            new_excited_mat *= -1
-
-            # Returns a Scipy OptimizeResult
-            result = linprog(cost_weights.flatten(), A_eq=unique_gnd_mat,
-                             b_eq=np.zeros((unique_gnd_mat.shape[0], 1)),
-                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
-                             bounds=bounds)
-
-            # TODO: propagate scipy.optimize.linprog's error message?
-            if not result.success:
-                #raise ValueError('Penaltymodel-lp is unable to find a solution.')
-                continue
-
-            # Split result
-            gap = result.x[-1]
-            if gap > best_gap:
-                best_result = result
-
-        x = best_result.x
+        # Split result
+        gap = result.x[-1]
+        x = result.x
         h = x[:m_linear]
         j = x[m_linear:-2]
         offset = x[-2]
