@@ -345,13 +345,12 @@ class PenaltyModel(Specification):
         # Construct biases and energy vectors
         biases = [bqm.linear[label] for label in labels[:m_linear]]
         biases += [bqm.quadratic[label] for label in labels[m_linear:]]
+        biases += [bqm.offset]
         biases = np.array(biases)
-        energy = np.matmul(states[:, :-2], biases)
+        energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
 
-        # TODO: remove hardcode
-        ground_threshold = 0    # Anything <= to this is feasible
-        excited_states = states[energy > ground_threshold]
-        feasible_states = states[energy <= ground_threshold]
+        excited_states = states[energy > self.ground_energy]
+        feasible_states = states[energy <= self.ground_energy]
 
         # Determine duplicate decision states
         # Note: we are grabbing the decision states, sorting them, and
@@ -377,6 +376,7 @@ class PenaltyModel(Specification):
         unique_indices[random_indices] = 1
 
         # Select which feasible states are unique
+        #TODO: Bool vector does not work here
         feasible_states[unique_indices, -1] = 0                     # unique states
         feasible_states[np.logical_not(unique_indices), -1] = -1    # duplicate states
         unique_mat = feasible_states[unique_indices]
@@ -388,6 +388,7 @@ class PenaltyModel(Specification):
 
         # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
         #   hence that 2 * sum(largest_biases)
+        #TODO remove hardcoded bounds
         bounds = [(-2, 2)] * m_linear
         bounds += [(-1, 1)] * m_quadratic
         max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)

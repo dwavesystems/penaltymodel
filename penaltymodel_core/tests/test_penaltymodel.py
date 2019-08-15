@@ -167,7 +167,7 @@ class TestPenaltyModel(unittest.TestCase):
                            (+1, +1, +1, +1)}
         classical_gap = 2
         ground_energy = 0
-        offset = 0
+        offset = 4.5
         vartype = dimod.SPIN
 
         # Construct a bqm that is an imbalanced penaltymodel
