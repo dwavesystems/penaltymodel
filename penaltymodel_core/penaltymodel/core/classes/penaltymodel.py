@@ -367,7 +367,7 @@ class PenaltyModel(Specification):
         bins = np.nonzero(bins)[0]
 
         # Cost function
-        cost_weights = np.zeros((1, excited_states.shape[1]))
+        cost_weights = np.zeros((1, states.shape[1]))
         cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
         # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
@@ -386,10 +386,10 @@ class PenaltyModel(Specification):
         # Store best solution:
         best_gap = 0
         best_result = None
-        for _ in range(30):
+        for _ in range(1000):
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
-            random_indices[1:] += bins[:-1]
+            random_indices[1:] += (bins[:-1] + 1)
             is_unique = np.zeros(feasible_states.shape[0], dtype=int)
             is_unique[random_indices] = 1
 
@@ -413,11 +413,12 @@ class PenaltyModel(Specification):
 
             gap = result.x[-1]
 
-            if gap > best_gap:
+            if abs(gap) > abs(best_gap):
                 best_result = result
 
         # Split result
         gap = best_result.x[-1]
+        print(gap)
         x = best_result.x
         h = x[:m_linear]
         j = x[m_linear:-2]
