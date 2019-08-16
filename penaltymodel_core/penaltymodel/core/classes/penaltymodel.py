@@ -372,15 +372,15 @@ class PenaltyModel(Specification):
         random_indices = np.random.rand(n_uniques) * bin_count
         random_indices = np.floor(random_indices).astype(np.int)
         random_indices[1:] += bins[:-1]
-        unique_indices = np.zeros(feasible_states.shape[0], dtype=int)
-        unique_indices[random_indices] = 1
+        is_unique = np.zeros(feasible_states.shape[0], dtype=int)
+        is_unique[random_indices] = 1
 
         # Select which feasible states are unique
         #TODO: Bool vector does not work here
-        feasible_states[unique_indices, -1] = 0                     # unique states
-        feasible_states[np.logical_not(unique_indices), -1] = -1    # duplicate states
-        unique_mat = feasible_states[unique_indices]
-        duplicate_mat = feasible_states[np.logical_not(unique_indices)]
+        feasible_states[is_unique==1, -1] = 0                     # unique states
+        feasible_states[is_unique==0, -1] = -1    # duplicate states
+        unique_mat = feasible_states[is_unique==1]
+        duplicate_mat = feasible_states[is_unique==0]
 
         # Cost function
         cost_weights = np.zeros((1, excited_states.shape[1]))
