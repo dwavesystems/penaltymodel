@@ -384,6 +384,9 @@ class PenaltyModel(Specification):
         bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1])) #TODO: double check
 
         # Store best solution:
+        best_gap = 0
+        best_result = None
+        for _ in range(30):
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
             random_indices[1:] += bins[:-1]
@@ -408,9 +411,14 @@ class PenaltyModel(Specification):
             if not result.success:
                 raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
+            gap = result.x[-1]
+
+            if gap > best_gap:
+                best_result = result
+
         # Split result
-        gap = result.x[-1]
-        x = result.x
+        gap = best_result.x[-1]
+        x = best_result.x
         h = x[:m_linear]
         j = x[m_linear:-2]
         offset = x[-2]
