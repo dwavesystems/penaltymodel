@@ -384,29 +384,29 @@ class PenaltyModel(Specification):
         bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1])) #TODO: double check
 
         # Store best solution:
-        random_indices = np.random.rand(n_uniques) * bin_count
-        random_indices = np.floor(random_indices).astype(np.int)
-        random_indices[1:] += bins[:-1]
-        is_unique = np.zeros(feasible_states.shape[0], dtype=int)
-        is_unique[random_indices] = 1
+            random_indices = np.random.rand(n_uniques) * bin_count
+            random_indices = np.floor(random_indices).astype(np.int)
+            random_indices[1:] += bins[:-1]
+            is_unique = np.zeros(feasible_states.shape[0], dtype=int)
+            is_unique[random_indices] = 1
 
-        # Select which feasible states are unique
-        #TODO: Bool vector does not work here
-        feasible_states[is_unique==1, -1] = 0                     # unique states
-        feasible_states[is_unique==0, -1] = -1    # duplicate states
-        unique_mat = feasible_states[is_unique==1]
-        duplicate_mat = feasible_states[is_unique==0]
+            # Select which feasible states are unique
+            #TODO: Bool vector does not work here
+            feasible_states[is_unique==1, -1] = 0                     # unique states
+            feasible_states[is_unique==0, -1] = -1    # duplicate states
+            unique_mat = feasible_states[is_unique==1]
+            duplicate_mat = feasible_states[is_unique==0]
 
-        # Returns a Scipy OptimizeResult
-        new_excited_mat = -np.vstack((excited_states, duplicate_mat))
-        result = linprog(cost_weights.flatten(), A_eq=unique_mat,
-                         b_eq=np.zeros((unique_mat.shape[0], 1)),
-                         A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
-                         bounds=bounds)
+            # Returns a Scipy OptimizeResult
+            new_excited_mat = -np.vstack((excited_states, duplicate_mat))
+            result = linprog(cost_weights.flatten(), A_eq=unique_mat,
+                             b_eq=np.zeros((unique_mat.shape[0], 1)),
+                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
+                             bounds=bounds)
 
-        # TODO: propagate scipy.optimize.linprog's error message?
-        if not result.success:
-            raise ValueError('Penaltymodel-lp is unable to find a solution.')
+            # TODO: propagate scipy.optimize.linprog's error message?
+            if not result.success:
+                raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
         # Split result
         gap = result.x[-1]
