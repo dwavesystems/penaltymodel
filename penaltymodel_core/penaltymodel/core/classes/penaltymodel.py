@@ -340,7 +340,7 @@ class PenaltyModel(Specification):
             edge_ind = indices[(node0, node1)]
             node0_ind = indices[node0]
             node1_ind = indices[node1]
-            states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]   #TODO Check here
+            states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]
 
         # Construct biases and energy vectors
         biases = [bqm.linear[label] for label in labels[:m_linear]]
@@ -386,10 +386,11 @@ class PenaltyModel(Specification):
         # Store best solution
         best_gap = 0
         best_result = None
-        for _ in range(10):
+        for _ in range(100):
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
-            random_indices[1:] += (bins[:-1] + 1)   # TODO check index 0
+            random_indices[1:] += (bins[:-1] + 1)  # +1 since random_indices is already zero-indexed
+            #random_indices = [1, 3, 5, 6, 8, 9, 10, 11]
             is_unique = np.zeros(feasible_states.shape[0], dtype=int)
             is_unique[random_indices] = 1
             print(random_indices)
@@ -416,6 +417,7 @@ class PenaltyModel(Specification):
 
             if abs(gap) > abs(best_gap):
                 best_result = result
+                best_gap = gap
 
         # Split result
         gap = best_result.x[-1]
