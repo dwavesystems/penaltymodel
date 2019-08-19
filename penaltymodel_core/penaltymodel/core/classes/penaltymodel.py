@@ -325,22 +325,22 @@ class PenaltyModel(Specification):
         m_linear = len(bqm.linear)
         m_quadratic = len(bqm.quadratic)
         labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
-        indices = {k: i for i, k in enumerate(labels)}
+        indices = {k: i for i, k in enumerate(labels)}  # map labels to column index
 
         # Construct the states matrix
         # Construct linear portion of states matrix
         states = np.empty((2**m_linear, m_linear + m_quadratic + 2))    # +2 for offset and gap columns
         states[:, :m_linear] = np.array([list(x) for x in
                                          itertools.product({-1, 1}, repeat=m_linear)])
-        states[:, -2] = 1
-        states[:, -1] = -1
+        states[:, -2] = 1       # column for offset
+        states[:, -1] = -1      # column for gap
 
         # Construct quadratic portion of states matrix
         for node0, node1 in bqm.quadratic.keys():
             edge_ind = indices[(node0, node1)]
             node0_ind = indices[node0]
             node1_ind = indices[node1]
-            states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]
+            states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]   #TODO Check here
 
         # Construct biases and energy vectors
         biases = [bqm.linear[label] for label in labels[:m_linear]]
@@ -380,22 +380,23 @@ class PenaltyModel(Specification):
         bounds.append((0, max_gap))  # Bound for gap.
 
         # Make unique and duplicate state matrices
-        n_uniques = bins.shape[0]
-        bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1])) #TODO: double check
+        n_uniques = bins.shape[0]   # Number of unique decision states
+        bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # number items in each bin
 
-        # Store best solution:
+        # Store best solution
         best_gap = 0
         best_result = None
-        for _ in range(1000):
+        for _ in range(10):
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
-            random_indices[1:] += (bins[:-1] + 1)
+            random_indices[1:] += (bins[:-1] + 1)   # TODO check index 0
             is_unique = np.zeros(feasible_states.shape[0], dtype=int)
             is_unique[random_indices] = 1
+            print(random_indices)
 
             # Select which feasible states are unique
             #TODO: Bool vector does not work here
-            feasible_states[is_unique==1, -1] = 0                     # unique states
+            feasible_states[is_unique==1, -1] = 0     # unique states
             feasible_states[is_unique==0, -1] = -1    # duplicate states
             unique_mat = feasible_states[is_unique==1]
             duplicate_mat = feasible_states[is_unique==0]
