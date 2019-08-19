@@ -316,11 +316,7 @@ class PenaltyModel(Specification):
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
         #TODO: convert state matrix to use ints rather than floats
 
-        # Generate all possible states and their corresponding energies
-        # Note: I want both the linear and quadratic values
-        # TODO: Should I be checking them? Probably not
-        #TODO: could use Exact Solver if it returned quadratics
-        # A*z = b, where z is [h, J]
+        # Set up
         bqm = self.model
         m_linear = len(bqm.linear)
         m_quadratic = len(bqm.quadratic)
@@ -329,7 +325,7 @@ class PenaltyModel(Specification):
 
         # Construct the states matrix
         # Construct linear portion of states matrix
-        states = np.empty((2**m_linear, m_linear + m_quadratic + 2))    # +2 for offset and gap columns
+        states = np.empty((2**m_linear, m_linear + m_quadratic + 2))  # +2 for offset and gap cols
         states[:, :m_linear] = np.array([list(x) for x in
                                          itertools.product({-1, 1}, repeat=m_linear)])
         states[:, -2] = 1       # column for offset
@@ -349,8 +345,22 @@ class PenaltyModel(Specification):
         biases = np.array(biases)
         energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
 
+        # Group states by threshold
         excited_states = states[energy > self.ground_energy]
         feasible_states = states[energy <= self.ground_energy]
+
+        # Cost function
+        cost_weights = np.zeros((1, states.shape[1]))
+        cost_weights[0, -1] = -1  # Only interested in maximizing the gap
+
+        # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
+        #   hence that 2 * sum(largest_biases)
+        #TODO remove hardcoded bounds
+        bounds = [(-2, 2)] * m_linear
+        bounds += [(-1, 1)] * m_quadratic
+        max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
+        bounds.append((None, None))  # Bound for offset
+        bounds.append((0, max_gap))  # Bound for gap.
 
         # Determine duplicate decision states
         # Note: we are grabbing the decision states, sorting them, and
@@ -366,19 +376,6 @@ class PenaltyModel(Specification):
         bins = np.append(bins, True)   # Marking the end of the last bin
         bins = np.nonzero(bins)[0]
 
-        # Cost function
-        cost_weights = np.zeros((1, states.shape[1]))
-        cost_weights[0, -1] = -1  # Only interested in maximizing the gap
-
-        # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
-        #   hence that 2 * sum(largest_biases)
-        #TODO remove hardcoded bounds
-        bounds = [(-2, 2)] * m_linear
-        bounds += [(-1, 1)] * m_quadratic
-        max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
-        bounds.append((None, None))  # Bound for offset
-        bounds.append((0, max_gap))  # Bound for gap.
-
         # Make unique and duplicate state matrices
         n_uniques = bins.shape[0]   # Number of unique decision states
         bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # number items in each bin
@@ -393,7 +390,6 @@ class PenaltyModel(Specification):
             #random_indices = [1, 3, 5, 6, 8, 9, 10, 11]
             is_unique = np.zeros(feasible_states.shape[0], dtype=int)
             is_unique[random_indices] = 1
-            print(random_indices)
 
             # Select which feasible states are unique
             #TODO: Bool vector does not work here
