@@ -428,7 +428,7 @@ class PenaltyModel(Specification):
         gap = weights[-1]
 
         if gap <= 0:
-            raise ValueError('Penaltymodel-lp is unable to find a solution.')
+            raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
         # Create BQM
         bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
