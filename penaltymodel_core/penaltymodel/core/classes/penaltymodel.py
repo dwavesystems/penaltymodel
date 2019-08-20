@@ -386,7 +386,7 @@ class PenaltyModel(Specification):
         # Store solution with largest gap
         best_gap = 0
         best_result = None
-        for _ in range(100):
+        for _ in range(100):    #TODO: remove hard code
             # Generate random indices such that there is one index picked from each bin
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)

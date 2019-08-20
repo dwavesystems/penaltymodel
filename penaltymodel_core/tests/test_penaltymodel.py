@@ -193,7 +193,24 @@ class TestPenaltyModel(unittest.TestCase):
                                  vartype, model, classical_gap, ground_energy)
         pmodel.balance_penaltymodel()
 
-        # Test balance
-        ss = dimod.ExactSolver().sample(pmodel.model)
-        print(ss.lowest())
-        x = 5
+        # Sample the balanced penaltymodel
+        sampleset = dimod.ExactSolver().sample(pmodel.model)
+        sample_states = sampleset.lowest().record.sample
+
+        # Reorder sample columns to match feasible_configuration
+        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
+        indices = [index_dict[dv] for dv in decision_variables]
+        decision_states = list(map(tuple, sample_states[:, indices]))
+
+        # Check that there are no duplicates
+        self.assertEqual(len(set(decision_states)), len(decision_states),
+                         msg="There are duplicate states in balanced solution")
+
+        # Check that we have the correct number of states
+        self.assertEqual(len(decision_states), len(feasible_config),
+                         msg="Incorrect number of states in balanced solution")
+
+        # Check that all states are valid
+        for state in decision_states:
+            self.assertIn(state, feasible_config,
+                          msg="{} is not a feasible configuration".format(state))
