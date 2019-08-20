@@ -160,12 +160,20 @@ class TestPenaltyModel(unittest.TestCase):
         pass
 
     def test_balance_with_ising(self):
-        # Constructing three-input AND-gate
+        # Constructing three-input AND-gate graph
         decision_variables = ['in0', 'in1', 'in2', 'out']
         g = nx.Graph([('in0', 'out'), ('in1', 'out'), ('in2', 'out')])
         aux_edges = [(dv, aux) for dv in decision_variables for aux in ['aux0', 'aux1']]
         g.add_edges_from(aux_edges)
 
+        # Construct an imbalanced penaltymodel of the above AND-gate
+        # Note: the following imbalanced penaltymodel has 12 ground states
+        linear_biases = {'in0': -1, 'in1': -.5, 'in2': 0,       # Shore 0
+                         'out': 2, 'aux0': .5, 'aux1': 1}       # Shore 1
+        quadratic_biases = \
+            {('in0', 'out'): -1, ('in0', 'aux0'): -.5, ('in0', 'aux1'): -.5,
+             ('in1', 'out'): -1, ('in1', 'aux0'): 1, ('in1', 'aux1'): -.5,
+             ('in2', 'out'): -1, ('in2', 'aux0'): 0, ('in2', 'aux1'): 1}
         feasible_config = {(-1, -1, -1, -1),
                            (-1, -1, +1, -1),
                            (-1, +1, -1, -1),
@@ -174,23 +182,16 @@ class TestPenaltyModel(unittest.TestCase):
                            (+1, -1, +1, -1),
                            (+1, +1, -1, -1),
                            (+1, +1, +1, +1)}
-        classical_gap = 2
-        ground_energy = 0
         offset = 4.5
         vartype = dimod.SPIN
+        classical_gap = 2
+        ground_energy = 0
 
-        # Construct a bqm that is an imbalanced penaltymodel
-        # Note: the following imbalanced penaltymodel has 12 ground states
-        linear_biases = {'in0': -1, 'in1': -.5, 'in2': 0,       # Shore 0
-                         'out': 2, 'aux0': .5, 'aux1': 1}       # Shore 1
-        quadratic_biases = \
-            {('in0', 'out'): -1, ('in0', 'aux0'): -.5, ('in0', 'aux1'): -.5,
-             ('in1', 'out'): -1, ('in1', 'aux0'): 1, ('in1', 'aux1'): -.5,
-             ('in2', 'out'): -1, ('in2', 'aux0'): 0, ('in2', 'aux1'): 1}
         model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
-
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
+
+        # Call to balance the penaltymodel
         pmodel.balance_penaltymodel()
 
         # Sample the balanced penaltymodel
