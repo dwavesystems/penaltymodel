@@ -363,10 +363,12 @@ class PenaltyModel(Specification):
         bounds.append((0, max_gap))  # Bound for gap.
 
         # Determine duplicate decision states
-        # Note: we are grabbing the decision states, sorting them, and
-        #   determining the boundaries of each bin
-        # Note2: using lexsort so that each row of decision_cols is treated as
-        #   a single object with primary, secondary, tertiary, etc key orders
+        # Note: we are forming a new matrix, decision_cols, which is made up of the decision
+        #   variable columns. We use decision_cols to bin like-feasible_states together (i.e. same
+        #   decision state values, potentially different aux values).
+        # Note2: using lexsort so that each row of decision_cols is treated as a single object with
+        #   primary, secondary, tertiary, etc key orders
+        # Note3: bins contains the index of the last item in each bin; these are the bin boundaries
         decision_indices = [indices[label] for label in self.decision_variables]
         decision_cols = feasible_states[:, decision_indices]
         sorted_indices = np.lexsort(decision_cols.T)
@@ -376,52 +378,54 @@ class PenaltyModel(Specification):
         bins = np.append(bins, True)   # Marking the end of the last bin
         bins = np.nonzero(bins)[0]
 
-        # Make unique and duplicate state matrices
-        n_uniques = bins.shape[0]   # Number of unique decision states
-        bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # number items in each bin
+        # Get number of unique decision states and number of items in each bin
+        n_uniques = bins.shape[0]
+        bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # +1 to account for zero-index
 
-        # Store best solution
+        # Store solution with largest gap
         best_gap = 0
         best_result = None
         for _ in range(100):
+            # Generate random indices such that there is one index picked from each bin
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
-            random_indices[1:] += (bins[:-1] + 1)  # +1 since random_indices is already zero-indexed
-            #random_indices = [1, 3, 5, 6, 8, 9, 10, 11]
+            random_indices[1:] += (bins[:-1] + 1)   # add bin offsets; +1 to negate bins' zero-index
             is_unique = np.zeros(feasible_states.shape[0], dtype=int)
             is_unique[random_indices] = 1
 
             # Select which feasible states are unique
-            #TODO: Bool vector does not work here
-            feasible_states[is_unique==1, -1] = 0     # unique states
-            feasible_states[is_unique==0, -1] = -1    # duplicate states
-            unique_mat = feasible_states[is_unique==1]
-            duplicate_mat = feasible_states[is_unique==0]
+            # Note: unique states do not have the 'gap' term in their linear equation, but duplicate
+            #   states do. Hence the 0 for unique states' gap column and -1 for that of duplicates.
+            feasible_states[is_unique==1, -1] = 0     # unique states' gap column
+            feasible_states[is_unique==0, -1] = -1    # duplicate states' gap column
+            unique_feasible_states = feasible_states[is_unique==1]
+            duplicate_feasible_states = feasible_states[is_unique==0]
 
             # Returns a Scipy OptimizeResult
-            new_excited_mat = -np.vstack((excited_states, duplicate_mat))
-            result = linprog(cost_weights.flatten(), A_eq=unique_mat,
-                             b_eq=np.zeros((unique_mat.shape[0], 1)),
-                             A_ub=new_excited_mat, b_ub=np.zeros((new_excited_mat.shape[0], 1)),
-                             bounds=bounds)
+            new_excited_states = -np.vstack((excited_states, duplicate_feasible_states))
+            result = linprog(cost_weights.flatten(),
+                             A_eq=unique_feasible_states,
+                             b_eq=np.zeros((unique_feasible_states.shape[0], 1)),
+                             A_ub=new_excited_states,
+                             b_ub=np.zeros((new_excited_states.shape[0], 1)),
+                             bounds=bounds,
+                             method="simplex")
 
-            # TODO: propagate scipy.optimize.linprog's error message?
             if not result.success:
-                raise ValueError('Penaltymodel-lp is unable to find a solution.')
+                continue
 
+            # Store best result
             gap = result.x[-1]
-
-            if abs(gap) > abs(best_gap):
+            if gap > best_gap:
                 best_result = result
                 best_gap = gap
 
-        # Split result
-        gap = best_result.x[-1]
-        print(gap)
-        x = best_result.x
-        h = x[:m_linear]
-        j = x[m_linear:-2]
-        offset = x[-2]
+        # Parse result
+        weights = best_result.x
+        h = weights[:m_linear]
+        j = weights[m_linear:-2]
+        offset = weights[-2]
+        gap = weights[-1]
 
         if gap <= 0:
             raise ValueError('Penaltymodel-lp is unable to find a solution.')
