@@ -150,7 +150,16 @@ class TestPenaltyModel(unittest.TestCase):
 
         pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
 
-    def test_balance_penaltymodel(self):
+    def test_balance_with_empty_penaltymodel(self):
+        pass
+
+    def test_balance_with_impossible_model(self):
+        pass
+
+    def test_balance_with_qubo(self):
+        pass
+
+    def test_balance_with_ising(self):
         # Constructing three-input AND-gate
         decision_variables = ['in0', 'in1', 'in2', 'out']
         g = nx.Graph([('in0', 'out'), ('in1', 'out'), ('in2', 'out')])

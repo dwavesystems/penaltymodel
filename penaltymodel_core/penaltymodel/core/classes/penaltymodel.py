@@ -20,15 +20,13 @@ from __future__ import absolute_import
 
 from numbers import Number
 
-from collections import defaultdict
 import itertools
 import networkx as nx
 import numpy as np
-import re
 from scipy.optimize import linprog
 from six import iteritems
 
-from dimod import BinaryQuadraticModel, Vartype, ExactSolver
+from dimod import BinaryQuadraticModel, Vartype
 import dimod
 from penaltymodel.core.classes.specification import Specification
 
@@ -315,6 +313,9 @@ class PenaltyModel(Specification):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
         #TODO: convert state matrix to use ints rather than floats
+        #TODO: what about empty BQM?
+        if not self.model:
+            raise TypeError("There is no model to balance")
 
         # Set up
         bqm = self.model
