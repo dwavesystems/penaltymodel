@@ -148,7 +148,20 @@ class TestPenaltyModel(unittest.TestCase):
         pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
 
     def test_balance_with_empty_penaltymodel(self):
-        pass
+        # Build a penaltymodel with an empty bqm
+        vartype = dimod.SPIN
+        empty_model = dimod.BinaryQuadraticModel.empty(vartype)
+        n_nodes = 3
+        graph = nx.complete_graph(n_nodes)
+        decision_variables = list(range(n_nodes - 1))
+        feasible_configurations = {(-1, -1), (1, 1)}
+        classical_gap = 2
+        ground_energy = 0
+        pmodel = pm.PenaltyModel(graph, decision_variables, feasible_configurations, vartype,
+                                 empty_model, classical_gap, ground_energy)
+
+        with self.assertRaises(TypeError):
+            pmodel.balance_penaltymodel(n_tries=10)
 
     def test_balance_with_impossible_model(self):
         pass
@@ -157,8 +170,8 @@ class TestPenaltyModel(unittest.TestCase):
         pass
 
     def test_balance_with_ising(self):
-        # Constructing three-input AND-gate
-        g = nx.complete_bipartite_graph(3, 3)
+        #TODO: perhaps a shorter problem for unit tests? but this IS representative
+        # Constructing three-input AND-gate graph
         decision_variables = ['in0', 'in1', 'in2', 'out']
         feasible_config = {(0, 0, 0, 0),
                            (0, 0, 1, 0),

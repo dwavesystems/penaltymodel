@@ -20,14 +20,10 @@ from __future__ import absolute_import
 
 from numbers import Number
 
-<<<<<<< HEAD
-import networkx as nx
-=======
 import itertools
 import networkx as nx
 import numpy as np
 from scipy.optimize import linprog
->>>>>>> Add unit test stubs. Raise TypeError for model=None
 from six import iteritems
 
 from dimod import BinaryQuadraticModel, Vartype
@@ -313,13 +309,13 @@ class PenaltyModel(Specification):
         matrix[:, -1] = gap_weight
         return matrix
 
-    def balance_penaltymodel(self):
+    def balance_penaltymodel(self, n_tries=100):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
         #TODO: convert state matrix to use ints rather than floats
         #TODO: what about empty BQM?
         if not self.model:
-            raise TypeError("There is no model to balance")
+            raise ValueError("There is no model to balance")
 
         # Set up
         bqm = self.model
@@ -390,7 +386,7 @@ class PenaltyModel(Specification):
         # Store solution with largest gap
         best_gap = 0
         best_result = None
-        for _ in range(100):
+        for _ in range(n_tries):
             # Generate random indices such that there is one index picked from each bin
             random_indices = np.random.rand(n_uniques) * bin_count
             random_indices = np.floor(random_indices).astype(np.int)
