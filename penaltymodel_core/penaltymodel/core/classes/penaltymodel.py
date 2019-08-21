@@ -356,9 +356,9 @@ class PenaltyModel(Specification):
 
         # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
         #   hence that 2 * sum(largest_biases)
-        #TODO remove hardcoded bounds
-        bounds = [(-2, 2)] * m_linear
-        bounds += [(-1, 1)] * m_quadratic
+        #TODO remove default hardcoded bounds
+        bounds = [self.ising_linear_ranges.get(label, (-2, 2)) for label in labels[:m_linear]]
+        bounds += [self.ising_quadratic_ranges.get(label, (-1, 1)) for label in labels[m_linear:]]
         max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
         bounds.append((None, None))  # Bound for offset
         bounds.append((0, max_gap))  # Bound for gap.

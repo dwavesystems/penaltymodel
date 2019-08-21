@@ -163,7 +163,7 @@ class TestPenaltyModel(unittest.TestCase):
         pmodel = pm.PenaltyModel(graph, decision_variables, feasible_configurations, vartype,
                                  empty_model, classical_gap, ground_energy)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             pmodel.balance_penaltymodel(n_tries=10)
 
     def test_balance_with_impossible_model(self):
