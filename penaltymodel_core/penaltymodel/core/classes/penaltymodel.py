@@ -311,10 +311,11 @@ class PenaltyModel(Specification):
 
     def balance_penaltymodel(self, n_tries=100):
         #TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
+        #TODO: Provide QUBO support
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
         #TODO: convert state matrix to use ints rather than floats
-        #TODO: what about empty BQM?
         #TODO: could probably put the matrix construction in its own function
+        #TODO: multiple ground states
         if not self.model:
             raise ValueError("There is no model to balance")
 

@@ -191,7 +191,20 @@ class TestPenaltyModel(unittest.TestCase):
         self.assertEqual(model, pmodel.model)
 
     def test_balance_with_qubo(self):
-        pass
+        decision_variables = ['a', 'b']
+        feasible_config = {(1, 0), (0, 1)}
+        vartype = dimod.BINARY
+        classical_gap = 0.5
+        ground_energy = -1
+        g = nx.complete_graph(decision_variables)
+
+        model = dimod.BinaryQuadraticModel({'a': -1, 'b': 0.5, 'c': -.5},
+                                           {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
+                                 vartype, model, classical_gap, ground_energy)
+        pmodel.balance_penaltymodel()
+        # TODO complete this unit test
+
 
     def test_balance_with_ising(self):
         #TODO: perhaps a shorter problem for unit tests? but this IS representative
