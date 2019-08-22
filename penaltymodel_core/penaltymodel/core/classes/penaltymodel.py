@@ -428,6 +428,7 @@ class PenaltyModel(Specification):
         offset = weights[-2]
         gap = weights[-1]
 
+        #TODO: Test that gap meets user's gap requirements
         if gap <= 0:
             raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 

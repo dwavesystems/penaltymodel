@@ -169,6 +169,9 @@ class TestPenaltyModel(unittest.TestCase):
     def test_balance_with_impossible_model(self):
         pass
 
+    def test_balance_with_already_balanced_model(self):
+        pass
+
     def test_balance_with_qubo(self):
         pass
 
