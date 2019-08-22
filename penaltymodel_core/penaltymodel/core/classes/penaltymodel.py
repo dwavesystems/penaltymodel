@@ -314,6 +314,7 @@ class PenaltyModel(Specification):
         #TODO: Assume I'm only getting Ising for now (assuming order of method operations)
         #TODO: convert state matrix to use ints rather than floats
         #TODO: what about empty BQM?
+        #TODO: could probably put the matrix construction in its own function
         if not self.model:
             raise ValueError("There is no model to balance")
 
@@ -349,6 +350,10 @@ class PenaltyModel(Specification):
         # Group states by threshold
         excited_states = states[energy > self.ground_energy]
         feasible_states = states[energy <= self.ground_energy]
+
+        # Check for balance
+        if len(feasible_states) == len(self.feasible_configurations):
+            return
 
         # Cost function
         cost_weights = np.zeros((1, states.shape[1]))
