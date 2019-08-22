@@ -190,9 +190,6 @@ class TestPenaltyModel(unittest.TestCase):
 
         self.assertEqual(model, pmodel.model)
 
-    def test_multiple_balance_calls(self):
-        pass
-
     def test_balance_with_qubo(self):
         pass
 
