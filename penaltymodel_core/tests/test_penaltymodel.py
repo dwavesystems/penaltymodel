@@ -167,10 +167,32 @@ class TestPenaltyModel(unittest.TestCase):
             pmodel.balance_penaltymodel(n_tries=10)
 
     def test_balance_with_impossible_model(self):
+        """Test impossible to further balance
+        """
+        """
+        # Set up
+        g = nx.Graph([('a', 'b', 'c')])
+        decision_variables = ['a', 'c']
+        feasible_config = {(-1, -1), (+1, -1)}  # not-gate
+        vartype = dimod.SPIN
+        offset = 0
+
+        # Construct a balanced BQM to put in penaltymodel
+        model = dimod.BinaryQuadraticModel({'a': -1.5, 'b': -2, 'c': 2},
+                                           {'ab': 1, 'bc': -1, 'ac': -.5}, offset, vartype)
+
+        # Construct and rebalance penaltymodel
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config, vartype, model,
+                                 classical_gap=2, ground_energy=0)
+        pmodel.balance_penaltymodel()
+
+        self.assertEqual(model, pmodel.model)
+        """
         pass
 
     def test_balance_with_already_balanced_model(self):
-        """Test balance on an already balanced NOT-gate penaltymodel"""
+        """Test balance on an already balanced NOT-gate penaltymodel
+        """
         # Set up
         g = nx.Graph([('in', 'out')])
         decision_variables = ['in', 'out']
@@ -204,7 +226,6 @@ class TestPenaltyModel(unittest.TestCase):
                                  vartype, model, classical_gap, ground_energy)
         pmodel.balance_penaltymodel()
         # TODO complete this unit test
-
 
     def test_balance_with_ising(self):
         #TODO: perhaps a shorter problem for unit tests? but this IS representative
