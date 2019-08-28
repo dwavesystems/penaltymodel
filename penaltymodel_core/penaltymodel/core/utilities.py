@@ -4,8 +4,8 @@ import numpy as np
 from scipy.optimize import linprog
 
 
-#TODO: potentially duplicate code with LP
-def _get_lp_matrix(self, spin_states, nodes, edges, offset_weight, gap_weight):
+#TODO: potentially duplicate code with LP; will refactor once this code is more stable
+def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
     LP matrix:
         [spin_states, corresponding states of edges, offset_weight, gap_weight]
@@ -44,16 +44,16 @@ def _get_lp_matrix(self, spin_states, nodes, edges, offset_weight, gap_weight):
     return matrix
 
 
-def balance_penaltymodel(self, n_tries=100):
+def balance_penaltymodel(pmodel, n_tries=100):
     # TODO: Provide QUBO support
     # TODO: convert state matrix to use ints rather than floats
     # TODO: could probably put the matrix construction in its own function
     # TODO: multiple ground states
-    if not self.model:
+    if not pmodel.model:
         raise ValueError("There is no model to balance")
 
     # Set up
-    bqm = self.model
+    bqm = pmodel.model
     m_linear = len(bqm.linear)
     m_quadratic = len(bqm.quadratic)
     labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
@@ -82,11 +82,11 @@ def balance_penaltymodel(self, n_tries=100):
     energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
 
     # Group states by threshold
-    excited_states = states[energy > self.ground_energy]
-    feasible_states = states[energy <= self.ground_energy]
+    excited_states = states[energy > pmodel.ground_energy]
+    feasible_states = states[energy <= pmodel.ground_energy]
 
     # Check for balance
-    if len(feasible_states) == len(self.feasible_configurations):
+    if len(feasible_states) == len(pmodel.feasible_configurations):
         return
 
     # Cost function
@@ -96,8 +96,8 @@ def balance_penaltymodel(self, n_tries=100):
     # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
     #   hence that 2 * sum(largest_biases)
     # TODO remove default hardcoded bounds
-    bounds = [self.ising_linear_ranges.get(label, (-2, 2)) for label in labels[:m_linear]]
-    bounds += [self.ising_quadratic_ranges.get(label, (-1, 1)) for label in labels[m_linear:]]
+    bounds = [pmodel.ising_linear_ranges.get(label, (-2, 2)) for label in labels[:m_linear]]
+    bounds += [pmodel.ising_quadratic_ranges.get(label, (-1, 1)) for label in labels[m_linear:]]
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))  # Bound for offset
     bounds.append((0, max_gap))  # Bound for gap.
@@ -109,7 +109,7 @@ def balance_penaltymodel(self, n_tries=100):
     # Note2: using lexsort so that each row of decision_cols is treated as a single object with
     #   primary, secondary, tertiary, etc key orders
     # Note3: bins contains the index of the last item in each bin; these are the bin boundaries
-    decision_indices = [indices[label] for label in self.decision_variables]
+    decision_indices = [indices[label] for label in pmodel.decision_variables]
     decision_cols = feasible_states[:, decision_indices]
     sorted_indices = np.lexsort(decision_cols.T)
     decision_cols = decision_cols[sorted_indices, :]
@@ -177,4 +177,4 @@ def balance_penaltymodel(self, n_tries=100):
     bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
     bqm.add_offset(offset)
 
-    self.model = bqm
+    return bqm
