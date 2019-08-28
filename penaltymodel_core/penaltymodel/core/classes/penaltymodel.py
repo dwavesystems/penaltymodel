@@ -20,10 +20,7 @@ from __future__ import absolute_import
 
 from numbers import Number
 
-import itertools
 import networkx as nx
-import numpy as np
-from scipy.optimize import linprog
 from six import iteritems
 
 from dimod import BinaryQuadraticModel, Vartype

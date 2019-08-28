@@ -1,3 +1,10 @@
+import dimod
+import itertools
+import numpy as np
+from scipy.optimize import linprog
+
+
+#TODO: potentially duplicate code with LP
 def _get_lp_matrix(self, spin_states, nodes, edges, offset_weight, gap_weight):
     """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
     LP matrix:
@@ -38,9 +45,7 @@ def _get_lp_matrix(self, spin_states, nodes, edges, offset_weight, gap_weight):
 
 
 def balance_penaltymodel(self, n_tries=100):
-    # TODO: Do I want to edit in QUBO? Or should I just translate it all to Ising
     # TODO: Provide QUBO support
-    # TODO: Assume I'm only getting Ising for now (assuming order of method operations)
     # TODO: convert state matrix to use ints rather than floats
     # TODO: could probably put the matrix construction in its own function
     # TODO: multiple ground states
