@@ -44,9 +44,8 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     return matrix
 
 
-def balance_penaltymodel(pmodel, n_tries=100):
+def balance(pmodel, n_tries=100):
     # TODO: Provide QUBO support
-    # TODO: convert state matrix to use ints rather than floats
     # TODO: could probably put the matrix construction in its own function
     # TODO: multiple ground states
     if not pmodel.model:
@@ -61,7 +60,7 @@ def balance_penaltymodel(pmodel, n_tries=100):
 
     # Construct the states matrix
     # Construct linear portion of states matrix
-    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2))  # +2 for offset and gap cols
+    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2), dtype=int)  # +2 for offset and gap cols
     states[:, :m_linear] = np.array([list(x) for x in
                                      itertools.product({-1, 1}, repeat=m_linear)])
     states[:, -2] = 1  # column for offset
