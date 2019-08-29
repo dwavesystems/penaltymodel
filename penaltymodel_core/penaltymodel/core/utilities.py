@@ -132,7 +132,6 @@ def get_balanced(pmodel, n_tries=100):
     offset = weights[-2]
     gap = weights[-1]
 
-    # TODO: Test that gap meets user's gap requirements
     if gap <= 0:
         raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
@@ -144,7 +143,8 @@ def get_balanced(pmodel, n_tries=100):
 
     # Copy and update
     #TODO: is this a real copy?
-    #TODO: probably safer to re-initialize a new penaltymodel rather than update attributes
+    #TODO: should I be re-initializing?
     pmodel.model = new_bqm
+    pmodel.classical_gap = gap
 
     return pmodel
