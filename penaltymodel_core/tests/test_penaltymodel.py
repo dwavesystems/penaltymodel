@@ -19,7 +19,7 @@ import itertools
 import networkx as nx
 
 import penaltymodel.core as pm
-from penaltymodel.core.utilities import balance
+from penaltymodel.core.utilities import get_balanced
 
 import dimod
 
@@ -165,7 +165,7 @@ class TestPenaltyModel(unittest.TestCase):
                                  empty_model, classical_gap, ground_energy)
 
         with self.assertRaises(ValueError):
-            balance(pmodel, n_tries=10)
+            get_balanced(pmodel, n_tries=10)
 
     def test_balance_with_impossible_model(self):
         """Test impossible to further balance
@@ -209,7 +209,7 @@ class TestPenaltyModel(unittest.TestCase):
         # Construct and rebalance penaltymodel
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config, vartype, model,
                                  classical_gap=2, ground_energy=0)
-        new_pmodel = balance(pmodel)
+        new_pmodel = get_balanced(pmodel)
 
         self.assertEqual(model, new_pmodel.model)
 
@@ -225,7 +225,7 @@ class TestPenaltyModel(unittest.TestCase):
                                            {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
-        new_model = balance(pmodel)
+        new_model = get_balanced(pmodel)
         # TODO complete this unit test
 
     def test_balance_with_ising(self):
@@ -262,7 +262,7 @@ class TestPenaltyModel(unittest.TestCase):
                                  vartype, model, classical_gap, ground_energy)
 
         # Call to balance the penaltymodel
-        new_pmodel = balance(pmodel)
+        new_pmodel = get_balanced(pmodel)
 
         # Sample the balanced penaltymodel
         sampleset = dimod.ExactSolver().sample(new_pmodel.model)

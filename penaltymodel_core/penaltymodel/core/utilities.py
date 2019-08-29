@@ -44,7 +44,10 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
     return matrix
 
 
-def balance(pmodel, n_tries=100):
+def get_balanced(pmodel, n_tries=100):
+    """
+    Returns a balanced penaltymodel
+    """
     # TODO: Provide QUBO support
     # TODO: could probably put the matrix construction in its own function
     # TODO: multiple ground states
@@ -171,9 +174,13 @@ def balance(pmodel, n_tries=100):
         raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
     # Create BQM
-    bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    bqm.add_variables_from((v, bias) for v, bias in zip(labels[:m_linear], h))
-    bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
-    bqm.add_offset(offset)
+    new_bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
+    new_bqm.add_variables_from((v, bias) for v, bias in zip(labels[:m_linear], h))
+    new_bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
+    new_bqm.add_offset(offset)
 
-    return bqm
+    # Copy and update
+    #TODO: is this a real copy?
+    pmodel.model = new_bqm
+
+    return pmodel
