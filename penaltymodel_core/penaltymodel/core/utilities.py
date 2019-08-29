@@ -61,7 +61,7 @@ def get_balanced(pmodel, n_tries=100):
     bounds += [pmodel.ising_quadratic_ranges.get(label, (-1, 1)) for label in labels[m_linear:]]
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))  # Bound for offset
-    bounds.append((0, max_gap))  # Bound for gap.
+    bounds.append((pmodel.min_classical_gap, max_gap))  # Bound for gap.
 
     # Determine duplicate decision states
     # Note: we are forming a new matrix, decision_cols, which is made up of the decision
@@ -88,7 +88,7 @@ def get_balanced(pmodel, n_tries=100):
         return pmodel
 
     # Store solution with largest gap
-    best_gap = 0
+    best_gap = pmodel.min_classical_gap
     best_result = None
     for _ in range(n_tries):
         # Generate random indices such that there is one index picked from each bin
