@@ -4,46 +4,6 @@ import numpy as np
 from scipy.optimize import linprog
 
 
-#TODO: potentially duplicate code with LP; will refactor once this code is more stable
-def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
-    """Creates an linear programming matrix based on the spin states, graph, and scalars provided.
-    LP matrix:
-        [spin_states, corresponding states of edges, offset_weight, gap_weight]
-
-    Args:
-        spin_states: Numpy array of spin states
-        nodes: Iterable
-        edges: Iterable of tuples
-        offset_weight: Numpy 1-D array or number
-        gap_weight: Numpy 1-D array or a number
-    """
-    if len(spin_states) == 0:
-        return None
-
-    # Set up an empty matrix
-    n_states = len(spin_states)
-    m_linear = len(nodes)
-    m_quadratic = len(edges)
-    matrix = np.empty((n_states, m_linear + m_quadratic + 2))  # +2 columns for offset and gap
-
-    # Populate linear terms (i.e. spin states)
-    if spin_states.ndim == 1:
-        spin_states = np.expand_dims(spin_states, 1)
-    matrix[:, :m_linear] = spin_states
-
-    # Populate quadratic terms
-    node_indices = dict(zip(nodes, range(m_linear)))
-    for j, (u, v) in enumerate(edges):
-        u_ind = node_indices[u]
-        v_ind = node_indices[v]
-        matrix[:, j + m_linear] = np.multiply(matrix[:, u_ind], matrix[:, v_ind])
-
-    # Populate offset and gap columns, respectively
-    matrix[:, -2] = offset_weight
-    matrix[:, -1] = gap_weight
-    return matrix
-
-
 def get_balanced(pmodel, n_tries=100):
     """
     Returns a balanced penaltymodel
