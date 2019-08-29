@@ -50,7 +50,6 @@ def get_balanced(pmodel, n_tries=100):
     """
     # TODO: Provide QUBO support
     # TODO: could probably put the matrix construction in its own function
-    # TODO: multiple ground states
     if not pmodel.model:
         raise ValueError("There is no model to balance")
 
@@ -124,6 +123,10 @@ def get_balanced(pmodel, n_tries=100):
     n_uniques = bins.shape[0]
     bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # +1 to account for zero-index
 
+    # pmodel is already balanced.
+    if len(set(bin_count)) == 1:
+        return pmodel
+
     # Store solution with largest gap
     best_gap = 0
     best_result = None
@@ -181,6 +184,7 @@ def get_balanced(pmodel, n_tries=100):
 
     # Copy and update
     #TODO: is this a real copy?
+    #TODO: probably safer to re-initialize a new penaltymodel rather than update attributes
     pmodel.model = new_bqm
 
     return pmodel
