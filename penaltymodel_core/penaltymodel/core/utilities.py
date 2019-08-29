@@ -3,6 +3,8 @@ import itertools
 import numpy as np
 from scipy.optimize import linprog
 
+from penaltymodel.core import PenaltyModel
+
 
 def get_balanced(pmodel, n_tries=100):
     """
@@ -142,9 +144,12 @@ def get_balanced(pmodel, n_tries=100):
     new_bqm.add_offset(offset)
 
     # Copy and update
-    #TODO: is this a real copy?
-    #TODO: should I be re-initializing?
-    pmodel.model = new_bqm
-    pmodel.classical_gap = gap
-
-    return pmodel
+    new_pmodel = PenaltyModel(decision_variables=pmodel.decision_variables,
+                              feasible_configurations=pmodel.feasible_configurations,
+                              vartype=pmodel.vartype,
+                              model=new_bqm,    #TODO: Make it to same vartype as original
+                              classical_gap=gap,
+                              ground_energy=pmodel.ground_energy,
+                              ising_linear_ranges=pmodel.ising_linear_ranges,
+                              ising_quadratic_ranges=pmodel.ising_quadratic_ranges)
+    return new_pmodel
