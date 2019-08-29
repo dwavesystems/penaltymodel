@@ -86,7 +86,7 @@ def balance(pmodel, n_tries=100):
 
     # Check for balance
     if len(feasible_states) == len(pmodel.feasible_configurations):
-        return
+        return pmodel
 
     # Cost function
     cost_weights = np.zeros((1, states.shape[1]))

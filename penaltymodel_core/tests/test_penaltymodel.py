@@ -19,6 +19,7 @@ import itertools
 import networkx as nx
 
 import penaltymodel.core as pm
+from penaltymodel.core.utilities import balance
 
 import dimod
 
@@ -164,7 +165,7 @@ class TestPenaltyModel(unittest.TestCase):
                                  empty_model, classical_gap, ground_energy)
 
         with self.assertRaises(ValueError):
-            pmodel.balance_penaltymodel(n_tries=10)
+            balance(pmodel, n_tries=10)
 
     def test_balance_with_impossible_model(self):
         """Test impossible to further balance
@@ -208,9 +209,9 @@ class TestPenaltyModel(unittest.TestCase):
         # Construct and rebalance penaltymodel
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config, vartype, model,
                                  classical_gap=2, ground_energy=0)
-        pmodel.balance_penaltymodel()
+        new_pmodel = balance(pmodel)
 
-        self.assertEqual(model, pmodel.model)
+        self.assertEqual(model, new_pmodel.model)
 
     def test_balance_with_qubo(self):
         decision_variables = ['a', 'b']
@@ -224,7 +225,7 @@ class TestPenaltyModel(unittest.TestCase):
                                            {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
-        pmodel.balance_penaltymodel()
+        new_model = balance(pmodel)
         # TODO complete this unit test
 
     def test_balance_with_ising(self):
@@ -261,10 +262,10 @@ class TestPenaltyModel(unittest.TestCase):
                                  vartype, model, classical_gap, ground_energy)
 
         # Call to balance the penaltymodel
-        pmodel.balance_penaltymodel()
+        new_pmodel = balance(pmodel)
 
         # Sample the balanced penaltymodel
-        sampleset = dimod.ExactSolver().sample(pmodel.model)
+        sampleset = dimod.ExactSolver().sample(new_pmodel.model)
         sample_states = sampleset.lowest().record.sample
 
         # Reorder sample columns to match feasible_configuration
