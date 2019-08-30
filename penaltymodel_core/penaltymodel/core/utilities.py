@@ -10,13 +10,21 @@ def get_balanced(pmodel, n_tries=100):
     """
     Returns a balanced penaltymodel
     """
-    # TODO: Provide QUBO support
     # TODO: could probably put the matrix construction in its own function
     if not pmodel.model:
         raise ValueError("There is no model to balance")
 
+    # Convert BQM to spin and define a function to undo this conversion later on
+    if pmodel.vartype == "dimod.SPIN":
+        def convert_to_original_vartype(spin_bqm):
+            return spin_bqm
+        bqm = pmodel.model
+    else:
+        def convert_to_original_vartype(spin_bqm):
+            return spin_bqm.change_vartype(dimod.BINARY)
+        bqm = pmodel.model.change_vartype(dimod.SPIN)
+
     # Set up
-    bqm = pmodel.model
     m_linear = len(bqm.linear)
     m_quadratic = len(bqm.quadratic)
     labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
@@ -142,14 +150,16 @@ def get_balanced(pmodel, n_tries=100):
     new_bqm.add_variables_from((v, bias) for v, bias in zip(labels[:m_linear], h))
     new_bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
     new_bqm.add_offset(offset)
+    new_bqm = convert_to_original_vartype(new_bqm)
 
     # Copy and update
     new_pmodel = PenaltyModel(decision_variables=pmodel.decision_variables,
                               feasible_configurations=pmodel.feasible_configurations,
                               vartype=pmodel.vartype,
-                              model=new_bqm,    #TODO: Make it to same vartype as original
+                              model=new_bqm,
                               classical_gap=gap,
                               ground_energy=pmodel.ground_energy,
                               ising_linear_ranges=pmodel.ising_linear_ranges,
                               ising_quadratic_ranges=pmodel.ising_quadratic_ranges)
+
     return new_pmodel
