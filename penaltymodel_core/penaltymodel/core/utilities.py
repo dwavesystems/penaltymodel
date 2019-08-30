@@ -153,7 +153,8 @@ def get_balanced(pmodel, n_tries=100):
     new_bqm = convert_to_original_vartype(new_bqm)
 
     # Copy and update
-    new_pmodel = PenaltyModel(decision_variables=pmodel.decision_variables,
+    new_pmodel = PenaltyModel(graph=pmodel.graph,
+                              decision_variables=pmodel.decision_variables,
                               feasible_configurations=pmodel.feasible_configurations,
                               vartype=pmodel.vartype,
                               model=new_bqm,
