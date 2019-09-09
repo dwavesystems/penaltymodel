@@ -68,7 +68,7 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
     #   hence that 2 * sum(largest_biases)
     # TODO remove default hardcoded bounds
     bounds = [pmodel.ising_linear_ranges.get(label, (-2, 2)) for label in labels[:m_linear]]
-    bounds += [pmodel.ising_quadratic_ranges.get(label, (-1, 1)) for label in labels[m_linear:]]
+    bounds += [pmodel.ising_quadratic_ranges.get(x, (-1, 1)).get(y, (-1, 1)) for x, y in labels[m_linear:]]
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))  # Bound for offset
     bounds.append((pmodel.min_classical_gap, max_gap))  # Bound for gap.
