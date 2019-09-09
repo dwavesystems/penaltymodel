@@ -98,7 +98,7 @@ def get_balanced(pmodel, n_tries=100):
         return pmodel
 
     # Store solution with largest gap
-    best_gap = pmodel.min_classical_gap
+    best_gap = -np.infty
     best_result = None
     for _ in range(n_tries):
         # Generate random indices such that there is one index picked from each bin
@@ -124,7 +124,7 @@ def get_balanced(pmodel, n_tries=100):
                          A_ub=new_excited_states,
                          b_ub=np.zeros((new_excited_states.shape[0], 1)),
                          bounds=bounds,
-                         method="simplex")
+                         method="revised simplex")
 
         if not result.success:
             continue
