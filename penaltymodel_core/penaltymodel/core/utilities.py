@@ -6,7 +6,7 @@ from scipy.optimize import linprog
 from penaltymodel.core import PenaltyModel
 
 
-def get_balanced(pmodel, n_tries=100):
+def get_balanced(pmodel, n_tries=100, tol=1e-12):
     """
     Returns a balanced penaltymodel
     """
@@ -124,7 +124,8 @@ def get_balanced(pmodel, n_tries=100):
                          A_ub=new_excited_states,
                          b_ub=np.zeros((new_excited_states.shape[0], 1)),
                          bounds=bounds,
-                         method="revised simplex")
+                         method="revised simplex",
+                         options={"tol": tol})
 
         if not result.success:
             continue

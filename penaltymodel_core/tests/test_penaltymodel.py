@@ -256,13 +256,14 @@ class TestPenaltyModel(unittest.TestCase):
         vartype = dimod.SPIN
         classical_gap = 2
         ground_energy = 0
+        tol = 1e-12
 
         model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
 
         # Call to balance the penaltymodel
-        new_pmodel = get_balanced(pmodel)
+        new_pmodel = get_balanced(pmodel, tol=tol)
 
         # Sample the balanced penaltymodel
         sampleset = dimod.ExactSolver().sample(new_pmodel.model)
@@ -272,6 +273,9 @@ class TestPenaltyModel(unittest.TestCase):
         index_dict = {v: i for i, v in enumerate(sampleset.variables)}
         indices = [index_dict[dv] for dv in decision_variables]
         decision_states = list(map(tuple, sample_states[:, indices]))
+
+        # Checking that the gap is larger than min_classical_gap with some tolerance
+        self.assertGreaterEqual(new_pmodel.classical_gap, pmodel.min_classical_gap - tol)
 
         # Check that there are no duplicates
         self.assertEqual(len(set(decision_states)), len(decision_states),
