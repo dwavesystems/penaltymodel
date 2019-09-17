@@ -225,8 +225,32 @@ class TestPenaltyModel(unittest.TestCase):
                                            {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
-        new_model = get_balanced(pmodel)
-        # TODO complete this unit test
+        new_pmodel = get_balanced(pmodel)
+
+        # Sample the balanced penaltymodel
+        sampleset = dimod.ExactSolver().sample(new_pmodel.model)
+        sample_states = sampleset.lowest().record.sample
+
+        # Reorder sample columns to match feasible_configuration
+        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
+        indices = [index_dict[dv] for dv in decision_variables]
+        decision_states = list(map(tuple, sample_states[:, indices]))
+
+        # Checking that the gap is larger than min_classical_gap with some tolerance
+        self.assertGreaterEqual(new_pmodel.classical_gap, pmodel.min_classical_gap)
+
+        # Check that there are no duplicates
+        self.assertEqual(len(set(decision_states)), len(decision_states),
+                         msg="There are duplicate states in balanced solution")
+
+        # Check that we have the correct number of states
+        self.assertEqual(len(decision_states), len(feasible_config),
+                         msg="Incorrect number of states in balanced solution")
+
+        # Check that all states are valid
+        for state in decision_states:
+            self.assertIn(state, feasible_config,
+                          msg="{} is not a feasible configuration".format(state))
 
     def test_balance_with_ising(self):
         #TODO: perhaps a shorter problem for unit tests? but this IS representative
