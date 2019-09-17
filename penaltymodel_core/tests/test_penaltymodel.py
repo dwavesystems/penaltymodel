@@ -147,6 +147,33 @@ class TestPenaltyModel(unittest.TestCase):
 
         pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
 
+class TestPenaltyModelBalance(unittest.TestCase):
+    def check_balance(self, balanced_pmodel, original_pmodel):
+        # Sample the balanced penaltymodel
+        sampleset = dimod.ExactSolver().sample(balanced_pmodel.model)
+        sample_states = sampleset.lowest().record.sample
+
+        # Reorder sample columns to match feasible_configuration
+        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
+        indices = [index_dict[dv] for dv in original_pmodel.decision_variables]
+        decision_states = list(map(tuple, sample_states[:, indices]))
+
+        # Checking that the gap is larger than min_classical_gap with some tolerance
+        self.assertGreaterEqual(balanced_pmodel.classical_gap, original_pmodel.min_classical_gap)
+
+        # Check that there are no duplicates
+        self.assertEqual(len(set(decision_states)), len(decision_states),
+                         msg="There are duplicate states in balanced solution")
+
+        # Check that we have the correct number of states
+        self.assertEqual(len(decision_states), len(original_pmodel.feasible_configurations),
+                         msg="Incorrect number of states in balanced solution")
+
+        # Check that all states are valid
+        for state in decision_states:
+            self.assertIn(state, original_pmodel.feasible_configurations,
+                          msg="{} is not a feasible configuration".format(state))
+
     def test_balance_with_empty_penaltymodel(self):
         # Build a penaltymodel with an empty bqm
         vartype = dimod.SPIN
@@ -167,7 +194,19 @@ class TestPenaltyModel(unittest.TestCase):
         pass
 
     def test_balance_with_qubo(self):
-        pass
+        decision_variables = ['a', 'b']
+        feasible_config = {(1, 0), (0, 1)}
+        vartype = dimod.BINARY
+        classical_gap = 0.5
+        ground_energy = -1
+        g = nx.complete_graph(decision_variables)
+
+        model = dimod.BinaryQuadraticModel({'a': -1, 'b': 0.5, 'c': -.5},
+                                           {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
+                                 vartype, model, classical_gap, ground_energy)
+        new_pmodel = get_balanced(pmodel)
+        self.check_balance(new_pmodel, pmodel)
 
     def test_balance_with_ising(self):
         #TODO: perhaps a shorter problem for unit tests? but this IS representative
@@ -192,4 +231,23 @@ class TestPenaltyModel(unittest.TestCase):
             {('in0', 'out'): -1, ('in0', 'aux0'): -.5, ('in0', 'aux1'): -.5,
              ('in1', 'out'): -1, ('in1', 'aux0'): 1, ('in1', 'aux1'): -.5,
              ('in2', 'out'): -1, ('in2', 'aux0'): 0, ('in2', 'aux1'): 1}
-        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases)
+        feasible_config = {(-1, -1, -1, -1),
+                           (-1, -1, +1, -1),
+                           (-1, +1, -1, -1),
+                           (-1, +1, +1, -1),
+                           (+1, -1, -1, -1),
+                           (+1, -1, +1, -1),
+                           (+1, +1, -1, -1),
+                           (+1, +1, +1, +1)}
+        offset = 4.5
+        vartype = dimod.SPIN
+        classical_gap = 2
+        ground_energy = 0
+        tol = 1e-12
+
+        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
+                                 vartype, model, classical_gap, ground_energy)
+
+        new_pmodel = get_balanced(pmodel, tol=tol)
+        self.check_balance(new_pmodel, pmodel)
