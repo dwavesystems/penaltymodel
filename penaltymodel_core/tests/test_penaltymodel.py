@@ -151,6 +151,34 @@ class TestPenaltyModel(unittest.TestCase):
 
         pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
 
+
+class TestPenaltyModelBalance(unittest.TestCase):
+    def check_balance(self, balanced_pmodel, original_pmodel):
+        # Sample the balanced penaltymodel
+        sampleset = dimod.ExactSolver().sample(balanced_pmodel.model)
+        sample_states = sampleset.lowest().record.sample
+
+        # Reorder sample columns to match feasible_configuration
+        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
+        indices = [index_dict[dv] for dv in original_pmodel.decision_variables]
+        decision_states = list(map(tuple, sample_states[:, indices]))
+
+        # Checking that the gap is larger than min_classical_gap with some tolerance
+        self.assertGreaterEqual(balanced_pmodel.classical_gap, original_pmodel.min_classical_gap)
+
+        # Check that there are no duplicates
+        self.assertEqual(len(set(decision_states)), len(decision_states),
+                         msg="There are duplicate states in balanced solution")
+
+        # Check that we have the correct number of states
+        self.assertEqual(len(decision_states), len(original_pmodel.feasible_configurations),
+                         msg="Incorrect number of states in balanced solution")
+
+        # Check that all states are valid
+        for state in decision_states:
+            self.assertIn(state, original_pmodel.feasible_configurations,
+                          msg="{} is not a feasible configuration".format(state))
+
     def test_balance_with_empty_penaltymodel(self):
         # Build a penaltymodel with an empty bqm
         vartype = dimod.SPIN
@@ -226,31 +254,7 @@ class TestPenaltyModel(unittest.TestCase):
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
         new_pmodel = get_balanced(pmodel)
-
-        # Sample the balanced penaltymodel
-        sampleset = dimod.ExactSolver().sample(new_pmodel.model)
-        sample_states = sampleset.lowest().record.sample
-
-        # Reorder sample columns to match feasible_configuration
-        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
-        indices = [index_dict[dv] for dv in decision_variables]
-        decision_states = list(map(tuple, sample_states[:, indices]))
-
-        # Checking that the gap is larger than min_classical_gap with some tolerance
-        self.assertGreaterEqual(new_pmodel.classical_gap, pmodel.min_classical_gap)
-
-        # Check that there are no duplicates
-        self.assertEqual(len(set(decision_states)), len(decision_states),
-                         msg="There are duplicate states in balanced solution")
-
-        # Check that we have the correct number of states
-        self.assertEqual(len(decision_states), len(feasible_config),
-                         msg="Incorrect number of states in balanced solution")
-
-        # Check that all states are valid
-        for state in decision_states:
-            self.assertIn(state, feasible_config,
-                          msg="{} is not a feasible configuration".format(state))
+        self.check_balance(new_pmodel, pmodel)
 
     def test_balance_with_ising(self):
         #TODO: perhaps a shorter problem for unit tests? but this IS representative
@@ -286,30 +290,5 @@ class TestPenaltyModel(unittest.TestCase):
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
 
-        # Call to balance the penaltymodel
         new_pmodel = get_balanced(pmodel, tol=tol)
-
-        # Sample the balanced penaltymodel
-        sampleset = dimod.ExactSolver().sample(new_pmodel.model)
-        sample_states = sampleset.lowest().record.sample
-
-        # Reorder sample columns to match feasible_configuration
-        index_dict = {v: i for i, v in enumerate(sampleset.variables)}
-        indices = [index_dict[dv] for dv in decision_variables]
-        decision_states = list(map(tuple, sample_states[:, indices]))
-
-        # Checking that the gap is larger than min_classical_gap with some tolerance
-        self.assertGreaterEqual(new_pmodel.classical_gap, pmodel.min_classical_gap - tol)
-
-        # Check that there are no duplicates
-        self.assertEqual(len(set(decision_states)), len(decision_states),
-                         msg="There are duplicate states in balanced solution")
-
-        # Check that we have the correct number of states
-        self.assertEqual(len(decision_states), len(feasible_config),
-                         msg="Incorrect number of states in balanced solution")
-
-        # Check that all states are valid
-        for state in decision_states:
-            self.assertIn(state, feasible_config,
-                          msg="{} is not a feasible configuration".format(state))
+        self.check_balance(new_pmodel, pmodel)
