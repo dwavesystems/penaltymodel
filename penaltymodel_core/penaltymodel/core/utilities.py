@@ -98,8 +98,8 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
     if len(set(bin_count)) == 1:
         return pmodel
 
-    # Store solution with largest gap
-    best_result = None
+    # Attempt to find solution
+    gap_threshold = max(pmodel.min_classical_gap - tol, 0)
     for _ in range(n_tries):
         # Generate random indices such that there is one index picked from each bin
         random_indices = np.random.rand(n_uniques) * bin_count
@@ -127,27 +127,19 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
                          method="revised simplex",
                          options={"tol": tol})
 
-        if not result.success:
-            continue
-
-        # Store best result
-        gap = result.x[-1]
-        if gap > (pmodel.min_classical_gap - tol):
-            best_result = result
+        # Break when we get desirable result
+        result_gap = result.x[-1]
+        if result.success and result_gap >= gap_threshold:
             break
-
     else:
         raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
     # Parse result
-    weights = best_result.x
+    weights = result.x
     h = weights[:m_linear]
     j = weights[m_linear:-2]
     offset = weights[-2]
     gap = weights[-1]
-
-    if gap <= 0:
-        raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
     # Create BQM
     new_bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
