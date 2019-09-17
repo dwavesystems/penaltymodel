@@ -153,7 +153,7 @@ class TestPenaltyModel(unittest.TestCase):
 
 
 class TestPenaltyModelBalance(unittest.TestCase):
-    def check_balance(self, balanced_pmodel, original_pmodel):
+    def check_balance(self, balanced_pmodel, original_pmodel, tol=10**-12):
         # Sample the balanced penaltymodel
         sampleset = dimod.ExactSolver().sample(balanced_pmodel.model)
         sample_states = sampleset.lowest().record.sample
@@ -164,7 +164,7 @@ class TestPenaltyModelBalance(unittest.TestCase):
         decision_states = list(map(tuple, sample_states[:, indices]))
 
         # Checking that the gap is larger than min_classical_gap with some tolerance
-        self.assertGreaterEqual(balanced_pmodel.classical_gap, original_pmodel.min_classical_gap)
+        self.assertGreaterEqual(balanced_pmodel.classical_gap, original_pmodel.min_classical_gap - tol)
 
         # Check that there are no duplicates
         self.assertEqual(len(set(decision_states)), len(decision_states),

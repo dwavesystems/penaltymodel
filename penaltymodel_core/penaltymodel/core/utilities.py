@@ -99,7 +99,6 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
         return pmodel
 
     # Store solution with largest gap
-    best_gap = -np.infty
     best_result = None
     for _ in range(n_tries):
         # Generate random indices such that there is one index picked from each bin
@@ -133,9 +132,12 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
 
         # Store best result
         gap = result.x[-1]
-        if gap > best_gap:
+        if gap > (pmodel.min_classical_gap - tol):
             best_result = result
-            best_gap = gap
+            break
+
+    else:
+        raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
 
     # Parse result
     weights = best_result.x
