@@ -190,6 +190,8 @@ class PenaltyModel(Specification):
             raise TypeError("expected ground_energy to be numeric")
         self.ground_energy = ground_energy
 
+        self.is_uniform = False
+
     @classmethod
     def from_specification(cls, specification, model, classical_gap, ground_energy):
         """Construct a PenaltyModel from a Specification.
