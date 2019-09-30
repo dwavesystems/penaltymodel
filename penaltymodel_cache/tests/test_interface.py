@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import unittest
-import os
 import time
-import multiprocessing
 import itertools
 
 import networkx as nx

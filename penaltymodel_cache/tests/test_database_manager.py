@@ -13,11 +13,7 @@
 # limitations under the License.
 
 import unittest
-import time
 import sqlite3
-import os
-
-from collections import defaultdict
 
 import networkx as nx
 import penaltymodel.core as pm
