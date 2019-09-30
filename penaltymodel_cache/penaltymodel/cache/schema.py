@@ -45,12 +45,14 @@ schema = \
         min_quadratic_bias REAL NOT NULL,
         max_linear_bias REAL NOT NULL,
         min_linear_bias REAL NOT NULL,
+        is_uniform INTEGER NOT NULL,  -- uniform number of states
         graph_id INTEGER NOT NULL,
         id INTEGER PRIMARY KEY,
         CONSTRAINT ising_model UNIQUE (
             linear_biases,
             quadratic_biases,
             offset,
+            is_uniform,
             graph_id),
         FOREIGN KEY (graph_id) REFERENCES graph(id) ON DELETE CASCADE);
 
