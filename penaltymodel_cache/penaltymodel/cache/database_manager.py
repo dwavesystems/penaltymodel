@@ -297,6 +297,8 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
         encoded_data['max_linear_bias'] = max(itervalues(linear), default=0)
     if 'min_linear_bias' not in encoded_data:
         encoded_data['min_linear_bias'] = min(itervalues(linear), default=0)
+    if 'is_uniform' not in encoded_data:
+        encoded_data['is_uniform']
 
     insert = \
         """
@@ -308,6 +310,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
             min_quadratic_bias,
             max_linear_bias,
             min_linear_bias,
+            is_uniform,
             graph_id)
         SELECT
             :linear_biases,
@@ -317,6 +320,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
             :min_quadratic_bias,
             :max_linear_bias,
             :min_linear_bias,
+            :is_uniform,
             graph.id
         FROM graph WHERE
             num_nodes = :num_nodes AND
@@ -384,7 +388,7 @@ def iter_ising_model(cur):
             is meant to be run within a :obj:`with` statement.
 
     Yields:
-        tuple: A 5-tuple consisting of:
+        tuple: A 6-tuple consisting of:
 
             list: The nodelist for a graph in the cache.
 
@@ -396,21 +400,24 @@ def iter_ising_model(cur):
 
             float: The constant offset of an Ising Model in the cache.
 
+            int: 0 or 1 on whether the ising model produces uniform states.
+
     """
     select = \
         """
-        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset
+        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset, is_uniform,
         FROM ising_model, graph
         WHERE graph.id = ising_model.graph_id;
         """
 
-    for linear_biases, quadratic_biases, num_nodes, edges, offset in cur.execute(select):
+    for linear_biases, quadratic_biases, num_nodes, edges, offset, is_uniform in cur.execute(select):
         nodelist = list(range(num_nodes))
         edgelist = json.loads(edges)
         yield (nodelist, edgelist,
                _decode_linear_biases(linear_biases, nodelist),
                _decode_quadratic_biases(quadratic_biases, edgelist),
-               offset)
+               offset,
+               is_uniform)
 
 
 def _decode_linear_biases(linear_string, nodelist):
