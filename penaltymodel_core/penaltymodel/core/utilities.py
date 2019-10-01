@@ -216,6 +216,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
             return spin_bqm.change_vartype(dimod.BINARY)
         bqm = pmodel.model.change_vartype(dimod.SPIN)
 
+    # TODO: could probably put the matrix construction in its own function
     # Set up
     # Note: Linear labels are ordered such that decision variables start first;
     #   that way, when the state matrix is returned, the initial columns of the
