@@ -298,7 +298,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
     if 'min_linear_bias' not in encoded_data:
         encoded_data['min_linear_bias'] = min(itervalues(linear), default=0)
     if 'is_uniform' not in encoded_data:
-        encoded_data['is_uniform']
+        encoded_data['is_uniform'] = False #TODO: do this based on the bqm we're getting
 
     insert = \
         """
@@ -405,7 +405,7 @@ def iter_ising_model(cur):
     """
     select = \
         """
-        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset, is_uniform,
+        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset, is_uniform
         FROM ising_model, graph
         WHERE graph.id = ising_model.graph_id;
         """
