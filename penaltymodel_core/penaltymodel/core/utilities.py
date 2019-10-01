@@ -333,4 +333,9 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
                               ground_energy=pmodel.ground_energy,
                               ising_linear_ranges=pmodel.ising_linear_ranges,
                               ising_quadratic_ranges=pmodel.ising_quadratic_ranges)
+
+    # By construction, the model's decision configuration is unique, therefore,
+    # the configuration is uniform
+    new_pmodel.is_uniform = True
+
     return new_pmodel
