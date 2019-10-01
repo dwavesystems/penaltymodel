@@ -174,6 +174,9 @@ class TestPenaltyModelBalance(unittest.TestCase):
             self.assertIn(state, original_pmodel.feasible_configurations,
                           msg="{} is not a feasible configuration".format(state))
 
+        # Check is_uniform flag
+        self.assertTrue(balanced_pmodel.is_uniform)
+
     def test_balance_with_empty_penaltymodel(self):
         # Build a penaltymodel with an empty bqm
         vartype = dimod.SPIN
@@ -192,6 +195,29 @@ class TestPenaltyModelBalance(unittest.TestCase):
 
     def test_balance_with_impossible_model(self):
         pass
+
+    def test_balance_with_already_balanced_model(self):
+        """Test balance on an already balanced NOT-gate penaltymodel
+        """
+        # Set up
+        g = nx.Graph([('in', 'out')])
+        decision_variables = ['in', 'out']
+        linear_biases = {}
+        quadratic_biases = {('in', 'out'): 1}
+        feasible_config = {(-1, +1), (+1, -1)}  # not-gate
+        vartype = dimod.SPIN
+        offset = 0
+
+        # Construct a balanced BQM to put in penaltymodel
+        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
+
+        # Construct and rebalance penaltymodel
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config, vartype, model,
+                                 classical_gap=2, ground_energy=0)
+        new_pmodel = get_balanced(pmodel)
+
+        self.assertEqual(model, new_pmodel.model)
+        self.assertTrue(new_pmodel.is_uniform)
 
     def test_balance_with_qubo(self):
         decision_variables = ['a', 'b']
