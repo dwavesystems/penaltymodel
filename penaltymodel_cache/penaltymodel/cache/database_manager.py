@@ -260,7 +260,8 @@ def _decode_config(c, num_variables):
     return tuple(bits(c))
 
 
-def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data=None):
+def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
+                       is_uniform=None, encoded_data=None):
     """Insert an Ising model into the cache.
 
     Args:
@@ -271,11 +272,15 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
         linear (dict): The linear bias associated with each node in nodelist.
         quadratic (dict): The quadratic bias associated with teach edge in edgelist.
         offset (float): The constant offset applied to the ising problem.
+        is_uniform (bool): Whether the number of configurations is uniform
         encoded_data (dict, optional): If a dictionary is provided, it
             will be populated with the serialized data. This is useful for
             preventing encoding the same information many times.
 
     """
+    if is_uniform is None:
+        is_uniform = False
+
     if encoded_data is None:
         encoded_data = {}
 
@@ -298,7 +303,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
     if 'min_linear_bias' not in encoded_data:
         encoded_data['min_linear_bias'] = min(itervalues(linear), default=0)
     if 'is_uniform' not in encoded_data:
-        encoded_data['is_uniform'] = False #TODO: do this based on the bqm we're getting
+        encoded_data['is_uniform'] = is_uniform #TODO: do this based on the bqm we're getting
 
     insert = \
         """
