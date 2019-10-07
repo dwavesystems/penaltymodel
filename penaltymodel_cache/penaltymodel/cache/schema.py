@@ -88,6 +88,7 @@ schema = \
         min_quadratic_bias,
         max_linear_bias,
         min_linear_bias,
+        is_uniform,
 
         decision_variables,
         classical_gap,

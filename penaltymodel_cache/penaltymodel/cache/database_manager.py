@@ -261,7 +261,7 @@ def _decode_config(c, num_variables):
 
 
 def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
-                       is_uniform=None, encoded_data=None):
+                       encoded_data=None, is_uniform=None):
     """Insert an Ising model into the cache.
 
     Args:
@@ -279,7 +279,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
 
     """
     if is_uniform is None:
-        is_uniform = False
+        is_uniform = 0
 
     if encoded_data is None:
         encoded_data = {}
@@ -571,6 +571,7 @@ def iter_penalty_model_from_specification(cur, specification):
 
     encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
     encoded_data['classical_gap'] = json.dumps(specification.min_classical_gap, separators=(',', ':'))
+    encoded_data['is_uniform'] = 0 #TODO: REMOVE HARDCODE
 
     select = \
         """
@@ -580,7 +581,8 @@ def iter_penalty_model_from_specification(cur, specification):
             offset,
             decision_variables,
             classical_gap,
-            ground_energy
+            ground_energy,
+            is_uniform
         FROM penalty_model_view
         WHERE
             -- graph:
@@ -595,7 +597,9 @@ def iter_penalty_model_from_specification(cur, specification):
             -- decision variables:
             decision_variables = :decision_variables AND
             -- we could apply filters based on the energy ranges but in practice this seems slower
-            classical_gap >= :classical_gap
+            classical_gap >= :classical_gap AND
+            -- when is_strictly_uniform is 1 (True), is_uniform must be 1
+            is_uniform >= 0 -- :is_strictly_uniform, REMOVE HARDCODE
         ORDER BY classical_gap DESC;
         """
 

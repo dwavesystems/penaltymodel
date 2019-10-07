@@ -134,7 +134,7 @@ class TestDatabaseManager(unittest.TestCase):
             self.assertEqual(edgelist_, edgelist)
             self.assertEqual(linear_, linear)
             self.assertEqual(quadratic_, quadratic)
-            self.assertFalse(is_uniform_)  #TODO fix hardcoded is_uniform value
+            self.assertFalse(is_uniform_)
 
         with conn as cur:
             # reinsert
@@ -144,6 +144,52 @@ class TestDatabaseManager(unittest.TestCase):
 
             # should be only one and it should match
             self.assertEqual(len(ims), 1)
+
+    def test_is_uniform_flag_insert_retrieve(self):
+        """Test penaltymodels can be grabbed by is_uniform flag value
+        """
+        conn = self.clean_connection
+
+        nodelist = ['a', 'b', 'c']
+        edgelist = [('a', 'b'), ('a', 'c'), ('b', 'c')]
+        #graph = nx.complete_graph(3, nodelist)
+
+        uniform_linear = {'a': -1, 'b': -1, 'c': 0}
+        uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
+        uniform_offset = 1
+
+        nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
+        nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
+        nonuniform_offset = 1
+
+        with conn as cur:
+            pmc.insert_ising_model(cur, nodelist, edgelist, uniform_linear,
+                                   uniform_quadratic, uniform_offset,
+                                   is_uniform=True)
+            pmc.insert_ising_model(cur, nodelist, edgelist, nonuniform_linear,
+                                   nonuniform_quadratic, nonuniform_offset,
+                                   is_uniform=False)
+
+            models = list(pmc.iter_ising_model(cur))
+
+            # should be only one and it should match
+            self.assertEqual(len(models), 2)
+        """
+            (nodelist_, edgelist_, linear_, quadratic_, offset_, is_uniform_) = ims
+            self.assertEqual(nodelist_, nodelist)
+            self.assertEqual(edgelist_, edgelist)
+            #self.assertEqual(linear_, linear)
+            #self.assertEqual(quadratic_, quadratic)
+            self.assertFalse(is_uniform_)
+        with conn as cur:
+            # reinsert
+            pmc.insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset)
+
+            ims = list(pmc.iter_ising_model(cur))
+
+            # should be only one and it should match
+            self.assertEqual(len(ims), 1)
+        """
 
     def test_penalty_model_insert_retrieve(self):
         conn = self.clean_connection
