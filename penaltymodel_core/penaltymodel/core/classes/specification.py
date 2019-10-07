@@ -135,10 +135,15 @@ class Specification(object):
             This is a threshold value for the classical gap. It describes the minimum energy gap
             between the highest feasible state and the lowest infeasible state. Default value is 2.
 
+        is_uniform (bool):
+            Specifies whether or not the penaltymodel has uniform ground states. Note: if False,
+            penaltymodel is indifferent to uniformity. Default value is False.
+
     """
     @dimod.decorators.vartype_argument('vartype')
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
-                 ising_linear_ranges=None, ising_quadratic_ranges=None, min_classical_gap=2):
+                 ising_linear_ranges=None, ising_quadratic_ranges=None, min_classical_gap=2,
+                 is_uniform=None):
 
         #
         # graph
@@ -203,6 +208,12 @@ class Specification(object):
                               "feasible_configurations have values {}, "
                               "values permitted by vartype are {}.").format(seen_variable_types, vartype.value))
         self.vartype = vartype
+
+        if is_uniform is None:
+            is_uniform = False
+        if not isinstance(is_uniform, bool):
+            raise ValueError("is_uniform must be a bool")
+        self.is_uniform = is_uniform
 
     @staticmethod
     def _check_ising_linear_ranges(linear_ranges, graph):

@@ -279,7 +279,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
 
     """
     if is_uniform is None:
-        is_uniform = 0
+        is_uniform = False
 
     if encoded_data is None:
         encoded_data = {}
@@ -303,7 +303,7 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
     if 'min_linear_bias' not in encoded_data:
         encoded_data['min_linear_bias'] = min(itervalues(linear), default=0)
     if 'is_uniform' not in encoded_data:
-        encoded_data['is_uniform'] = is_uniform #TODO: do this based on the bqm we're getting
+        encoded_data['is_uniform'] = int(is_uniform)
 
     insert = \
         """
@@ -422,7 +422,7 @@ def iter_ising_model(cur):
                _decode_linear_biases(linear_biases, nodelist),
                _decode_quadratic_biases(quadratic_biases, edgelist),
                offset,
-               is_uniform)
+               bool(is_uniform))
 
 
 def _decode_linear_biases(linear_string, nodelist):
@@ -571,7 +571,7 @@ def iter_penalty_model_from_specification(cur, specification):
 
     encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
     encoded_data['classical_gap'] = json.dumps(specification.min_classical_gap, separators=(',', ':'))
-    encoded_data['is_uniform'] = 0 #TODO: REMOVE HARDCODE
+    encoded_data['is_uniform'] = int(specification.is_uniform)
 
     select = \
         """
@@ -598,8 +598,8 @@ def iter_penalty_model_from_specification(cur, specification):
             decision_variables = :decision_variables AND
             -- we could apply filters based on the energy ranges but in practice this seems slower
             classical_gap >= :classical_gap AND
-            -- when is_strictly_uniform is 1 (True), is_uniform must be 1
-            is_uniform >= 0 -- :is_strictly_uniform, REMOVE HARDCODE
+            -- when :is_uniform is 1 (True), is_uniform must be 1
+            is_uniform >= :is_uniform
         ORDER BY classical_gap DESC;
         """
 
