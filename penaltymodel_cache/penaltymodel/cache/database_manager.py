@@ -503,7 +503,7 @@ def insert_penalty_model(cur, penalty_model):
 
     insert_graph(cur, nodelist, edgelist, encoded_data)
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
-    insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data)
+    insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data, penalty_model.is_uniform)
 
     encoded_data['decision_variables'] = json.dumps(penalty_model.decision_variables, separators=(',', ':'))
     encoded_data['classical_gap'] = penalty_model.classical_gap
@@ -531,6 +531,7 @@ def insert_penalty_model(cur, penalty_model):
             ising_model.linear_biases = :linear_biases AND
             ising_model.quadratic_biases = :quadratic_biases AND
             ising_model.offset = :offset AND
+            ising_model.is_uniform = :is_uniform AND
             feasible_configurations.num_variables = :num_variables AND
             feasible_configurations.num_feasible_configurations = :num_feasible_configurations AND
             feasible_configurations.feasible_configurations = :feasible_configurations AND

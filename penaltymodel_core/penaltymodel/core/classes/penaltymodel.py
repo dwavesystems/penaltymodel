@@ -147,13 +147,14 @@ class PenaltyModel(Specification):
     """
     def __init__(self, graph, decision_variables, feasible_configurations, vartype,
                  model, classical_gap, ground_energy,
-                 ising_linear_ranges=None, ising_quadratic_ranges=None):
+                 ising_linear_ranges=None, ising_quadratic_ranges=None, is_uniform=None):
 
         Specification.__init__(self, graph, decision_variables, feasible_configurations,
                                vartype=vartype,
                                min_classical_gap=classical_gap,
                                ising_linear_ranges=ising_linear_ranges,
-                               ising_quadratic_ranges=ising_quadratic_ranges)
+                               ising_quadratic_ranges=ising_quadratic_ranges,
+                               is_uniform=is_uniform)
 
         if self.vartype != model.vartype:
             model = model.change_vartype(self.vartype)
@@ -190,7 +191,10 @@ class PenaltyModel(Specification):
             raise TypeError("expected ground_energy to be numeric")
         self.ground_energy = ground_energy
 
-        self.is_uniform = False
+        if is_uniform is None:
+            self.is_uniform = False
+        else:
+            self.is_uniform = is_uniform
 
     @classmethod
     def from_specification(cls, specification, model, classical_gap, ground_energy):
@@ -220,7 +224,8 @@ class PenaltyModel(Specification):
                    classical_gap,
                    ground_energy,
                    ising_linear_ranges=specification.ising_linear_ranges,
-                   ising_quadratic_ranges=specification.ising_quadratic_ranges)
+                   ising_quadratic_ranges=specification.ising_quadratic_ranges,
+                   is_uniform=specification.is_uniform)
 
     def __eq__(self, penalty_model):
         # other values are derived
