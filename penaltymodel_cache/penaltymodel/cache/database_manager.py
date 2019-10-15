@@ -261,7 +261,7 @@ def _decode_config(c, num_variables):
 
 
 def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
-                       encoded_data=None, is_uniform=None):
+                       is_uniform=False, encoded_data=None):
     """Insert an Ising model into the cache.
 
     Args:
@@ -278,9 +278,6 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
             preventing encoding the same information many times.
 
     """
-    if is_uniform is None:
-        is_uniform = False
-
     if encoded_data is None:
         encoded_data = {}
 
@@ -503,7 +500,9 @@ def insert_penalty_model(cur, penalty_model):
 
     insert_graph(cur, nodelist, edgelist, encoded_data)
     insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
-    insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data, penalty_model.is_uniform)
+    insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset,
+                       is_uniform=penalty_model.is_uniform,
+                       encoded_data=encoded_data)
 
     encoded_data['decision_variables'] = json.dumps(penalty_model.decision_variables, separators=(',', ':'))
     encoded_data['classical_gap'] = penalty_model.classical_gap
