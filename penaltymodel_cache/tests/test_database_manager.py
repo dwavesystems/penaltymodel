@@ -149,31 +149,37 @@ class TestDatabaseManager(unittest.TestCase):
         """
         conn = self.clean_connection
 
+        # Set up problem
         decision_variables = ['a', 'b']
         all_variables = decision_variables + ['c']
         G = nx.complete_graph(all_variables)
         feasible_config = {(-1, 1), (1, -1), (1, 1)}
+        common_specs = (G, decision_variables, feasible_config, dimod.SPIN)
 
+        # Set up uniform penaltymodel representation
         uniform_linear = {'a': -1, 'b': -1, 'c': 0}
         uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
         uniform_offset = 1
-        uniform_specification = pm.Specification(G, decision_variables, feasible_config, dimod.SPIN, is_uniform=True)
         uniform_model = dimod.BinaryQuadraticModel(uniform_linear, uniform_quadratic, 1.0, vartype=dimod.SPIN)
-        uniform_widget = pm.PenaltyModel.from_specification(uniform_specification, uniform_model, 2, 0)
+        uniform_spec = pm.Specification(*common_specs, is_uniform=True)
+        uniform_pm = pm.PenaltyModel.from_specification(uniform_spec, uniform_model, 2, 0)
 
+        # Set up nonuniform penaltymodel representation
         nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
         nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
         nonuniform_offset = 1
-        nonuniform_specification = pm.Specification(G, decision_variables, feasible_config, dimod.SPIN, is_uniform=False)
         nonuniform_model = dimod.BinaryQuadraticModel(nonuniform_linear, nonuniform_quadratic, 1.0, vartype=dimod.SPIN)
-        nonuniform_widget = pm.PenaltyModel.from_specification(nonuniform_specification, nonuniform_model, 2, 0)
+        nonuniform_spec = pm.Specification(*common_specs, is_uniform=False)
+        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
 
-        #TODO: do nodes and edges need to be sorted for insert?
+        # Test insert_ising uniform flag
         with conn as cur:
-            pmc.insert_ising_model(cur, list(G.nodes), list(G.edges), uniform_linear,
+            nodelist = sorted(G.nodes)
+            edgelist = sorted(sorted(edge) for edge in G.edges)
+            pmc.insert_ising_model(cur, nodelist, edgelist, uniform_linear,
                                    uniform_quadratic, uniform_offset,
                                    is_uniform=True)
-            pmc.insert_ising_model(cur, list(G.nodes), list(G.edges), nonuniform_linear,
+            pmc.insert_ising_model(cur, nodelist, edgelist, nonuniform_linear,
                                    nonuniform_quadratic, nonuniform_offset,
                                    is_uniform=False)
 
@@ -181,16 +187,21 @@ class TestDatabaseManager(unittest.TestCase):
             models = list(pmc.iter_ising_model(cur))
             self.assertEqual(len(models), 2)
 
+        # Test insert_penalty_model uniform flag
         with conn as cur:
-            pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_specification))
-            pmc.insert_penalty_model(cur, uniform_widget)
-            pmc.insert_penalty_model(cur, nonuniform_widget)
+            pmc.insert_penalty_model(cur, uniform_pm)
+            pmc.insert_penalty_model(cur, nonuniform_pm)
 
-            pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_specification))
+            # Case when uniformity is not a requirement
+            pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_spec))
             self.assertEqual(len(pms), 2)
+            self.assertTrue(nonuniform_pm in pms)
+            self.assertTrue(uniform_pm in pms)
 
-            pms = list(pmc.iter_penalty_model_from_specification(cur, uniform_specification))
+            # Case when uniformity is a requirement
+            pms = list(pmc.iter_penalty_model_from_specification(cur, uniform_spec))
             self.assertEqual(len(pms), 1)
+            self.assertEqual(pms[0], uniform_pm)
 
     def test_penalty_model_insert_retrieve(self):
         conn = self.clean_connection
