@@ -144,38 +144,25 @@ class TestDatabaseManager(unittest.TestCase):
             # should be only one and it should match
             self.assertEqual(len(ims), 1)
 
-    def test_is_uniform_flag_insert_retrieve(self):
-        """Test penaltymodels can be grabbed by is_uniform flag value
-        """
+    def test_ising_model_is_uniform_flag_insert_retrieve(self):
         conn = self.clean_connection
 
-        # Set up problem
-        decision_variables = ['a', 'b']
-        all_variables = decision_variables + ['c']
-        G = nx.complete_graph(all_variables)
-        feasible_config = {(-1, 1), (1, -1), (1, 1)}
-        common_specs = (G, decision_variables, feasible_config, dimod.SPIN)
+        # set up problem
+        G = nx.complete_graph(['a', 'b', 'c'])
+        nodelist = sorted(G.nodes)
+        edgelist = sorted(sorted(edge) for edge in G.edges)
 
-        # Set up uniform penaltymodel representation
+        # uniform ising model
         uniform_linear = {'a': -1, 'b': -1, 'c': 0}
         uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
         uniform_offset = 1
-        uniform_model = dimod.BinaryQuadraticModel(uniform_linear, uniform_quadratic, 1.0, vartype=dimod.SPIN)
-        uniform_spec = pm.Specification(*common_specs, is_uniform=True)
-        uniform_pm = pm.PenaltyModel.from_specification(uniform_spec, uniform_model, 2, 0)
 
-        # Set up nonuniform penaltymodel representation
+        # nonuniform ising model
         nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
         nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
         nonuniform_offset = 1
-        nonuniform_model = dimod.BinaryQuadraticModel(nonuniform_linear, nonuniform_quadratic, 1.0, vartype=dimod.SPIN)
-        nonuniform_spec = pm.Specification(*common_specs, is_uniform=False)
-        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
 
-        # Test insert_ising uniform flag
         with conn as cur:
-            nodelist = sorted(G.nodes)
-            edgelist = sorted(sorted(edge) for edge in G.edges)
             pmc.insert_ising_model(cur, nodelist, edgelist, uniform_linear,
                                    uniform_quadratic, uniform_offset,
                                    is_uniform=True)
@@ -187,18 +174,44 @@ class TestDatabaseManager(unittest.TestCase):
             models = list(pmc.iter_ising_model(cur))
             self.assertEqual(len(models), 2)
 
-        # Test insert_penalty_model uniform flag
+    def test_penaltymodel_is_uniform_flag_insert_retrieve(self):
+        """Test penaltymodels can be grabbed by is_uniform flag value
+        """
+        conn = self.clean_connection
+
+        # set up problem
+        decision_variables = ['a', 'b']
+        all_variables = decision_variables + ['c']
+        G = nx.complete_graph(all_variables)
+        feasible_config = {(-1, 1), (1, -1), (1, 1)}
+        common_specs = (G, decision_variables, feasible_config, dimod.SPIN)
+
+        # set up uniform penaltymodel representation
+        uniform_linear = {'a': -1, 'b': -1, 'c': 0}
+        uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
+        uniform_model = dimod.BinaryQuadraticModel(uniform_linear, uniform_quadratic, 1.0, vartype=dimod.SPIN)
+        uniform_spec = pm.Specification(*common_specs, is_uniform=True)
+        uniform_pm = pm.PenaltyModel.from_specification(uniform_spec, uniform_model, 2, 0)
+
+        # set up nonuniform penaltymodel representation
+        nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
+        nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
+        nonuniform_model = dimod.BinaryQuadraticModel(nonuniform_linear, nonuniform_quadratic, 1.0, vartype=dimod.SPIN)
+        nonuniform_spec = pm.Specification(*common_specs, is_uniform=False)
+        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
+
+        # test insert_penalty_model uniform flag
         with conn as cur:
             pmc.insert_penalty_model(cur, uniform_pm)
             pmc.insert_penalty_model(cur, nonuniform_pm)
 
-            # Case when uniformity is not a requirement
+            # case when uniformity is not a requirement
             pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_spec))
             self.assertEqual(len(pms), 2)
             self.assertTrue(nonuniform_pm in pms)
             self.assertTrue(uniform_pm in pms)
 
-            # Case when uniformity is a requirement
+            # case when uniformity is a requirement
             pms = list(pmc.iter_penalty_model_from_specification(cur, uniform_spec))
             self.assertEqual(len(pms), 1)
             self.assertEqual(pms[0], uniform_pm)
@@ -246,11 +259,11 @@ class TestDatabaseManager(unittest.TestCase):
         spec = pm.Specification(graph, decision_variables, and_gate_configurations, dimod.SPIN)
         widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
 
-        # Insert widget into database
+        # insert widget into database
         with conn as cur:
             pmc.insert_penalty_model(cur, widget)
 
-        # Test specifications with varying classical gap sizes
+        # test specifications with varying classical gap sizes
         max_gap = 2
         spec_same_gap = pm.Specification(graph, decision_variables, and_gate_configurations,
                                          dimod.SPIN, min_classical_gap=max_gap)
@@ -259,25 +272,25 @@ class TestDatabaseManager(unittest.TestCase):
         spec_larger_gap = pm.Specification(graph, decision_variables, and_gate_configurations,
                                            dimod.SPIN, min_classical_gap=max_gap+1)
 
-        # Find in database
+        # find in database
         with conn as cur:
-            # Search database for penalty models matching specifications
+            # search database for penalty models matching specifications
             pms_same_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_same_gap))
             pms_smaller_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_smaller_gap))
             pms_larger_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_larger_gap))
 
-            # Test specification that uses the max classical gap as its min_classical_gap
+            # test specification that uses the max classical gap as its min_classical_gap
             self.assertEqual(len(pms_same_gap), 1, 'Using max gap should return a penalty model.')
             widget_same_gap_, = pms_same_gap
             self.assertEqual(widget_same_gap_, widget)
 
-            # Specification uses a gap that is smaller than the expected max classical gap
+            # specification uses a gap that is smaller than the expected max classical gap
             self.assertEqual(len(pms_smaller_gap), 1, 'Using a gap that is less than the max gap'
                                                       ' should return a penalty model.')
             widget_smaller_gap_, = pms_smaller_gap
             self.assertEqual(widget_smaller_gap_, widget)
 
-            # Specification uses a gap that is larger than the expected max classical gap
-            # Note: classical gap constraint shouldn't be satisfied in this case
+            # specification uses a gap that is larger than the expected max classical gap
+            # note: classical gap constraint shouldn't be satisfied in this case
             self.assertEqual(len(pms_larger_gap), 0, 'Using a gap that exceeds the max gap should'
                                                      ' not return a penalty model.')
