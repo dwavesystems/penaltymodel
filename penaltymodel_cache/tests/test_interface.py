@@ -241,3 +241,35 @@ class TestInterfaceFunctions(unittest.TestCase):
         # retrieve model back from cache
         retrieved_model = pmc.get_penalty_model(spec, database=dbfile)
         self.assertEqual(pmodel, retrieved_model)
+
+    def test_uniform_penaltymodel_cache_miss(self):
+        """Testing the case when a uniform penaltymodel cannot be found"""
+        dbfile = self.database
+
+        # set up problem
+        decision_variables = ['a', 'b']
+        all_variables = decision_variables + ['c']
+        G = nx.complete_graph(all_variables)
+        feasible_config = {(-1, 1), (1, -1), (1, 1)}
+
+        # set up specifications
+        common_spec = (G, decision_variables, feasible_config, dimod.SPIN)
+        uniform_spec = pm.Specification(*common_spec, is_uniform=True)
+        nonuniform_spec = pm.Specification(*common_spec, is_uniform=False)
+
+        # set up nonuniform penaltymodel that satisfies the problem
+        linear = {'a': -.5, 'b': -.5, 'c': 0}
+        quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
+        nonuniform_model = dimod.BinaryQuadraticModel(linear, quadratic, 1.0, vartype=dimod.SPIN)
+        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
+
+        # cache miss
+        with self.assertRaises(pm.MissingPenaltyModel):
+            pmc.get_penalty_model(uniform_spec, database=dbfile)
+
+        # insert nonuniform penaltymodel
+        pmc.cache_penalty_model(nonuniform_pm, database=dbfile)
+
+        # Cache miss for uniform penaltymodel, but should find a non-uniform version
+        retrieved_pm = pmc.get_penalty_model(uniform_spec, database=dbfile)
+        self.assertEqual(retrieved_pm, nonuniform_pm)
