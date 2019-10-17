@@ -4,11 +4,17 @@ import numpy as np
 from scipy.optimize import linprog
 
 from penaltymodel.core import PenaltyModel
+from penaltymodel.core.constants import (DEFAULT_LINEAR_RANGE,
+                                         DEFAULT_QUADRATIC_RANGE)
 
 
-def get_balanced(pmodel, n_tries=100, tol=1e-12):
-    """
-    Returns a balanced penaltymodel
+def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
+    """Returns a uniform penaltymodel
+
+    pmodel(PenaltyModel): a penaltymodel
+    n_tries(int): number of attempts at making a uniform penaltymodel
+    tol(float): gap tolerance between uniform penaltymodel gap and
+      pmodel.min_classical_gap
     """
     # TODO: could probably put the matrix construction in its own function
     if not pmodel.model:
@@ -67,8 +73,8 @@ def get_balanced(pmodel, n_tries=100, tol=1e-12):
     # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
     #   hence that 2 * sum(largest_biases)
     # TODO remove default hardcoded bounds
-    bounds = [pmodel.ising_linear_ranges.get(label, (-2, 2)) for label in labels[:m_linear]]
-    bounds += [pmodel.ising_quadratic_ranges.get(x, (-1, 1)).get(y, (-1, 1)) for x, y in labels[m_linear:]]
+    bounds = [pmodel.ising_linear_ranges.get(label, DEFAULT_LINEAR_RANGE) for label in labels[:m_linear]]
+    bounds += [pmodel.ising_quadratic_ranges.get(x, DEFAULT_QUADRATIC_RANGE).get(y, DEFAULT_QUADRATIC_RANGE) for x, y in labels[m_linear:]]
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))  # Bound for offset
     bounds.append((pmodel.min_classical_gap, max_gap))  # Bound for gap.
