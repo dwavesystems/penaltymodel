@@ -37,6 +37,7 @@ Functions and Utilities
 from pkg_resources import iter_entry_points
 
 from penaltymodel.core.exceptions import FactoryException, ImpossiblePenaltyModel
+from penaltymodel.core.utilities import get_balanced
 
 __all__ = ['FACTORY_ENTRYPOINT', 'CACHE_ENTRYPOINT', 'get_penalty_model', 'penaltymodel_factory',
            'iter_factories', 'iter_caches']
@@ -71,6 +72,10 @@ def get_penalty_model(specification):
     for factory in iter_factories():
         try:
             pm = factory(specification)
+
+            if specification.is_uniform:
+                pm = get_balanced(pm)
+
         except ImpossiblePenaltyModel as e:
             # information about impossible models should be propagated
             raise e
