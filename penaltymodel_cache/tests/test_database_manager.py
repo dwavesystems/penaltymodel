@@ -21,6 +21,7 @@ import dimod
 
 import penaltymodel.cache as pmc
 
+
 class TestConnectionAndConfiguration(unittest.TestCase):
     """Test the creation of the database and tables"""
     def test_connection(self):
@@ -174,48 +175,6 @@ class TestDatabaseManager(unittest.TestCase):
             models = list(pmc.iter_ising_model(cur))
             self.assertEqual(len(models), 2)
 
-    def test_penaltymodel_is_uniform_flag_insert_retrieve(self):
-        """Test penaltymodels can be grabbed by is_uniform flag value
-        """
-        conn = self.clean_connection
-
-        # set up problem
-        decision_variables = ['a', 'b']
-        all_variables = decision_variables + ['c']
-        G = nx.complete_graph(all_variables)
-        feasible_config = {(-1, 1), (1, -1), (1, 1)}
-        common_specs = (G, decision_variables, feasible_config, dimod.SPIN)
-
-        # set up uniform penaltymodel representation
-        uniform_linear = {'a': -1, 'b': -1, 'c': 0}
-        uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
-        uniform_model = dimod.BinaryQuadraticModel(uniform_linear, uniform_quadratic, 1.0, vartype=dimod.SPIN)
-        uniform_spec = pm.Specification(*common_specs, is_uniform=True)
-        uniform_pm = pm.PenaltyModel.from_specification(uniform_spec, uniform_model, 2, 0)
-
-        # set up nonuniform penaltymodel representation
-        nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
-        nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
-        nonuniform_model = dimod.BinaryQuadraticModel(nonuniform_linear, nonuniform_quadratic, 1.0, vartype=dimod.SPIN)
-        nonuniform_spec = pm.Specification(*common_specs, is_uniform=False)
-        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
-
-        # test insert_penalty_model uniform flag
-        with conn as cur:
-            pmc.insert_penalty_model(cur, uniform_pm)
-            pmc.insert_penalty_model(cur, nonuniform_pm)
-
-            # case when uniformity is not a requirement
-            pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_spec))
-            self.assertEqual(len(pms), 2)
-            self.assertTrue(nonuniform_pm in pms)
-            self.assertTrue(uniform_pm in pms)
-
-            # case when uniformity is a requirement
-            pms = list(pmc.iter_penalty_model_from_specification(cur, uniform_spec))
-            self.assertEqual(len(pms), 1)
-            self.assertEqual(pms[0], uniform_pm)
-
     def test_penalty_model_insert_retrieve(self):
         conn = self.clean_connection
 
@@ -294,3 +253,45 @@ class TestDatabaseManager(unittest.TestCase):
             # note: classical gap constraint shouldn't be satisfied in this case
             self.assertEqual(len(pms_larger_gap), 0, 'Using a gap that exceeds the max gap should'
                                                      ' not return a penalty model.')
+
+    def test_penaltymodel_is_uniform_flag_insert_retrieve(self):
+        """Test penaltymodels can be grabbed by is_uniform flag value
+        """
+        conn = self.clean_connection
+
+        # set up problem
+        decision_variables = ['a', 'b']
+        all_variables = decision_variables + ['c']
+        G = nx.complete_graph(all_variables)
+        feasible_config = {(-1, 1), (1, -1), (1, 1)}
+        common_specs = (G, decision_variables, feasible_config, dimod.SPIN)
+
+        # set up uniform penaltymodel representation
+        uniform_linear = {'a': -1, 'b': -1, 'c': 0}
+        uniform_quadratic = {('a', 'b'): 1, ('a', 'c'): 0, ('b', 'c'): 0}
+        uniform_model = dimod.BinaryQuadraticModel(uniform_linear, uniform_quadratic, 1.0, vartype=dimod.SPIN)
+        uniform_spec = pm.Specification(*common_specs, is_uniform=True)
+        uniform_pm = pm.PenaltyModel.from_specification(uniform_spec, uniform_model, 2, 0)
+
+        # set up nonuniform penaltymodel representation
+        nonuniform_linear = {'a': -.5, 'b': -.5, 'c': 0}
+        nonuniform_quadratic = {('a', 'b'): 1, ('a', 'c'): .5, ('b', 'c'): .5}
+        nonuniform_model = dimod.BinaryQuadraticModel(nonuniform_linear, nonuniform_quadratic, 1.0, vartype=dimod.SPIN)
+        nonuniform_spec = pm.Specification(*common_specs, is_uniform=False)
+        nonuniform_pm = pm.PenaltyModel.from_specification(nonuniform_spec, nonuniform_model, 2, 0)
+
+        # test insert_penalty_model uniform flag
+        with conn as cur:
+            pmc.insert_penalty_model(cur, uniform_pm)
+            pmc.insert_penalty_model(cur, nonuniform_pm)
+
+            # case when uniformity is not a requirement
+            pms = list(pmc.iter_penalty_model_from_specification(cur, nonuniform_spec))
+            self.assertEqual(len(pms), 2)
+            self.assertTrue(nonuniform_pm in pms)
+            self.assertTrue(uniform_pm in pms)
+
+            # case when uniformity is a requirement
+            pms = list(pmc.iter_penalty_model_from_specification(cur, uniform_spec))
+            self.assertEqual(len(pms), 1)
+            self.assertEqual(pms[0], uniform_pm)
