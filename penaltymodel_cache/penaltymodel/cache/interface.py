@@ -63,11 +63,23 @@ def get_penalty_model(specification, database=None):
         conn = cache_connect(database)
 
     # get the penalty_model
+    # note: if specification.is_uniform is True and a penaltymodel is not found in cache, then
+    #   there is a second attempt to find a penaltymodel with similar specifications (i.e. with
+    #   uniformity no longer a requirement). This behaviour is a little odd but it is consistent
+    #   with the other penaltymodel factories as they don't consider the is_uniform property.
     with conn as cur:
         try:
             widget = next(iter_penalty_model_from_specification(cur, specification))
         except StopIteration:
             widget = None
+
+            if specification.is_uniform:
+                try:
+                    new_specification = specification.copy()
+                    new_specification.is_uniform = False
+                    widget = next(iter_penalty_model_from_specification(cur, new_specification))
+                except StopIteration:
+                    pass  # fall back on outer try-except widget value
 
     # close the connection
     conn.close()
