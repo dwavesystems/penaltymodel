@@ -38,7 +38,8 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Construct the states matrix
     # Construct linear portion of states matrix
-    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2), dtype=int)  # +2 for offset and gap cols
+    # Note: +2 columns in 'states' is for the offset and gap columns
+    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2), dtype=int)
     states[:, :m_linear] = np.array([list(x) for x in
                                      itertools.product({-1, 1}, repeat=m_linear)])
     states[:, -2] = 1  # column for offset
@@ -70,22 +71,26 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     cost_weights = np.zeros((1, states.shape[1]))
     cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
-    # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias, largest_bias],
-    #   hence that 2 * sum(largest_biases)
-    # TODO remove default hardcoded bounds
-    bounds = [pmodel.ising_linear_ranges.get(label, DEFAULT_LINEAR_RANGE) for label in labels[:m_linear]]
-    bounds += [pmodel.ising_quadratic_ranges.get(x, DEFAULT_QUADRATIC_RANGE).get(y, DEFAULT_QUADRATIC_RANGE) for x, y in labels[m_linear:]]
+    # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias,
+    #   largest_bias], hence that 2 * sum(largest_biases)
+    l_ranges = pmodel.ising_linear_ranges
+    q_ranges = pmodel.ising_quadratic_ranges
+    bounds = [l_ranges.get(l, DEFAULT_LINEAR_RANGE) for l in labels[:m_linear]]
+    bounds += [q_ranges.get(x, DEFAULT_QUADRATIC_RANGE).get(y, DEFAULT_QUADRATIC_RANGE)
+               for x, y in labels[m_linear:]]
     max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
     bounds.append((None, None))  # Bound for offset
     bounds.append((pmodel.min_classical_gap, max_gap))  # Bound for gap.
 
     # Determine duplicate decision states
-    # Note: we are forming a new matrix, decision_cols, which is made up of the decision
-    #   variable columns. We use decision_cols to bin like-feasible_states together (i.e. same
-    #   decision state values, potentially different aux values).
-    # Note2: using lexsort so that each row of decision_cols is treated as a single object with
-    #   primary, secondary, tertiary, etc key orders
-    # Note3: bins contains the index of the last item in each bin; these are the bin boundaries
+    # Note: we are forming a new matrix, decision_cols, which is made up of the
+    #   decision variable columns. We use decision_cols to bin like-feasible
+    #   states together (i.e. same decision state values, potentially different
+    #   aux values).
+    # Note2: using lexsort so that each row of decision_cols is treated as a
+    #   single object with primary, secondary, tertiary, etc key orders
+    # Note3: bins contains the index of the last item in each bin; these are the
+    #   bin boundaries
     decision_indices = [indices[label] for label in pmodel.decision_variables]
     decision_cols = feasible_states[:, decision_indices]
     sorted_indices = np.lexsort(decision_cols.T)
@@ -97,7 +102,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Get number of unique decision states and number of items in each bin
     n_uniques = bins.shape[0]
-    bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # +1 to account for zero-index
+    bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # +1 for zero-index
 
     # pmodel is already balanced.
     if len(set(bin_count)) == 1:
@@ -114,8 +119,9 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         is_unique[random_indices] = 1
 
         # Select which feasible states are unique
-        # Note: unique states do not have the 'gap' term in their linear equation, but duplicate
-        #   states do. Hence the 0 for unique states' gap column and -1 for that of duplicates.
+        # Note: unique states do not have the 'gap' term in their linear
+        #   equation, but duplicate states do. Hence the 0 for unique states'
+        #   gap column and -1 for that of duplicates.
         feasible_states[is_unique == 1, -1] = 0  # unique states' gap column
         feasible_states[is_unique == 0, -1] = -1  # duplicate states' gap column
         unique_feasible_states = feasible_states[is_unique == 1]
@@ -137,7 +143,8 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         if result.success and result_gap >= gap_threshold:
             break
     else:
-        raise ValueError('Unable to balance this penaltymodel, hence no changes will be made.')
+        raise ValueError('Unable to balance this penaltymodel, hence no changes'
+                         ' will be made.')
 
     # Parse result
     weights = result.x
@@ -148,8 +155,10 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Create BQM
     new_bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    new_bqm.add_variables_from((v, bias) for v, bias in zip(labels[:m_linear], h))
-    new_bqm.add_interactions_from((u, v, bias) for (u, v), bias in zip(labels[m_linear:], j))
+    new_bqm.add_variables_from((v, bias) for v, bias in
+                               zip(labels[:m_linear], h))
+    new_bqm.add_interactions_from((u, v, bias) for (u, v), bias in
+                                  zip(labels[m_linear:], j))
     new_bqm.add_offset(offset)
     new_bqm = convert_to_original_vartype(new_bqm)
 
