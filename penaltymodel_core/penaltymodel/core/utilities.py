@@ -80,6 +80,10 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     excited_states = states[energy > pmodel.ground_energy]
     feasible_states = states[energy <= pmodel.ground_energy]
 
+    if not feasible_states:
+        raise RuntimeError("no states with energies less than or equal to the"
+                           " ground_energy found")
+
     # Check for balance
     if len(feasible_states) == len(pmodel.feasible_configurations):
         return pmodel
