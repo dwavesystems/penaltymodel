@@ -5,6 +5,7 @@ import unittest
 import penaltymodel.core as pm
 from penaltymodel.core.utilities import get_uniform_penaltymodel
 
+
 class TestPenaltyModelBalance(unittest.TestCase):
     def check_balance(self, balanced_pmodel, original_pmodel, tol=10**-12):
         # Sample the balanced penaltymodel
@@ -16,15 +17,17 @@ class TestPenaltyModelBalance(unittest.TestCase):
         indices = [index_dict[dv] for dv in original_pmodel.decision_variables]
         decision_states = list(map(tuple, sample_states[:, indices]))
 
-        # Checking that the gap is larger than min_classical_gap with some tolerance
-        self.assertGreaterEqual(balanced_pmodel.classical_gap, original_pmodel.min_classical_gap - tol)
+        # Check that gap is larger than min_classical_gap with some tolerance
+        self.assertGreaterEqual(balanced_pmodel.classical_gap,
+                                original_pmodel.min_classical_gap - tol)
 
         # Check that there are no duplicates
         self.assertEqual(len(set(decision_states)), len(decision_states),
                          msg="There are duplicate states in balanced solution")
 
         # Check that we have the correct number of states
-        self.assertEqual(len(decision_states), len(original_pmodel.feasible_configurations),
+        self.assertEqual(len(decision_states),
+                         len(original_pmodel.feasible_configurations),
                          msg="Incorrect number of states in balanced solution")
 
         # Check that all states are valid
@@ -42,15 +45,15 @@ class TestPenaltyModelBalance(unittest.TestCase):
         feasible_configurations = {(-1, -1), (1, 1)}
         classical_gap = 2
         ground_energy = 0
-        pmodel = pm.PenaltyModel(graph, decision_variables, feasible_configurations, vartype,
-                                 empty_model, classical_gap, ground_energy)
+        pmodel = pm.PenaltyModel(graph, decision_variables,
+                                 feasible_configurations, vartype, empty_model,
+                                 classical_gap, ground_energy)
 
         with self.assertRaises(ValueError):
             get_uniform_penaltymodel(pmodel, n_tries=10)
 
     def test_balance_with_impossible_model(self):
-        """Test impossible to further balance
-        """
+        """Test impossible to further balance"""
         """
         # Set up
         g = nx.Graph([('a', 'b', 'c')])
@@ -73,8 +76,7 @@ class TestPenaltyModelBalance(unittest.TestCase):
         pass
 
     def test_balance_with_already_balanced_model(self):
-        """Test balance on an already balanced NOT-gate penaltymodel
-        """
+        """Test balance on an already balanced NOT-gate penaltymodel"""
         # Set up
         g = nx.Graph([('in', 'out')])
         decision_variables = ['in', 'out']
@@ -85,11 +87,13 @@ class TestPenaltyModelBalance(unittest.TestCase):
         offset = 0
 
         # Construct a balanced BQM to put in penaltymodel
-        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
+        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases,
+                                           offset, vartype)
 
         # Construct and rebalance penaltymodel
-        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config, vartype, model,
-                                 classical_gap=2, ground_energy=0)
+        pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
+                                 vartype, model, classical_gap=2,
+                                 ground_energy=0)
         new_pmodel = get_uniform_penaltymodel(pmodel)
 
         self.assertEqual(model, new_pmodel.model)
@@ -103,18 +107,19 @@ class TestPenaltyModelBalance(unittest.TestCase):
         g = nx.complete_graph(decision_variables)
 
         model = dimod.BinaryQuadraticModel({'a': -1, 'b': 0.5, 'c': -.5},
-                                           {'ab': 1, 'bc': -1, 'ac': 0.5}, 0, vartype)
+                                           {'ab': 1, 'bc': -1, 'ac': 0.5},
+                                           0, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
         new_pmodel = get_uniform_penaltymodel(pmodel)
         self.check_balance(new_pmodel, pmodel)
 
     def test_balance_with_ising(self):
-        #TODO: perhaps a shorter problem for unit tests? but this IS representative
         # Constructing three-input AND-gate graph
         decision_variables = ['in0', 'in1', 'in2', 'out']
         g = nx.Graph([('in0', 'out'), ('in1', 'out'), ('in2', 'out')])
-        aux_edges = [(dv, aux) for dv in decision_variables for aux in ['aux0', 'aux1']]
+        aux_edges = [(dv, aux) for dv in decision_variables for aux
+                     in ['aux0', 'aux1']]
         g.add_edges_from(aux_edges)
 
         # Construct an imbalanced penaltymodel of the above AND-gate
@@ -139,7 +144,8 @@ class TestPenaltyModelBalance(unittest.TestCase):
         ground_energy = 0
         tol = 1e-12
 
-        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases, offset, vartype)
+        model = dimod.BinaryQuadraticModel(linear_biases, quadratic_biases,
+                                           offset, vartype)
         pmodel = pm.PenaltyModel(g, decision_variables, feasible_config,
                                  vartype, model, classical_gap, ground_energy)
 
