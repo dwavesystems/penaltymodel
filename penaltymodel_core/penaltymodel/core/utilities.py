@@ -11,6 +11,9 @@ from penaltymodel.core.constants import (DEFAULT_LINEAR_RANGE,
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     """Returns a uniform penaltymodel
 
+    Note: if pmodel is already uniform, it will simply return the pmodel.
+    Otherwise, a pmodel with unique ground states is returned.
+
     pmodel(PenaltyModel): a penaltymodel
     n_tries(int): number of attempts at making a uniform penaltymodel
     tol(float): gap tolerance between uniform penaltymodel gap and
