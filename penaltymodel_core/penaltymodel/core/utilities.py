@@ -164,8 +164,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         if result.success and result_gap >= gap_threshold:
             break
     else:
-        raise ValueError('Unable to balance this penaltymodel, hence no changes'
-                         ' will be made.')
+        raise ValueError('Unable to balance this penaltymodel')
 
     # Parse result
     weights = result.x
