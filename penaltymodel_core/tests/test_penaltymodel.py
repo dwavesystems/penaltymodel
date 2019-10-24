@@ -137,3 +137,15 @@ class TestPenaltyModel(unittest.TestCase):
             copy_widget = widget.relabel_variables(mapping, inplace=False)
             inv_copy = copy_widget.relabel_variables(inv_mapping, inplace=False)
             self.assertEqual(inv_copy, original_widget)
+
+    def test_bqm_and_graph_label_matching(self):
+        vartype = dimod.BINARY
+        bqm = dimod.BinaryQuadraticModel({'a': -1, 'b': 0}, {('c', 'a'): 0}, 0,
+                                         vartype)
+        g1 = nx.complete_graph(['a', 1, 2])
+        g2 = nx.complete_graph(['a', 'b', 'c'])
+
+        with self.assertRaises(ValueError):
+            pm.PenaltyModel(g1, ['a'], {(0, )}, vartype, bqm, 2, 0)
+
+        pm.PenaltyModel(g2, ['a'], {(0, )}, vartype, bqm, 2, 0)
