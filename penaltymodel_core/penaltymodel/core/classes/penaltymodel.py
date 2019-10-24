@@ -173,7 +173,7 @@ class PenaltyModel(Specification):
 
         if not isinstance(model, BinaryQuadraticModel):
             raise TypeError("expected 'model' to be a BinaryQuadraticModel")
-        if set(model.variables) != set(graph.nodes):
+        if set(model.variables).symmetric_difference(graph.nodes):
             raise ValueError("model labels must match graph node labels")
         self.model = model
 
