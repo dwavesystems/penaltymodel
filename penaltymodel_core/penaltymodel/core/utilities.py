@@ -13,13 +13,22 @@
 # limitations under the License.
 
 import dimod
+import functools
 import itertools
 import numpy as np
+import random
 from scipy.optimize import linprog
 
 from penaltymodel.core import PenaltyModel
 from penaltymodel.core.constants import (DEFAULT_LINEAR_RANGE,
                                          DEFAULT_QUADRATIC_RANGE)
+
+
+def random_indices_generator(bin_sizes, n_tries):
+    """Generate random indices such that there is one index picked from each bin"""
+    for _ in range(n_tries):
+        random_tuple = (random.randint(0, bin_size) for bin_size in bin_sizes)
+        yield random_tuple
 
 
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
@@ -131,10 +140,14 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Attempt to find solution
     gap_threshold = max(pmodel.min_classical_gap - tol, 0)
-    for _ in range(n_tries):
-        # Generate random indices such that there is one index picked from each bin
-        random_indices = np.random.rand(n_uniques) * bin_count
-        random_indices = np.floor(random_indices).astype(np.int)
+    n_possibilities = functools.reduce(lambda a, b: a*b, bin_count)
+    if n_possibilities <= n_tries:
+        index_gen = itertools.product(*(range(x) for x in bin_count))
+    else:
+        index_gen = random_indices_generator(bins, n_tries)
+
+    for random_indices in index_gen:
+        random_indices = np.array(random_indices)
         random_indices[1:] += (bins[:-1] + 1)  # add bin offsets; +1 to negate bins' zero-index
         is_unique = np.zeros(feasible_states.shape[0], dtype=int)
         is_unique[random_indices] = 1
