@@ -141,7 +141,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Set up
     linear_labels = list(bqm.linear.keys())
-    quadratic_labels = list(bqm.linear.keys())
+    quadratic_labels = list(bqm.quadratic.keys())
     states, labels = get_ordered_state_matrix(linear_labels, quadratic_labels)
 
     # Construct biases and energy vectors
