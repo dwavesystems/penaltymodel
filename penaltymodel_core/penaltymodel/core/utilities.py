@@ -32,7 +32,7 @@ def random_indices_generator(bin_sizes, n_tries):
         yield random_tuple
 
 
-def get_state_matrix(linear_labels, quadratic_labels):
+def get_ordered_state_matrix(linear_labels, quadratic_labels):
     m_linear = len(linear_labels)
     m_quadratic = len(quadratic_labels)
 
@@ -54,7 +54,8 @@ def get_state_matrix(linear_labels, quadratic_labels):
         ab_ind = indices[(a, b)]
         states[:, ab_ind] = states[:, a_ind] * states[:, b_ind]
 
-    return states, labels
+    ordered_states = states
+    return ordered_states, labels
 
 
 def get_bias_vector(linear_bias_dict, quadratic_bias_dict, bias_order, offset=0):
@@ -77,6 +78,34 @@ def get_bias_vector(linear_bias_dict, quadratic_bias_dict, bias_order, offset=0)
     biases.append(offset)
 
     return np.array(biases)
+
+
+# TODO: this function might be overly specific
+def get_bounds(linear_ranges, quadratic_ranges, order, min_classical_gap,
+               default_linear_range=DEFAULT_LINEAR_RANGE,
+               default_quadratic_range=DEFAULT_QUADRATIC_RANGE):
+    # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias,
+    #   largest_bias], hence that 2 * sum(largest_biases)
+    lr = linear_ranges
+    qr = quadratic_ranges
+    default_lr = default_linear_range
+    default_qr = default_quadratic_range
+
+    bounds = []
+    for k in order:
+        if isinstance(k, tuple) and len(k) == 2 and k[0] != k[1]:
+            quadratic_bias_bound = qr.get(k[0], default_qr).get(k[1], default_qr)
+            bounds.append(quadratic_bias_bound)
+            continue
+
+        linear_bias_bound = lr.get(k, default_lr)
+        bounds.append(linear_bias_bound)
+
+    max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
+    bounds.append((None, None))  # Bound for offset
+    bounds.append((min_classical_gap, max_gap))  # Bound for gap.
+
+    return bounds
 
 
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
@@ -106,7 +135,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Set up
     m_linear = len(bqm.linear)
-    states, labels = get_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
+    states, labels = get_ordered_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
 
     # Construct biases and energy vectors
     biases = get_bias_vector(bqm.linear, bqm.quadratic, labels, bqm.offset)
@@ -128,16 +157,8 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     cost_weights = np.zeros((1, states.shape[1]))
     cost_weights[0, -1] = -1  # Only interested in maximizing the gap
 
-    # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias,
-    #   largest_bias], hence that 2 * sum(largest_biases)
-    l_ranges = pmodel.ising_linear_ranges
-    q_ranges = pmodel.ising_quadratic_ranges
-    bounds = [l_ranges.get(l, DEFAULT_LINEAR_RANGE) for l in labels[:m_linear]]
-    bounds += [q_ranges.get(x, DEFAULT_QUADRATIC_RANGE).get(y, DEFAULT_QUADRATIC_RANGE)
-               for x, y in labels[m_linear:]]
-    max_gap = 2 * sum(max(abs(lbound), abs(ubound)) for lbound, ubound in bounds)
-    bounds.append((None, None))  # Bound for offset
-    bounds.append((pmodel.min_classical_gap, max_gap))  # Bound for gap.
+    bounds = get_bounds(pmodel.ising_linear_ranges, pmodel.ising_quadratic_ranges,
+                        labels, pmodel.min_classical_gap)
 
     # Determine duplicate decision states
     # Note: we are forming a new matrix, decision_cols, which is made up of the
