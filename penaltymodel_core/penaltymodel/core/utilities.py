@@ -33,6 +33,12 @@ def random_indices_generator(bin_sizes, n_tries):
 
 
 def get_ordered_state_matrix(linear_labels, quadratic_labels):
+    """Returns a state matrix following the order of [linear_labels, quadratic_labels]"""
+    if not isinstance(linear_labels, list):
+        raise TypeError("Linear labels must be contained in a list")
+    if not isinstance(quadratic_labels, list):
+        raise TypeError("Linear labels must be contained in a list")
+
     m_linear = len(linear_labels)
     m_quadratic = len(quadratic_labels)
 
@@ -46,7 +52,7 @@ def get_ordered_state_matrix(linear_labels, quadratic_labels):
     states[:, -1] = -1  # column for gap
 
     # Construct quadratic portion of states matrix
-    labels = list(linear_labels) + list(quadratic_labels)
+    labels = linear_labels + quadratic_labels
     indices = {k: i for i, k in enumerate(labels)}  # map labels to column index
     for a, b in quadratic_labels:
         a_ind = indices[a]
@@ -134,8 +140,9 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         bqm = pmodel.model.change_vartype(dimod.SPIN)
 
     # Set up
-    m_linear = len(bqm.linear)
-    states, labels = get_ordered_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
+    linear_labels = list(bqm.linear.keys())
+    quadratic_labels = list(bqm.linear.keys())
+    states, labels = get_ordered_state_matrix(linear_labels, quadratic_labels)
 
     # Construct biases and energy vectors
     biases = get_bias_vector(bqm.linear, bqm.quadratic, labels, bqm.offset)
@@ -160,6 +167,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     bounds = get_bounds(pmodel.ising_linear_ranges, pmodel.ising_quadratic_ranges,
                         labels, pmodel.min_classical_gap)
 
+    # TODO: force states to be ordered?
     # Determine duplicate decision states
     # Note: we are forming a new matrix, decision_cols, which is made up of the
     #   decision variable columns. We use decision_cols to bin like-feasible
@@ -169,11 +177,12 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     #   single object with primary, secondary, tertiary, etc key orders
     # Note3: bins contains the index of the last item in each bin; these are the
     #   bin boundaries
-    decision_indices = [i for i, label in enumerate(labels) if label in pmodel.decision_variables]
+    decision_indices = [i for i, label in enumerate(linear_labels)
+                        if label in pmodel.decision_variables]
     decision_cols = feasible_states[:, decision_indices]
-    sorted_indices = np.lexsort(decision_cols.T)
-    decision_cols = decision_cols[sorted_indices, :]
-    feasible_states = feasible_states[sorted_indices, :]
+    # sorted_indices = np.lexsort(decision_cols.T)
+    # decision_cols = decision_cols[sorted_indices, :]
+    # feasible_states = feasible_states[sorted_indices, :]
     bins = (decision_cols[:-1, :] != decision_cols[1:, :]).any(axis=1)
     bins = np.append(bins, True)  # Marking the end of the last bin
     bins = np.nonzero(bins)[0]
@@ -194,11 +203,11 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     else:
         index_gen = random_indices_generator(bins, n_tries)
 
-    for random_indices in index_gen:
-        random_indices = np.array(random_indices)
-        random_indices[1:] += (bins[:-1] + 1)  # add bin offsets; +1 to negate bins' zero-index
+    for row_indices in index_gen:
+        row_indices = np.array(row_indices)
+        row_indices[1:] += (bins[:-1] + 1)  # add bin offsets; +1 to negate bins' zero-index
         is_unique = np.zeros(feasible_states.shape[0], dtype=int)
-        is_unique[random_indices] = 1
+        is_unique[row_indices] = 1
 
         # Select which feasible states are unique
         # Note: unique states do not have the 'gap' term in their linear
@@ -229,17 +238,16 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Parse result
     weights = result.x
-    h = weights[:m_linear]
-    j = weights[m_linear:-2]
+    h = weights[:len(linear_labels)]
+    j = weights[len(linear_labels):-2]
     offset = weights[-2]
     gap = weights[-1]
 
     # Create BQM
     new_bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
-    new_bqm.add_variables_from((v, bias) for v, bias in
-                               zip(labels[:m_linear], h))
+    new_bqm.add_variables_from((v, bias) for v, bias in zip(linear_labels, h))
     new_bqm.add_interactions_from((u, v, bias) for (u, v), bias in
-                                  zip(labels[m_linear:], j))
+                                  zip(quadratic_labels, j))
     new_bqm.add_offset(offset)
     new_bqm = convert_to_original_vartype(new_bqm)
 
