@@ -84,10 +84,6 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
 
     # Set up
     m_linear = len(bqm.linear)
-    m_quadratic = len(bqm.quadratic)
-    labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
-    indices = {k: i for i, k in enumerate(labels)}  # map labels to column index
-
     states, labels = get_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
 
     # Construct biases and energy vectors
@@ -132,7 +128,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     #   single object with primary, secondary, tertiary, etc key orders
     # Note3: bins contains the index of the last item in each bin; these are the
     #   bin boundaries
-    decision_indices = [indices[label] for label in pmodel.decision_variables]
+    decision_indices = [i for i, label in enumerate(labels) if label in pmodel.decision_variables]
     decision_cols = feasible_states[:, decision_indices]
     sorted_indices = np.lexsort(decision_cols.T)
     decision_cols = decision_cols[sorted_indices, :]
