@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 import dimod
 import functools
 import itertools
@@ -29,6 +30,31 @@ def random_indices_generator(bin_sizes, n_tries):
     for _ in range(n_tries):
         random_tuple = (random.randint(0, bin_size) for bin_size in bin_sizes)
         yield random_tuple
+
+
+def get_state_matrix(linear_labels, quadratic_labels):
+    m_linear = len(linear_labels)
+    m_quadratic = len(quadratic_labels)
+
+    # Construct the states matrix
+    # Construct linear portion of states matrix
+    # Note: +2 columns in 'states' is for the offset and gap columns
+    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2), dtype=int)
+    states[:, :m_linear] = np.array([list(x) for x in
+                                     itertools.product({-1, 1}, repeat=m_linear)])
+    states[:, -2] = 1  # column for offset
+    states[:, -1] = -1  # column for gap
+
+    # Construct quadratic portion of states matrix
+    labels = list(linear_labels) + list(quadratic_labels)
+    indices = {k: i for i, k in enumerate(labels)}  # map labels to column index
+    for a, b in quadratic_labels:
+        a_ind = indices[a]
+        b_ind = indices[b]
+        ab_ind = indices[(a, b)]
+        states[:, ab_ind] = states[:, a_ind] * states[:, b_ind]
+
+    return states, labels
 
 
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
@@ -62,21 +88,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     labels = list(bqm.linear.keys()) + list(bqm.quadratic.keys())
     indices = {k: i for i, k in enumerate(labels)}  # map labels to column index
 
-    # Construct the states matrix
-    # Construct linear portion of states matrix
-    # Note: +2 columns in 'states' is for the offset and gap columns
-    states = np.empty((2 ** m_linear, m_linear + m_quadratic + 2), dtype=int)
-    states[:, :m_linear] = np.array([list(x) for x in
-                                     itertools.product({-1, 1}, repeat=m_linear)])
-    states[:, -2] = 1  # column for offset
-    states[:, -1] = -1  # column for gap
-
-    # Construct quadratic portion of states matrix
-    for node0, node1 in bqm.quadratic.keys():
-        edge_ind = indices[(node0, node1)]
-        node0_ind = indices[node0]
-        node1_ind = indices[node1]
-        states[:, edge_ind] = states[:, node0_ind] * states[:, node1_ind]
+    states, labels = get_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
 
     # Construct biases and energy vectors
     biases = [bqm.linear[label] for label in labels[:m_linear]]
@@ -84,7 +96,6 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     biases += [bqm.offset]
     biases = np.array(biases)
     energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
-
     # Group states by threshold
     excited_states = states[energy > pmodel.ground_energy]
     feasible_states = states[energy <= pmodel.ground_energy]
