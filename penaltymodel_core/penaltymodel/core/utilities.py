@@ -57,6 +57,28 @@ def get_state_matrix(linear_labels, quadratic_labels):
     return states, labels
 
 
+def get_bias_vector(linear_bias_dict, quadratic_bias_dict, bias_order, offset=0):
+    if len(bias_order) != len(linear_bias_dict) + len(quadratic_bias_dict):
+        raise ValueError("The number of elements in the bias ordering does not"
+                         "equal the number of elements in the biases")
+
+    biases = []
+    for k in bias_order:
+        # Quadratic bias
+        if isinstance(k, tuple) and len(k) == 2 and k[0] != k[1]:
+            biases.append(quadratic_bias_dict[k])
+            continue
+
+        # Linear bias
+        # Note: the linear bias key could either be a single element or a
+        #  two-element tuple with identical elements
+        biases.append(linear_bias_dict[k])
+
+    biases.append(offset)
+
+    return np.array(biases)
+
+
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     """Returns a uniform penaltymodel
 
@@ -87,11 +109,9 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     states, labels = get_state_matrix(bqm.linear.keys(), bqm.quadratic.keys())
 
     # Construct biases and energy vectors
-    biases = [bqm.linear[label] for label in labels[:m_linear]]
-    biases += [bqm.quadratic[label] for label in labels[m_linear:]]
-    biases += [bqm.offset]
-    biases = np.array(biases)
+    biases = get_bias_vector(bqm.linear, bqm.quadratic, labels, bqm.offset)
     energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
+
     # Group states by threshold
     excited_states = states[energy > pmodel.ground_energy]
     feasible_states = states[energy <= pmodel.ground_energy]
