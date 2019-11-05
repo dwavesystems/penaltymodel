@@ -140,7 +140,12 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         bqm = pmodel.model.change_vartype(dimod.SPIN)
 
     # Set up
-    linear_labels = list(bqm.linear.keys())
+    # Note: Linear labels are ordered such that decision variables start first;
+    #   that way, when the state matrix is returned, the initial columns of the
+    #   state matrix will correspond to the decision variables. This will make
+    #   grouping states with the same feasible configurations much easier later on.
+    aux_variables = [k for k in bqm.linear.keys() if k not in pmodel.decision_variables]
+    linear_labels = list(pmodel.decision_variables) + aux_variables
     quadratic_labels = list(bqm.quadratic.keys())
     states, labels = get_ordered_state_matrix(linear_labels, quadratic_labels)
 

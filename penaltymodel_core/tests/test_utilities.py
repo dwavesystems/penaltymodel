@@ -70,7 +70,7 @@ class TestPenaltyModelBalance(unittest.TestCase):
         """Test impossible to further balance"""
         # Set up 3-input XOR gate
         decision_variables = ['a', 'b', 'c', 'd']
-        g = nx.complete_graph(decision_variables + ['a0', 'a1'])
+        g = nx.complete_graph(decision_variables + ['a1', 'a2'])
         feasible_config = [(1, 0, 0, 1),
                            (0, 1, 0, 1),
                            (0, 0, 1, 1),
