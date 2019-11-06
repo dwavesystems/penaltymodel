@@ -114,6 +114,23 @@ def get_bounds(linear_ranges, quadratic_ranges, order, min_classical_gap,
     return bounds
 
 
+def get_binned_indices(arr, step):
+    bins = []
+    bin_sizes = []
+    curr_bin = []
+
+    for i, v in enumerate(np.nditer(arr, order="K")):
+        if v > 0:
+            curr_bin.append(i)
+
+        if i % step == step-1 and curr_bin:
+            bins.append(curr_bin)
+            bin_sizes.append(len(curr_bin))
+            curr_bin = []
+
+    return bins, bin_sizes
+
+
 def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     """Returns a uniform penaltymodel
 
@@ -154,8 +171,12 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
 
     # Group states by threshold
-    excited_states = states[energy > pmodel.ground_energy]
-    feasible_states = states[energy <= pmodel.ground_energy]
+    feasible_flag = energy <= pmodel.ground_energy
+    feasible_states = states[feasible_flag]
+
+    # Bin auxiliary configs with the same decision configs together
+    step = 2**len(aux_variables)
+    bins, bin_sizes = get_binned_indices(feasible_flag, step)
 
     if len(feasible_states) == 0:
         raise RuntimeError("no states with energies less than or equal to the"
@@ -172,59 +193,27 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     bounds = get_bounds(pmodel.ising_linear_ranges, pmodel.ising_quadratic_ranges,
                         labels, pmodel.min_classical_gap)
 
-    # TODO: force states to be ordered?
-    # Determine duplicate decision states
-    # Note: we are forming a new matrix, decision_cols, which is made up of the
-    #   decision variable columns. We use decision_cols to bin like-feasible
-    #   states together (i.e. same decision state values, potentially different
-    #   aux values).
-    # Note2: using lexsort so that each row of decision_cols is treated as a
-    #   single object with primary, secondary, tertiary, etc key orders
-    # Note3: bins contains the index of the last item in each bin; these are the
-    #   bin boundaries
-    decision_indices = [i for i, label in enumerate(linear_labels)
-                        if label in pmodel.decision_variables]
-    decision_cols = feasible_states[:, decision_indices]
-    # sorted_indices = np.lexsort(decision_cols.T)
-    # decision_cols = decision_cols[sorted_indices, :]
-    # feasible_states = feasible_states[sorted_indices, :]
-    bins = (decision_cols[:-1, :] != decision_cols[1:, :]).any(axis=1)
-    bins = np.append(bins, True)  # Marking the end of the last bin
-    bins = np.nonzero(bins)[0]
-
-    # Get number of unique decision states and number of items in each bin
-    n_uniques = bins.shape[0]
-    bin_count = np.hstack((bins[0] + 1, bins[1:] - bins[:-1]))  # +1 for zero-index
-
-    # pmodel is already balanced.
-    if len(set(bin_count)) == 1:
-        return pmodel
-
     # Attempt to find solution
     gap_threshold = max(pmodel.min_classical_gap - tol, 0)
-    n_possibilities = functools.reduce(lambda a, b: a*b, bin_count)
+    n_possibilities = functools.reduce(lambda a, b: a*b, bin_sizes)
     if n_possibilities <= n_tries:
-        index_gen = itertools.product(*(range(x) for x in bin_count))
+        index_gen = itertools.product(*(range(x) for x in bin_sizes))
     else:
         index_gen = random_indices_generator(bins, n_tries)
 
     for row_indices in index_gen:
-        row_indices = np.array(row_indices)
-        row_indices[1:] += (bins[:-1] + 1)  # add bin offsets; +1 to negate bins' zero-index
-        is_unique = np.zeros(feasible_states.shape[0], dtype=int)
-        is_unique[row_indices] = 1
+        index = [bin[i] for i, bin in zip(row_indices, bins)]
 
-        # Select which feasible states are unique
-        # Note: unique states do not have the 'gap' term in their linear
-        #   equation, but duplicate states do. Hence the 0 for unique states'
-        #   gap column and -1 for that of duplicates.
-        feasible_states[is_unique == 1, -1] = 0  # unique states' gap column
-        feasible_states[is_unique == 0, -1] = -1  # duplicate states' gap column
-        unique_feasible_states = feasible_states[is_unique == 1]
-        duplicate_feasible_states = feasible_states[is_unique == 0]
+        is_unique = np.zeros(len(states))
+        is_unique[index] = 1
+
+        states[is_unique==1, -1] = 0
+        states[is_unique==0, -1] = -1
+        unique_feasible_states = states[is_unique==1, :]
+        new_excited_states = -states[is_unique==0, :]
 
         # Returns a Scipy OptimizeResult
-        new_excited_states = -np.vstack((excited_states, duplicate_feasible_states))
+        #new_excited_states = -np.vstack((excited_states, duplicate_feasible_states))
         result = linprog(cost_weights.flatten(),
                          A_eq=unique_feasible_states,
                          b_eq=np.zeros((unique_feasible_states.shape[0], 1)),
