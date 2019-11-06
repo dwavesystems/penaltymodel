@@ -142,7 +142,6 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     tol(float): gap tolerance between uniform penaltymodel gap and
       pmodel.min_classical_gap
     """
-    # TODO: could probably put the matrix construction in its own function
     if not pmodel.model:
         raise ValueError("There is no model to balance")
 
@@ -174,10 +173,6 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     feasible_flag = energy <= pmodel.ground_energy
     feasible_states = states[feasible_flag]
 
-    # Bin auxiliary configs with the same decision configs together
-    step = 2**len(aux_variables)
-    bins, bin_sizes = get_binned_indices(feasible_flag, step)
-
     if len(feasible_states) == 0:
         raise RuntimeError("no states with energies less than or equal to the"
                            " ground_energy found")
@@ -193,6 +188,10 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     bounds = get_bounds(pmodel.ising_linear_ranges, pmodel.ising_quadratic_ranges,
                         labels, pmodel.min_classical_gap)
 
+    # Bin auxiliary configs with the same decision configs together
+    step = 2**len(aux_variables)
+    bins, bin_sizes = get_binned_indices(feasible_flag, step)
+
     # Attempt to find solution
     gap_threshold = max(pmodel.min_classical_gap - tol, 0)
     n_possibilities = functools.reduce(lambda a, b: a*b, bin_sizes)
@@ -204,16 +203,15 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     for row_indices in index_gen:
         index = [bin[i] for i, bin in zip(row_indices, bins)]
 
-        is_unique = np.zeros(len(states))
-        is_unique[index] = 1
+        is_unique = np.zeros(len(states), dtype=bool)
+        is_unique[index] = True
 
-        states[is_unique==1, -1] = 0
-        states[is_unique==0, -1] = -1
-        unique_feasible_states = states[is_unique==1, :]
-        new_excited_states = -states[is_unique==0, :]
+        states[is_unique, -1] = 0
+        states[np.logical_not(is_unique), -1] = -1
+        unique_feasible_states = states[is_unique, :]
+        new_excited_states = -states[np.logical_not(is_unique), :]
 
         # Returns a Scipy OptimizeResult
-        #new_excited_states = -np.vstack((excited_states, duplicate_feasible_states))
         result = linprog(cost_weights.flatten(),
                          A_eq=unique_feasible_states,
                          b_eq=np.zeros((unique_feasible_states.shape[0], 1)),
