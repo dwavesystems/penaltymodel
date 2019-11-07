@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
-import dimod
 import functools
 import itertools
-import numpy as np
 import random
+
+import dimod
+import numpy as np
 from scipy.optimize import linprog
 
 from penaltymodel.core import PenaltyModel
@@ -169,16 +169,14 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     biases = get_bias_vector(bqm.linear, bqm.quadratic, labels, bqm.offset)
     energy = np.matmul(states[:, :-1], biases)  # Ignore last column; gap column
 
-    # Group states by threshold
+    # Determine feasible states with a flag
     feasible_flag = energy <= pmodel.ground_energy
-    feasible_states = states[feasible_flag]
-
-    if len(feasible_states) == 0:
+    if sum(feasible_flag) == 0:
         raise RuntimeError("no states with energies less than or equal to the"
                            " ground_energy found")
 
-    # Check for balance
-    if len(feasible_states) == len(pmodel.feasible_configurations):
+    # Check for uniqueness, which is trivially balanced
+    if sum(feasible_flag) == len(pmodel.feasible_configurations):
         return pmodel
 
     # Cost function
@@ -192,14 +190,17 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     step = 2**len(aux_variables)
     bins, bin_sizes = get_binned_indices(feasible_flag, step)
 
-    # Attempt to find solution
-    gap_threshold = max(pmodel.min_classical_gap - tol, 0)
+    # Determine index generator
+    # Either try all possible feasible combinations or try a random subset of
+    # combinations
     n_possibilities = functools.reduce(lambda a, b: a*b, bin_sizes)
     if n_possibilities <= n_tries:
         index_gen = itertools.product(*(range(x) for x in bin_sizes))
     else:
         index_gen = random_indices_generator(bins, n_tries)
 
+    # Attempt to find solution
+    gap_threshold = max(pmodel.min_classical_gap - tol, 0)
     for row_indices in index_gen:
         index = [bin[i] for i, bin in zip(row_indices, bins)]
 
@@ -243,7 +244,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     new_bqm.add_offset(offset)
     new_bqm = convert_to_original_vartype(new_bqm)
 
-    # Copy and update
+    # Copy pmodel with updated bqm and gap
     new_pmodel = PenaltyModel(graph=pmodel.graph,
                               decision_variables=pmodel.decision_variables,
                               feasible_configurations=pmodel.feasible_configurations,
@@ -253,5 +254,4 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
                               ground_energy=pmodel.ground_energy,
                               ising_linear_ranges=pmodel.ising_linear_ranges,
                               ising_quadratic_ranges=pmodel.ising_quadratic_ranges)
-
     return new_pmodel
