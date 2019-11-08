@@ -14,11 +14,42 @@
 
 import dimod
 import networkx as nx
+import numpy as np
+import random
 import unittest
 
 import penaltymodel.core as pm
-from penaltymodel.core.utilities import get_uniform_penaltymodel
+from penaltymodel.core.utilities import (get_uniform_penaltymodel,
+                                         random_indices_generator,
+                                         get_ordered_state_matrix)
 
+
+class TestHelperFunctions(unittest.TestCase):
+    #TODO: empty case
+    def test_random_indices_generator(self):
+        random.seed(0)
+        expected = [(3, 1, 0), (2, 1, 6), (2, 1, 5), (1, 0, 4), (1, 0, 9)]
+
+        ind_gen = random_indices_generator([3, 1, 10], 5)
+        for ind, expected_ind in zip(ind_gen, expected):
+            self.assertTupleEqual(tuple(ind), expected_ind)
+
+    #TODO: possible quadratic with no linear?
+    def test_get_ordered_state_matrix(self):
+        """
+        linear_labels = ['a', 'b', 'c']
+        quadratic_labels = ['bc', 'ac']
+
+        expected_labels = linear_labels + quadratic_labels
+        ordered_states, column_labels = get_ordered_state_matrix(linear_labels,
+                                                                 quadratic_labels)
+
+        col_a = np.zeros(8)
+        col_a[4:] = 1
+
+        col_b = [0]*8
+        col_b[::]
+    """
 
 class TestPenaltyModelBalance(unittest.TestCase):
     def check_balance(self, balanced_pmodel, original_pmodel, tol=10**-12):
