@@ -100,7 +100,11 @@ def get_bounds(linear_ranges, quadratic_ranges, order, min_classical_gap,
     bounds = []
     for k in order:
         if isinstance(k, tuple) and len(k) == 2 and k[0] != k[1]:
-            quadratic_bias_bound = qr.get(k[0], default_qr).get(k[1], default_qr)
+            try:
+                quadratic_bias_bound = qr[k[0]][k[1]]
+            except KeyError:
+                quadratic_bias_bound = default_qr
+
             bounds.append(quadratic_bias_bound)
             continue
 
