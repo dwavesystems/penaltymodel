@@ -4,9 +4,10 @@ from setuptools import setup
 # add __version__, __author__, __authoremail__, __description__ to this namespace
 exec(open("./penaltymodel/core/package_info.py").read())
 
-install_requires = ['dimod>=0.6.3,<0.10.0',
+install_requires = ['dimod>=0.8.10,<0.10.0',
                     'six>=1.11.0,<2.0.0',
-                    'networkx>=2.0,<3.0'
+                    'networkx>=2.0,<3.0',
+                    'scipy>=1.3.0,<2.0.0'
                     ]
 
 extras_require = {'all': ['penaltymodel_cache>=0.3.0,<0.4.0',

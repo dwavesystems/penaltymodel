@@ -51,6 +51,7 @@ class TestHelperFunctions(unittest.TestCase):
         col_b[::]
     """
 
+
 class TestPenaltyModelBalance(unittest.TestCase):
     def check_balance(self, balanced_pmodel, original_pmodel, tol=10**-12):
         # Sample the balanced penaltymodel
