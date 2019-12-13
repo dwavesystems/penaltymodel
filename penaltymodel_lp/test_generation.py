@@ -30,7 +30,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             energy = bqm.energy(spin_state)
 
             if c == get_gate_output(a, b):
-                self.assertEqual(ground_energy, energy, "Failed for {}".format(spin_state))
+                self.assertAlmostEqual(ground_energy, energy, "Failed for {}".format(spin_state))
             else:
                 self.assertGreaterEqual(energy, ground_energy + min_gap,
                                         "Failed for {}".format(spin_state))
@@ -88,7 +88,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Lowering the min_classical_gap should allow a bqm to be found
         smaller_min_gap = 4
         bqm, gap = run_same_problem(smaller_min_gap)
-        self.assertEqual(smaller_min_gap, gap)
+        self.assertAlmostEqual(smaller_min_gap, gap)
 
     def test_linear_energy_range(self):
         # Test linear energy range
@@ -100,8 +100,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                                    linear_energy_ranges=linear_energy_range)
 
         # Verify that results match expected BQM
-        self.assertEqual(100, bqm.offset)
-        self.assertEqual(-4, bqm.linear['a'])   # linear bias falls within 'linear_energy_range'
+        self.assertAlmostEqual(100, bqm.offset)
+        self.assertAlmostEqual(-4, bqm.linear['a'])   # linear bias falls within 'linear_energy_range'
 
     def test_quadratic_energy_range(self):
         # Test quadratic energy range
@@ -114,15 +114,15 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                                    quadratic_energy_ranges=quadratic_energy_range)
 
         # Verify that results match expected BQM
-        self.assertEqual(42, bqm.offset)
-        self.assertEqual(-1, bqm.linear['a'])   # Bias within 'linear_energy_range'
-        self.assertEqual(2, bqm.linear['b'])    # Bias within 'linear_energy_range'
+        self.assertAlmostEqual(42, bqm.offset)
+        self.assertAlmostEqual(-1, bqm.linear['a'])   # Bias within 'linear_energy_range'
+        self.assertAlmostEqual(2, bqm.linear['b'])    # Bias within 'linear_energy_range'
 
         # Check that bias is within 'quadratic_energy_range'
         try:
-            self.assertEqual(-123, bqm.quadratic[('a', 'b')])
+            self.assertAlmostEqual(-123, bqm.quadratic[('a', 'b')])
         except KeyError:
-            self.assertEqual(-123, bqm.quadratic[('b', 'a')])
+            self.assertAlmostEqual(-123, bqm.quadratic[('b', 'a')])
 
     def test_multi_energy_bqm(self):
         # Create BQM for fully determined configuration with no ground states
@@ -135,7 +135,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Verify BQM
         for (x, y), expected_energy in configurations.items():
             energy = bqm.energy({'x': x, 'y': y})
-            self.assertEqual(expected_energy, energy, "Failed for x:{}, y:{}".format(x, y))
+            self.assertAlmostEqual(expected_energy, energy, "Failed for x:{}, y:{}".format(x, y))
 
     def test_mixed_specification_truth_table(self):
         # Set a ground state and a valid state with an energy level
@@ -150,7 +150,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         for i, j, k in product([-1, 1], repeat=3):
             energy = bqm.energy({'x': i, 'y': j, 'z': k})
             if (i, j, k) in configurations.keys():
-                self.assertEqual(energy, configurations[(i, j, k)])
+                self.assertAlmostEqual(energy, configurations[(i, j, k)])
             else:
                 self.assertGreaterEqual(energy, 2)
 
@@ -161,19 +161,19 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         nodes = ['a', 'b']
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes)
 
-        self.assertEqual(gap, 2)
+        self.assertAlmostEqual(gap, 2)
 
         # Check specified config
         for a, b in config.keys():
             expected_energy = config[(a, b)]
             energy = bqm.energy({'a': a, 'b': b})
-            self.assertEqual(expected_energy, energy)
+            self.assertAlmostEqual(expected_energy, energy)
 
         # Check unspecified configuration
         # Namely, threshold is gap + max-config-energy (i.e. 2 + 1). Threshold should not be based
         # on gap + smallest-config-energy (i.e. 2 + 0).
         energy = bqm.energy({'a': -1, 'b': -1})
-        self.assertEqual(3, energy)
+        self.assertAlmostEqual(3, energy)
 
     def test_impossible_bqm(self):
         # Set up xor-gate
