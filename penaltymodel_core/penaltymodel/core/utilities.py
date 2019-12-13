@@ -233,8 +233,20 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     else:
         raise ValueError('Unable to balance this penaltymodel')
 
-    # Parse result
+    # Remove floating point rounding errors
+    # Note: I am not checking that the weight is within a certain epsilon
+    #   beyond the bound because if it passed the linear program (i.e. obeyed
+    #   the constraints), I am assuming the error is a small rounding issue.
     weights = result.x
+    for i, (weight, bound) in enumerate(zip(weights, bounds)):
+        lbound, ubound = bound
+
+        if lbound is not None:
+            weights[i] = max(weight, lbound)
+        if ubound is not None:
+            weights[i] = min(weight, ubound)
+
+    # Parse result
     h = weights[:len(linear_labels)]
     j = weights[len(linear_labels):-2]
     offset = weights[-2]
