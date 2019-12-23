@@ -21,7 +21,7 @@ import penaltymodel.lp as lp
 #TODO: add tests on satisfying min_gap. Currently, we're always checking that gap > 0, and passive
 # check that gap >= default 2.
 class TestPenaltyModelLinearProgramming(unittest.TestCase):
-    def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2, precision=7):
+    def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2, places=7):
         """Check that all equally valid gate inputs are at ground and that invalid values meet
         threshold (min_gap) requirement.
         """
@@ -30,12 +30,12 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             energy = bqm.energy(spin_state)
 
             if c == get_gate_output(a, b):
-                self.assertAlmostEqual(ground_energy, energy, places=precision,
+                self.assertAlmostEqual(ground_energy, energy, places=places,
                                        msg="Failed for {}".format(spin_state))
             else:
                 # We are rounding the energy so that we can do almost-equal-or-
                 # greater-than comparison
-                energy = round(energy, precision)
+                energy = round(energy, places)
                 self.assertGreaterEqual(energy, ground_energy + min_gap,
                                         "Failed for {}".format(spin_state))
 
