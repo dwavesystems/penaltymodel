@@ -21,7 +21,7 @@ import penaltymodel.lp as lp
 #TODO: add tests on satisfying min_gap. Currently, we're always checking that gap > 0, and passive
 # check that gap >= default 2.
 class TestPenaltyModelLinearProgramming(unittest.TestCase):
-    def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2):
+    def verify_gate_bqm(self, bqm, nodes, get_gate_output, ground_energy=0, min_gap=2, places=7):
         """Check that all equally valid gate inputs are at ground and that invalid values meet
         threshold (min_gap) requirement.
         """
@@ -30,8 +30,12 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
             energy = bqm.energy(spin_state)
 
             if c == get_gate_output(a, b):
-                self.assertAlmostEqual(ground_energy, energy, "Failed for {}".format(spin_state))
+                self.assertAlmostEqual(ground_energy, energy, places=places,
+                                       msg="Failed for {}".format(spin_state))
             else:
+                # We are rounding the energy so that we can do almost-equal-or-
+                # greater-than comparison
+                energy = round(energy, places)
                 self.assertGreaterEqual(energy, ground_energy + min_gap,
                                         "Failed for {}".format(spin_state))
 
@@ -135,7 +139,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Verify BQM
         for (x, y), expected_energy in configurations.items():
             energy = bqm.energy({'x': x, 'y': y})
-            self.assertAlmostEqual(expected_energy, energy, "Failed for x:{}, y:{}".format(x, y))
+            self.assertAlmostEqual(expected_energy, energy,
+                                   msg="Failed for x:{}, y:{}".format(x, y))
 
     def test_mixed_specification_truth_table(self):
         # Set a ground state and a valid state with an energy level
@@ -185,6 +190,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # penaltymodel-lp should not be able to handle an xor-gate
         with self.assertRaises(ValueError):
             lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
+
 
 if __name__ == "__main__":
     unittest.main()
