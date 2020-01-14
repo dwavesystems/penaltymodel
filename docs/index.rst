@@ -14,13 +14,22 @@ Documentation
   :Release: |version|
   :Date: |today|
 
+.. sdk-start-marker
+
 .. toctree::
   :maxdepth: 1
 
   packages/index
+
+.. sdk-end-marker
+
+.. toctree::
+  :caption: Code
+  :maxdepth: 1
+
+  Source <https://github.com/dwavesystems/penaltymodel>
   installation
   license
-  Source <https://github.com/dwavesystems/penaltymodel>
 
 .. toctree::
   :caption: Ocean Software
