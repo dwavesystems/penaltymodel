@@ -15,7 +15,9 @@
 import dimod
 from itertools import product
 import numpy as np
-from scipy.optimize import linprog
+from scipy.linalg import LinAlgWarning
+from scipy.optimize import linprog, OptimizeWarning
+import warnings
 
 #TODO: put these values in a common penaltymodel folder
 MIN_LINEAR_BIAS = -2
@@ -160,10 +162,17 @@ def generate_bqm(graph, table, decision_variables,
     cost_weights[0, -1] = -1     # Only interested in maximizing the gap
 
     # Returns a Scipy OptimizeResult
-    result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
-                     A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
+    # Note: if linear program encounters an ill conditioned matrix or non-full-row-rank matrix,
+    #   rather than let it continue, just fail and allow the next penaltymodel to make an attempt
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error")
+        try:
+            result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
+                             A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
+        except (OptimizeWarning, LinAlgWarning) as e:
+            raise ValueError('Penaltymodel-lp has a bad matrix')
 
-    #TODO: propagate scipy.optimize.linprog's error message?
+    # Unable to find a solution
     if not result.success:
         raise ValueError('Penaltymodel-lp is unable to find a solution.')
 
