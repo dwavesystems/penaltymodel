@@ -191,6 +191,11 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         with self.assertRaises(ValueError):
             lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
 
+    def test_ill_conditioned_matrix(self):
+
+        with self.assertRaises(ValueError):
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()
