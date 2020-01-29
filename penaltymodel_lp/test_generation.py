@@ -13,8 +13,13 @@
 # limitations under the License.
 
 from itertools import product
-import networkx as nx
 import unittest
+from unittest.mock import patch
+from scipy.optimize import OptimizeWarning
+from scipy.linalg import LinAlgWarning
+
+import networkx as nx
+
 import penaltymodel.lp as lp
 
 
@@ -191,10 +196,41 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         with self.assertRaises(ValueError):
             lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
 
-    def test_ill_conditioned_matrix(self):
+    @patch('scipy.optimize.linprog')
+    def test_linprog_optimizewarning(self, dummy_linprog):
+        """The linear program sometimes throws OptimizeWarning for matrices that
+        are not full row rank. In such a case, penaltymodel-lp should give up
+        and let a more sophisticated penaltymodel deal with the problem"""
+
+        # Note: I'm using mock because it's difficult to think of a small ising
+        #   system that is not full row rank. (i.e. need to consider linear states,
+        #   quadratic states, offset and gap coefficients when building
+        #   the non-full-row-rank matrix).
+        dummy_linprog.return_value = OptimizeWarning
+
+        # Placeholder problem
+        nodes = ['r', 'a', 'n', 'd', 'o', 'm']
+        values = {(1, 1, 1, 1, 1, 1), (1, 1, 0, 0, 0, 0)}
 
         with self.assertRaises(ValueError):
-            pass
+            lp.generate_bqm(nx.complete_graph(nodes), values, nodes)
+
+    @patch('scipy.optimize.linprog')
+    def test_linprog_linalgwarning(self, dummy_linprog):
+        """The linear program sometimes throws LinAlgWarning for matrices that
+        are ill-conditioned. In such a case, penaltymodel-lp should give up
+        and let a more sophisticated penaltymodel deal with the problem"""
+
+        # Note: I'm using mock because it's difficult to think of a small ising
+        #   system that is ill-conditioned.
+        dummy_linprog.return_value = LinAlgWarning
+
+        # Placeholder problem
+        nodes = ['r', 'a', 'n', 'd', 'o', 'm']
+        values = {(1, 1, 1, 1, 1, 1), (1, 1, 0, 0, 0, 0)}
+
+        with self.assertRaises(ValueError):
+            lp.generate_bqm(nx.complete_graph(nodes), values, nodes)
 
 
 if __name__ == "__main__":
