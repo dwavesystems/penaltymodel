@@ -121,11 +121,6 @@ jobs:
   #   docker:
   #     - image: circleci/python:3.4-jessie
 
-  test-2.7:
-    <<: *full-test-template
-    docker:
-      - image: circleci/python:2.7-jessie
-
   test-osx-3.7: &osx-tests-template
     macos:
       xcode: "10.1.0"
@@ -215,12 +210,6 @@ jobs:
   #   environment:
   #     PYTHON: 3.4.8
   #     HOMEBREW_NO_AUTO_UPDATE: 1
-
-  test-osx-2.7:
-    <<: *osx-tests-template
-    environment:
-      PYTHON: 2.7.15
-      HOMEBREW_NO_AUTO_UPDATE: 1
 
   deploy-core:
     docker:
@@ -408,12 +397,10 @@ workflows:
       - test-3.6
       - test-3.5
       # - test-3.4
-      - test-2.7
       - test-osx-3.7
       - test-osx-3.6
       - test-osx-3.5
       # - test-osx-3.4
-      - test-osx-2.7
       - deploy-core:
           filters:
             tags:
