@@ -163,7 +163,12 @@ def generate_bqm(graph, table, decision_variables,
 
     # Returns a Scipy OptimizeResult
     # Note: if linear program encounters an ill conditioned matrix or non-full-row-rank matrix,
-    #   rather than let it continue, just fail and allow the next penaltymodel to make an attempt
+    #   rather than let it continue, just fail and allow the next penaltymodel to make an attempt.
+    #   This is just a quick fix as I worry that the warnings could indicate an unreliable
+    #   solution. Note that non-full-row-rank matrix is probably okay, but I feel more comfortable
+    #   failing early and getting a reliable solution from another penaltymodel than from
+    #   simply suppressing the non-full-row-rank matrix warning.
+    # TODO: address warnings by preconditioning the matrix and factorizing the matrix
     with warnings.catch_warnings():
         warnings.filterwarnings("error")
         try:
