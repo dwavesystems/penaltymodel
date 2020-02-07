@@ -14,6 +14,12 @@ Documentation
   :Release: |version|
   :Date: |today|
 
+.. note:: This documentation is for the latest version of
+   `penaltymodel <https://github.com/dwavesystems/penaltymodel>`_.
+   Documentation for the version currently installed by
+   `dwave-ocean-sdk <https://github.com/dwavesystems/dwave-ocean-sdk>`_
+   is here: :std:doc:`penaltymodel <oceandocs:docs_penalty/sdk_index>`.
+
 .. sdk-start-marker
 
 .. toctree::
