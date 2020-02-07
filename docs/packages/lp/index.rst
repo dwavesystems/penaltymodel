@@ -1,7 +1,7 @@
 penaltymodel-lp
 ===================
 
-.. include:: ../../../penaltymodel_lp/README.rst
+.. include:: README.rst
   :start-after: index-start-marker
   :end-before: index-end-marker
 

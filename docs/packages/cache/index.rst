@@ -1,7 +1,7 @@
 penaltymodel-cache
 ==================
 
-.. include:: ../../../penaltymodel_cache/README.rst
+.. include:: README.rst
   :start-after: index-start-marker
   :end-before: index-end-marker
 
