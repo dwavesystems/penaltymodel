@@ -1,9 +1,9 @@
 version: 2
 jobs:
 
-  test-3.7: &full-test-template
+  test-3.8: &full-test-template
     docker:
-      - image: circleci/python:3.7-stretch
+      - image: circleci/python:3.8-buster
 
     steps:
       - checkout
@@ -106,6 +106,11 @@ jobs:
             . env/bin/activate
             codecov
 
+  test-3.7:
+    <<: *full-test-template
+    docker:
+      - image: circleci/python:3.7-stretch
+
   test-3.6:
     <<: *full-test-template
     docker:
@@ -116,17 +121,16 @@ jobs:
     docker:
       - image: circleci/python:3.5-jessie
 
-  # test-3.4:
-  #   <<: *full-test-template
-  #   docker:
-  #     - image: circleci/python:3.4-jessie
+  #
+  # MacOS tests
+  #
 
-  test-osx-3.7: &osx-tests-template
+  test-osx-3.8: &osx-tests-template
     macos:
-      xcode: "10.1.0"
+      xcode: "11.2.1"
     environment:
-      PYTHON: 3.7.0
-      HOMEBREW_NO_AUTO_UPDATE: 1  # for 3.7 we need to update homebrew
+      PYTHON: 3.8.0
+      HOMEBREW_NO_AUTO_UPDATE: 1
 
     working_directory: ~/repo
 
@@ -193,6 +197,12 @@ jobs:
 
       - run: *integration-tests-template
 
+  test-osx-3.7:
+    <<: *osx-tests-template
+    environment:
+      PYTHON: 3.7.0
+      HOMEBREW_NO_AUTO_UPDATE: 1
+
   test-osx-3.6:
     <<: *osx-tests-template
     environment:
@@ -204,12 +214,6 @@ jobs:
     environment:
       PYTHON: 3.5.5
       HOMEBREW_NO_AUTO_UPDATE: 1
-
-  # test-osx-3.4:
-  #   <<: *osx-tests-template
-  #   environment:
-  #     PYTHON: 3.4.8
-  #     HOMEBREW_NO_AUTO_UPDATE: 1
 
   deploy-core:
     docker:
@@ -393,14 +397,14 @@ workflows:
   version: 2
   test:
     jobs:
+      - test-3.8
       - test-3.7
       - test-3.6
       - test-3.5
-      # - test-3.4
+      - test-osx-3.8
       - test-osx-3.7
       - test-osx-3.6
       - test-osx-3.5
-      # - test-osx-3.4
       - deploy-core:
           filters:
             tags:
