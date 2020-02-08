@@ -1,4 +1,4 @@
-dimod==0.8.1
+dimod==0.8.18
 dwavebinarycsp==0.0.10
 numpy==1.18.1
 scipy==1.1.0
