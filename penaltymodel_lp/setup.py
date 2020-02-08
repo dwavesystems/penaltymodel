@@ -28,7 +28,7 @@ classifiers = [
     'Programming Language :: Python :: 3.7',
     ]
 
-python_requires = '>=3.5,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*'
+python_requires = '>=3.5'
 
 setup(
     name="penaltymodel-lp",
