@@ -4,7 +4,7 @@ from setuptools import setup
 # add __version__, __author__, __authoremail__, __description__ to this namespace
 exec(open("./penaltymodel/core/package_info.py").read())
 
-install_requires = ['dimod>=0.6.3,<0.9.0',
+install_requires = ['dimod>=0.6.3,<0.10.0',
                     'six>=1.11.0,<2.0.0',
                     'networkx>=2.0,<3.0'
                     ]
