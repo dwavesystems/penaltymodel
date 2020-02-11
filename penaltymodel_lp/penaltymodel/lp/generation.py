@@ -169,16 +169,19 @@ def generate_bqm(graph, table, decision_variables,
     #   failing early and getting a reliable solution from another penaltymodel than from
     #   simply suppressing the non-full-row-rank matrix warning.
     # TODO: address warnings by preconditioning the matrix and factorizing the matrix
-    with warnings.catch_warnings():
-        warnings.filterwarnings("error")
-        try:
-            result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
-                             A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
-        except (OptimizeWarning, LinAlgWarning) as e:
-            # If catch_warnings is False, we force penaltymodel-lp to keep going
-            # rather than to fail and pass to the next penaltymodel
-            if catch_warnings:
-                raise ValueError('Penaltymodel-lp has a bad matrix')
+    if catch_warnings:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            try:
+                result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
+                                 A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
+            except (OptimizeWarning, LinAlgWarning) as e:
+                # If catch_warnings is False, we force penaltymodel-lp to keep going
+                # rather than to fail and pass to the next penaltymodel
+                    raise ValueError('Penaltymodel-lp has a bad matrix')
+    else:
+        result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
+                         A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
 
     # Unable to find a solution
     if not result.success:
