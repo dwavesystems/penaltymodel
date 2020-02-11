@@ -46,7 +46,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(ValueError):
-            lp.generate_bqm(nx.complete_graph([]), [], [])
+            lp.generate_bqm(nx.complete_graph([]), [], [], catch_warnings=False)
 
     def test_dictionary_input(self):
         # Generate BQM with a dictionary
@@ -56,7 +56,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                           (1, -1, 1): ground,
                           (1, 1, 1): ground,
                           (-1, -1, -1): ground}
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), or_gate_values, nodes,
+                                   catch_warnings=False)
 
         self.assertGreater(gap, 0)
         self.verify_gate_bqm(bqm, nodes, max, ground_energy=ground)
@@ -65,7 +66,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Generate BQM with a set
         nodes = [1, 2, 3]
         and_gate_set = {(-1, -1, -1), (-1, 1, -1), (1, -1, -1), (1, 1, 1)}
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), and_gate_set, nodes,
+                                   catch_warnings=False)
 
         self.assertGreater(gap, 0)
         self.verify_gate_bqm(bqm, nodes, min)
@@ -74,7 +76,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Generate BQM with a list
         nodes = [1, 2, 3]
         nand_gate_list = [(-1, -1, 1), (-1, 1, 1), (1, -1, 1), (1, 1, -1)]
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), nand_gate_list, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), nand_gate_list, nodes,
+                                   catch_warnings=False)
 
         self.assertGreater(gap, 0)
         self.verify_gate_bqm(bqm, nodes, lambda x, y: -1 * min(x, y))
@@ -87,7 +90,7 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                       (-1, 1): -1,
                       (1, -1): -1}
             return lp.generate_bqm(nx.complete_graph(nodes), states, nodes,
-                                   min_classical_gap=min_gap)
+                                   min_classical_gap=min_gap, catch_warnings=False)
 
         # min_classical_gap=5 should be too large for the problem
         with self.assertRaises(ValueError):
@@ -106,7 +109,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         config = {1: 96,
                   -1: 104}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes,
-                                   linear_energy_ranges=linear_energy_range)
+                                   linear_energy_ranges=linear_energy_range,
+                                   catch_warnings=False)
 
         # Verify that results match expected BQM
         self.assertAlmostEqual(100, bqm.offset)
@@ -120,7 +124,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
                   (1, 1): -80,
                   (1, -1): 162}
         bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes,
-                                   quadratic_energy_ranges=quadratic_energy_range)
+                                   quadratic_energy_ranges=quadratic_energy_range,
+                                   catch_warnings=False)
 
         # Verify that results match expected BQM
         self.assertAlmostEqual(42, bqm.offset)
@@ -137,7 +142,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Create BQM for fully determined configuration with no ground states
         configurations = {(-1, -1): -.5, (-1, 1): 3.5, (1, -1): 1.5, (1, 1): 3.5}
         nodes = ['x', 'y']
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes,
+                                   catch_warnings=False)
 
         self.assertGreater(gap, 0)
 
@@ -152,7 +158,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         # Note: all other states should be invalid
         configurations = {(-1, -1, 1): 0, (1, -1, 1): 2}
         nodes = ['x', 'y', 'z']
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), configurations, nodes,
+                                   catch_warnings=False)
 
         self.assertGreater(gap, 0)
 
@@ -169,7 +176,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         """
         config = {(1, 1): 1, (-1, 1): 0, (1, -1): 0}
         nodes = ['a', 'b']
-        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes)
+        bqm, gap = lp.generate_bqm(nx.complete_graph(nodes), config, nodes,
+                                   catch_warnings=False)
 
         self.assertAlmostEqual(gap, 2)
 
@@ -194,7 +202,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
 
         # penaltymodel-lp should not be able to handle an xor-gate
         with self.assertRaises(ValueError):
-            lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes)
+            lp.generate_bqm(nx.complete_graph(nodes), xor_gate_values, nodes,
+                            catch_warnings=False)
 
     @patch('scipy.optimize.linprog')
     def test_linprog_optimizewarning(self, dummy_linprog):
@@ -213,7 +222,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         values = {(1, 1, 1, 1, 1, 1), (1, 1, 0, 0, 0, 0)}
 
         with self.assertRaises(ValueError):
-            lp.generate_bqm(nx.complete_graph(nodes), values, nodes)
+            lp.generate_bqm(nx.complete_graph(nodes), values, nodes,
+                            catch_warnings=False)
 
     @patch('scipy.optimize.linprog')
     def test_linprog_linalgwarning(self, dummy_linprog):
@@ -230,7 +240,8 @@ class TestPenaltyModelLinearProgramming(unittest.TestCase):
         values = {(1, 1, 1, 1, 1, 1), (1, 1, 0, 0, 0, 0)}
 
         with self.assertRaises(ValueError):
-            lp.generate_bqm(nx.complete_graph(nodes), values, nodes)
+            lp.generate_bqm(nx.complete_graph(nodes), values, nodes,
+                            catch_warnings=False)
 
 
 if __name__ == "__main__":

@@ -89,7 +89,7 @@ def _get_lp_matrix(spin_states, nodes, edges, offset_weight, gap_weight):
 #TODO: check table is not empty (perhaps this check should be in bqm.stitch or as a common
 # penaltymodel check)
 def generate_bqm(graph, table, decision_variables,
-                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2):
+                 linear_energy_ranges=None, quadratic_energy_ranges=None, min_classical_gap=2, catch_warnings=True):
     """
     Args:
         graph: A networkx.Graph
@@ -175,7 +175,10 @@ def generate_bqm(graph, table, decision_variables,
             result = linprog(cost_weights.flatten(), A_eq=noted_matrix, b_eq=noted_bound,
                              A_ub=unnoted_matrix, b_ub=unnoted_bound, bounds=bounds)
         except (OptimizeWarning, LinAlgWarning) as e:
-            raise ValueError('Penaltymodel-lp has a bad matrix')
+            # If catch_warnings is False, we force penaltymodel-lp to keep going
+            # rather than to fail and pass to the next penaltymodel
+            if catch_warnings:
+                raise ValueError('Penaltymodel-lp has a bad matrix')
 
     # Unable to find a solution
     if not result.success:
