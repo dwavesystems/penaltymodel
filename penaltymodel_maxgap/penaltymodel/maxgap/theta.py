@@ -40,13 +40,13 @@ def limitReal(x, max_denominator=1000000):
 
 
 class Theta(dimod.BinaryQuadraticModel):
-    def __init__(self, linear, quadratic, offset, vartype):
+    def __init__(self, *args, **kwargs):
         """Theta is a BQM where the biases are pysmt Symbols.
 
         Theta is normally constructed using :meth:`.Theta.from_graph`.
 
         """
-        dimod.BinaryQuadraticModel.__init__(self, linear, quadratic, offset, vartype)
+        super(Theta, self).__init__(*args, **kwargs)
 
         # add additional assertions tab
         self.assertions = set()
