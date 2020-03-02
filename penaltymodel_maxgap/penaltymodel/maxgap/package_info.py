@@ -13,7 +13,7 @@
 #    limitations under the License.
 #
 # ================================================================================================
-__version__ = '0.5.2'
+__version__ = '0.5.3'
 __author__ = 'D-Wave Systems Inc.'
 __authoremail__ = 'acondello@dwavesys.com'
 __description__ = 'Generates penalty models using smt solvers.'
