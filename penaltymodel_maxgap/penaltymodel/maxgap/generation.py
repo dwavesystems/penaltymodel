@@ -81,6 +81,13 @@ def generate(graph, feasible_configurations, decision_variables,
     # we need to build a Table. The table encodes all of the information used by the smt solver
     table = Table(graph, decision_variables, linear_energy_ranges, quadratic_energy_ranges)
 
+    # grab highest feasible energy
+    # note: highest_feasible_energy will be used to set bounds later on
+    if isinstance(feasible_configurations, dict) and feasible_configurations:
+        highest_feasible_energy = max(feasible_configurations.values())
+    else:
+        highest_feasible_energy = 0
+
     # iterate over every possible configuration of the decision variables.
     for config in itertools.product((-1, 1), repeat=len(decision_variables)):
 
@@ -94,11 +101,6 @@ def generate(graph, feasible_configurations, decision_variables,
         else:
             # if the configuration is infeasible, we simply want its minimum energy over all
             # possible aux variable settings to be an upper bound on the classical gap.
-            if isinstance(feasible_configurations, dict) and feasible_configurations:
-                highest_feasible_energy = max(feasible_configurations.values())
-            else:
-                highest_feasible_energy = 0
-
             table.set_energy_upperbound(spins, highest_feasible_energy)
 
     # now we just need to get a solver
