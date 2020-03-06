@@ -369,3 +369,22 @@ class TestGeneration(unittest.TestCase):
         bqm, gap = mip.generate_bqm(graph, configurations, nodes)
         self.check_bqm_table(bqm, gap, configurations, nodes)
         self.check_bqm_graph(bqm, graph)
+
+    def test_all_possible_config_with_auxiliary(self):
+        """Test the case when all possible configurations for the decision
+        variables are defined and auxiliary variables are available"""
+        nodes = ['a', 'b', 'c']
+        auxiliaries = ['aux0', 'aux1', 'aux2']
+        graph = nx.complete_graph(nodes + auxiliaries)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, -1, +1): 0.5,
+                          (-1, +1, -1): 0,
+                          (-1, +1, +1): 0.5,
+                          (+1, -1, -1): 0,
+                          (+1, -1, +1): 0.5,
+                          (+1, +1, -1): 0.5,
+                          (+1, +1, +1): 0}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
