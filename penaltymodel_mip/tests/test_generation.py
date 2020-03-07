@@ -49,10 +49,24 @@ class TestGeneration(unittest.TestCase):
             if energy < highest_feasible_energy + .001:
                 self.assertIn(config, table)
 
-                if isinstance(table, dict):
-                    self.assertAlmostEqual(table[config], energy)
+                # If there's no specific target energy to match, we've already
+                # satisfied the configuration by being less than the highest
+                # feasible energy
+                if not isinstance(table, dict):
+                    seen_table.add(config)
+                    continue
 
-                seen_table.add(config)
+                # Check configuration against specific target energy
+                # Note: For a given valid decision configuration, there could
+                #   be different sets of decision + auxiliary configurations. We
+                #   only need one of those sets to match the specific target
+                #   energy, while the remaining sets can be above that target.
+                self.assertGreaterEqual(energy, table[config])
+
+                # If configuration matches target energy, the configuration
+                # should be added to the seen_table
+                if round(table[config]-energy, ndigits=7) == 0:
+                    seen_table.add(config)
 
             # Get smallest gap among non-table configurations
             elif config not in table:
