@@ -49,10 +49,24 @@ class TestGeneration(unittest.TestCase):
             if energy < highest_feasible_energy + .001:
                 self.assertIn(config, table)
 
-                if isinstance(table, dict):
-                    self.assertAlmostEqual(table[config], energy)
+                # If there's no specific target energy to match, we've already
+                # satisfied the configuration by being less than the highest
+                # feasible energy
+                if not isinstance(table, dict):
+                    seen_table.add(config)
+                    continue
 
-                seen_table.add(config)
+                # Check configuration against specific target energy
+                # Note: For a given valid decision configuration, there could
+                #   be different sets of decision + auxiliary configurations. We
+                #   only need one of those sets to match the specific target
+                #   energy, while the remaining sets can be above that target.
+                self.assertGreaterEqual(energy, table[config])
+
+                # If configuration matches target energy, the configuration
+                # should be added to the seen_table
+                if round(table[config]-energy, ndigits=7) == 0:
+                    seen_table.add(config)
 
             # Get smallest gap among non-table configurations
             elif config not in table:
@@ -365,6 +379,25 @@ class TestGeneration(unittest.TestCase):
         graph = nx.complete_graph(nodes)
         configurations = {(-1,): -1,
                           (+1,): 1}
+
+        bqm, gap = mip.generate_bqm(graph, configurations, nodes)
+        self.check_bqm_table(bqm, gap, configurations, nodes)
+        self.check_bqm_graph(bqm, graph)
+
+    def test_all_possible_config_with_auxiliary(self):
+        """Test the case when all possible configurations for the decision
+        variables are defined and auxiliary variables are available"""
+        nodes = ['a', 'b', 'c']
+        auxiliaries = ['aux0', 'aux1', 'aux2']
+        graph = nx.complete_graph(nodes + auxiliaries)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, -1, +1): 0.5,
+                          (-1, +1, -1): 0,
+                          (-1, +1, +1): 0.5,
+                          (+1, -1, -1): 0,
+                          (+1, -1, +1): 0.5,
+                          (+1, +1, -1): 0.5,
+                          (+1, +1, +1): 0}
 
         bqm, gap = mip.generate_bqm(graph, configurations, nodes)
         self.check_bqm_table(bqm, gap, configurations, nodes)
