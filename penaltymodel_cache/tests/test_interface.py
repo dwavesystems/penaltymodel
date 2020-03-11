@@ -198,3 +198,20 @@ class TestInterfaceFunctions(unittest.TestCase):
             self.assertNotEqual(ret_pmodel, pmodel)
         except:
             pass
+
+    def test_one_variable_insert_retrieve(self):
+        dbfile = self.database
+
+        # generate one variable model (i.e. no quadratic terms)
+        spec = pm.Specification(graph=nx.complete_graph(1),
+                                decision_variables=[0],
+                                feasible_configurations=[(-1,)],
+                                min_classical_gap=2, vartype='SPIN')
+        pmodel = pm.get_penalty_model(spec)
+
+        # insert model into cache
+        pmc.cache_penalty_model(pmodel, database=dbfile)
+
+        # retrieve model back from cache
+        retrieved_model = pmc.get_penalty_model(spec, database=dbfile)
+        self.assertEqual(pmodel, retrieved_model)
