@@ -200,6 +200,9 @@ class TestInterfaceFunctions(unittest.TestCase):
             pass
 
     def test_one_variable_insert_retrieve(self):
+        """Test case when there is no quadratic contribution (i.e. cache will
+        receive an empty value for the quadratic contribution)
+        """
         dbfile = self.database
 
         # generate one variable model (i.e. no quadratic terms)
@@ -215,3 +218,12 @@ class TestInterfaceFunctions(unittest.TestCase):
         # retrieve model back from cache
         retrieved_model = pmc.get_penalty_model(spec, database=dbfile)
         self.assertEqual(pmodel, retrieved_model)
+
+    def test_empty_linear_insert_retrieve(self):
+        """Test case when there is no linear contribution (i.e. cache will
+        receive an empty value for the linear contribution)
+        """
+        dbfile = self.database
+
+        # make a model that does not contain any linear terms
+        pass
