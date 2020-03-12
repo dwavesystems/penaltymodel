@@ -219,11 +219,27 @@ class TestInterfaceFunctions(unittest.TestCase):
         retrieved_model = pmc.get_penalty_model(spec, database=dbfile)
         self.assertEqual(pmodel, retrieved_model)
 
-    def test_empty_linear_insert_retrieve(self):
-        """Test case when there is no linear contribution (i.e. cache will
-        receive an empty value for the linear contribution)
-        """
+    def test_no_linear_bias_insert_retrieve(self):
+        """Test case when there is no linear bias"""
         dbfile = self.database
 
-        # make a model that does not contain any linear terms
-        pass
+        # define specifications
+        spec = pm.Specification(graph=nx.complete_graph(2),
+                                decision_variables=[0, 1],
+                                feasible_configurations=[(-1, +1), (+1, -1)],
+                                min_classical_gap=2, vartype='SPIN')
+
+        # make a model
+        # note: model must satisfy specifications and not have a nonzero linear bias
+        linear = {}
+        quadratic = {(0, 1): 1}
+        offset = 0.0
+        model = dimod.BinaryQuadraticModel(linear, quadratic, offset, vartype=dimod.SPIN)
+        pmodel = pm.PenaltyModel.from_specification(spec, model, 2, -1)
+
+        # insert model into cache
+        pmc.cache_penalty_model(pmodel, database=dbfile)
+
+        # retrieve model back from cache
+        retrieved_model = pmc.get_penalty_model(spec, database=dbfile)
+        self.assertEqual(pmodel, retrieved_model)
