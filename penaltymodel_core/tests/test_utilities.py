@@ -150,11 +150,12 @@ class TestPenaltyModelBalance(unittest.TestCase):
 
     def test_balance_with_qubo(self):
         decision_variables = ['a', 'b']
+        aux_variables = ['c']
         feasible_config = {(1, 0), (0, 1)}
         vartype = dimod.BINARY
         classical_gap = 0.5
         ground_energy = -1
-        g = nx.complete_graph(decision_variables)
+        g = nx.complete_graph(decision_variables + aux_variables)
 
         model = dimod.BinaryQuadraticModel({'a': -1, 'b': 0.5, 'c': -.5},
                                            {'ab': 1, 'bc': -1, 'ac': 0.5},
