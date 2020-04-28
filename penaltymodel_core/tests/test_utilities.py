@@ -85,10 +85,9 @@ class TestPenaltyModelBalance(unittest.TestCase):
         # Build a penaltymodel with an empty bqm
         vartype = dimod.SPIN
         empty_model = dimod.BinaryQuadraticModel.empty(vartype)
-        n_nodes = 3
-        graph = nx.complete_graph(n_nodes)
-        decision_variables = list(range(n_nodes - 1))
-        feasible_configurations = {(-1, -1), (1, 1)}
+        graph = nx.complete_graph(0)
+        decision_variables = []
+        feasible_configurations = {}
         classical_gap = 2
         ground_energy = 0
         pmodel = pm.PenaltyModel(graph, decision_variables,
