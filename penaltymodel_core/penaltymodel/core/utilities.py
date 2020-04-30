@@ -177,7 +177,7 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
     feasible_flag = energy <= pmodel.ground_energy
     if sum(feasible_flag) == 0:
         raise RuntimeError("no states with energies less than or equal to the"
-                           " ground_energy found")
+                           " ground_energy found; no feasible states found")
 
     # Check for uniqueness, which is trivially balanced
     if sum(feasible_flag) == len(pmodel.feasible_configurations):
