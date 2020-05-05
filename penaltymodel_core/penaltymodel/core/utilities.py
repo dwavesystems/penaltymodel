@@ -237,14 +237,9 @@ def get_uniform_penaltymodel(pmodel, n_tries=100, tol=1e-12):
         raise RuntimeError("no states with energies less than or equal to the"
                            " ground_energy found; no feasible states found")
 
-    # Check for balance
-    if len(feasible_states) == len(pmodel.feasible_configurations):
-        # Note: using a shallow copy because penaltymodels should be immutable,
-        #   hence, it would be unexpected that the actual values in pmodel
-        #   would be altered.
-        new_pmodel = copy.copy(pmodel)
-        new_pmodel.is_uniform = True
-        return new_pmodel
+    # Check for uniqueness, which is trivially balanced
+    if sum(feasible_flag) == len(pmodel.feasible_configurations):
+        return pmodel
 
     # Cost function
     cost_weights = np.zeros((1, states.shape[1]))
