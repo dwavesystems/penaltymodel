@@ -26,14 +26,29 @@ from penaltymodel.core.constants import (DEFAULT_LINEAR_RANGE,
 
 
 def random_indices_generator(bin_sizes, n_tries):
-    """Generate random indices such that there is one index picked from each bin"""
+    """Generate random indices such that there is one index picked from each bin.
+
+    Args:
+        bin_sizes():
+        n_tries(integer): number of random tuples this generator will produce
+    """
     for _ in range(n_tries):
         random_tuple = (random.randint(0, bin_size) for bin_size in bin_sizes)
         yield random_tuple
 
 
 def get_ordered_state_matrix(linear_labels, quadratic_labels):
-    """Returns a state matrix following the order of [linear_labels, quadratic_labels]"""
+    """Returns a state matrix and its column labels.
+
+    Specifically, the rows of the state matrix contains all possible states the
+    linear and quadratic variables can take on. The columns of the state matrix
+    follow the order [linear_labels, quadratic_labels, offset, gap]. As this is
+    a state matrix, the offset and gap columns are held constant.
+
+    Args:
+        linear_labels: iterable of linear variables
+        quadratic_labels: iterable of tuples representing quadratic variables
+    """
     if not isinstance(linear_labels, list):
         raise TypeError("Linear labels must be contained in a list")
     if not isinstance(quadratic_labels, list):
@@ -149,6 +164,7 @@ def get_binned_indices(arr, step):
         if v > 0:
             curr_bin.append(i)
 
+        # Reached last item of current bin
         if i % step == step-1 and curr_bin:
             bins.append(curr_bin)
             bin_sizes.append(len(curr_bin))
