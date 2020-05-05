@@ -65,6 +65,14 @@ def get_ordered_state_matrix(linear_labels, quadratic_labels):
 
 
 def get_bias_vector(linear_bias_dict, quadratic_bias_dict, bias_order, offset=0):
+    """Returns numpy vector of biases that follows the order of 'bias_order'.
+
+    Args:
+        linear_bias_dict(dict): key contains variable name, value contains bias
+        quadratic_bias_dict(dict): key contains variable name, value contains bias
+        bias_order(iterable): varible names indicating desired result order
+        offset(number): the value of the offset
+    """
     if len(bias_order) != len(linear_bias_dict) + len(quadratic_bias_dict):
         raise ValueError("The number of elements in the bias ordering does not"
                          "equal the number of elements in the biases")
@@ -90,6 +98,20 @@ def get_bias_vector(linear_bias_dict, quadratic_bias_dict, bias_order, offset=0)
 def get_bounds(linear_ranges, quadratic_ranges, order, min_classical_gap,
                default_linear_range=DEFAULT_LINEAR_RANGE,
                default_quadratic_range=DEFAULT_QUADRATIC_RANGE):
+    """Returns a list of tuple bounds that follow the variable ordering listed
+    in 'order'. Each tuple indicates the (<lowerbound>, <upperbound>) of a
+    variable.
+
+    Args:
+        linear_ranges(dict): key contains variable name; value contains tuple bound
+        quadratic_ranges(dict): key contains variable name; value contains tuple bound
+        order(iterable): list of variable names ordered in the desired order of the result
+        min_classical_gap(number): a number used as the lowerbound of the gap
+        default_linear_range(tuple): a tuple of bounds used when a variable does not
+          exist in 'linear_ranges' dict
+        default_quadratic_range(tuple): a tuple of bounds used when a variable does
+          not exist in 'quadratic_ranges' dict
+    """
     # Note: Since ising has {-1, 1}, the largest possible gap is [-largest_bias,
     #   largest_bias], hence that 2 * sum(largest_biases)
     lr = linear_ranges
