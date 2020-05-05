@@ -74,7 +74,7 @@ def get_penalty_model(specification):
             pm = factory(specification)
 
             if specification.is_uniform:
-                pm = get_balanced(pm)
+                pm = get_uniform_penaltymodel(pm)
 
         except ImpossiblePenaltyModel as e:
             # information about impossible models should be propagated
