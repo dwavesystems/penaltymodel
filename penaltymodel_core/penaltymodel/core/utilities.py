@@ -156,6 +156,20 @@ def get_bounds(linear_ranges, quadratic_ranges, order, min_classical_gap,
 
 
 def get_binned_indices(arr, step):
+    """Returns a list of lists containing the indices to all the True values in
+    'arr'. Each sublist indicates the indices (associated with True values)
+    within an interval, 'step'.
+
+    Note: this is probably an overly specific function
+
+    Args:
+        arr(numpy.array): a one-dimensional, boolean array
+        step(integer): the max bin size to consider
+
+    Returns:
+        A list of lists, such that each sublist contains the indices with True
+         within an interval 'step'.
+    """
     bins = []
     bin_sizes = []
     curr_bin = []
