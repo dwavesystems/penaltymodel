@@ -50,7 +50,7 @@ def generate_bqm(graph, table, decision,
             Dict of the form {(u, v): (min, max), ...} where min and max are the range of values
             allowed to (u, v). The default range is [-1, 1].
 
-        min_classical_gap (float):
+        min_classical_gap (float, optional, default=2):
             The minimum energy gap between the highest feasible state and the lowest infeasible
             state.
 
@@ -58,11 +58,11 @@ def generate_bqm(graph, table, decision,
             Values returned by the optimization solver are rounded to `precision` digits of
             precision.
 
-        max_decision (int, optional, default=4):
+        max_decision (int, optional, default=8):
             Maximum number of decision variables allowed. The algorithm is valid for arbitrary
             sizes of problem but can be extremely slow.
 
-        max_variables (int, optional, default=4):
+        max_variables (int, optional, default=10):
             Maximum number of variables allowed. The algorithm is valid for arbitrary
             sizes of problem but can be extremely slow.
 
