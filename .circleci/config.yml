@@ -10,7 +10,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ checksum "penaltymodel_mip/requirements.txt" }}-{{ checksum "penaltymodel_lp/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &create-virtualenv-template
           name: create virtual environement
@@ -26,7 +26,7 @@ jobs:
       - save_cache:
           paths:
             - ./env
-          key: env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ checksum "penaltymodel_mip/requirements.txt" }}-{{ checksum "penaltymodel_lp/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &install-core-template
           name: install penaltymodel
