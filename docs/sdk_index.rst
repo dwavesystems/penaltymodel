@@ -12,4 +12,4 @@
    :caption: Code
    :maxdepth: 1
 
-   Source <https://github.com/dwavesystems/dimod>
+   Source <https://github.com/dwavesystems/penaltymodel>
