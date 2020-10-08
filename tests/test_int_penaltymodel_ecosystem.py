@@ -28,6 +28,7 @@ class TestInterfaceWithLP(unittest.TestCase):
     def assert_dict_almost_equal(self, dict0, dict1):
         self.assertEqual(len(dict0), len(dict1))
         for key in dict0:
+            self.assertIn(key, dict1)
             self.assertAlmostEqual(dict0[key], dict1[key])
 
     @isolated_cache

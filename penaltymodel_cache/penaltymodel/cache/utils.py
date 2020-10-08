@@ -29,3 +29,4 @@ def isolated_cache(f):
                 f(obj)
 
     return _isolated_cache
+    
