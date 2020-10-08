@@ -1,24 +1,11 @@
 import unittest
-from unittest import mock
-import tempfile
-import os.path as path
 
 import networkx as nx
 
 import dimod
 
 import penaltymodel.core as pm
-
-def isolated_cache(f):
-    """Method decorator used to isolate the method's penaltymodel cache."""
-    def _isolated_cache(obj):
-        with tempfile.TemporaryDirectory() as tmpdir:         
-            filename = path.join(tmpdir, "tmp_db_file")
-
-            with mock.patch("penaltymodel.cache.database_manager.cache_file", lambda: filename):
-                f(obj)
-
-    return _isolated_cache
+from penaltymodel.cache.utils import isolated_cache
 
 class TestInterfaceWithCache(unittest.TestCase):
     @isolated_cache
