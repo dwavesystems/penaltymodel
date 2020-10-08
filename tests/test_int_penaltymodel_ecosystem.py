@@ -7,8 +7,6 @@ import networkx as nx
 import dimod
 
 import penaltymodel.core as pm
-import penaltymodel.cache as pmc
-import penaltymodel.maxgap as maxgap
 
 class TestInterfaceWithCache(unittest.TestCase):
     def test_retrieval(self):
@@ -28,7 +26,11 @@ class TestInterfaceWithCache(unittest.TestCase):
 
             self.assertEqual(widget, new_widget)
 
-class TestInterfaceWithMaxGap(unittest.TestCase):
+class TestInterfaceWithLP(unittest.TestCase):
+    def assert_dict_almost_equal(self, dict0, dict1):
+        for key in dict0:
+            self.assertAlmostEqual(dict0[key], dict1[key])
+
     def test_retrieval(self):
         tmp_db_file = tempfile.NamedTemporaryFile().name
 
@@ -38,5 +40,5 @@ class TestInterfaceWithMaxGap(unittest.TestCase):
             spec = pm.Specification(nx.path_graph(2), (0, 1), eq, vartype=pm.SPIN)
             widget = pm.get_penalty_model(spec)
 
-            self.assertEqual(widget.model.linear, {0: 0, 1: 0})
-            self.assertEqual(widget.model.quadratic, {(0, 1): -1})
+            self.assert_dict_almost_equal(widget.model.linear, {0: 0, 1: 0})
+            self.assert_dict_almost_equal(widget.model.quadratic, {(0, 1): -1})
