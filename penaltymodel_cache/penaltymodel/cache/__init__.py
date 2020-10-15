@@ -12,3 +12,5 @@ from penaltymodel.cache.interface import *
 import penaltymodel.cache.interface
 
 from penaltymodel.cache.package_info import *
+
+from penaltymodel.cache.utils import *
