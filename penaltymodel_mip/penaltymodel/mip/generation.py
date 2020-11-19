@@ -15,7 +15,8 @@
 import itertools
 import random
 
-from collections import Mapping, defaultdict
+from collections import defaultdict
+from collections.abc import Mapping
 
 import dimod
 import networkx as nx
