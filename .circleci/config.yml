@@ -1,9 +1,9 @@
 version: 2
 jobs:
 
-  test-3.8: &full-test-template
+  test-3.9: &full-test-template
     docker:
-      - image: circleci/python:3.8-buster
+      - image: circleci/python:3.9
 
     steps:
       - checkout
@@ -106,6 +106,11 @@ jobs:
             . env/bin/activate
             codecov
 
+  test-3.8:
+    <<: *full-test-template
+    docker:
+      - image: circleci/python:3.8-buster
+
   test-3.7:
     <<: *full-test-template
     docker:
@@ -125,11 +130,11 @@ jobs:
   # MacOS tests
   #
 
-  test-osx-3.8: &osx-tests-template
+  test-osx-3.9: &osx-tests-template
     macos:
-      xcode: "11.2.1"
+      xcode: "12.2.0"
     environment:
-      PYTHON: 3.8.0
+      PYTHON: 3.9.0
       HOMEBREW_NO_AUTO_UPDATE: 1
 
     working_directory: ~/repo
@@ -144,7 +149,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode11.2.1
+            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-12.2.0
 
       - run:
           name: install python
@@ -154,7 +159,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.pyenv
-          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode11.2.1
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-12.2.0
 
       - run:
           name: create virtualenv
@@ -200,6 +205,12 @@ jobs:
       - run: *lp-tests-template
 
       - run: *integration-tests-template
+
+  test-osx-3.8:
+    <<: *osx-tests-template
+    environment:
+      PYTHON: 3.8.0
+      HOMEBREW_NO_AUTO_UPDATE: 1
 
   test-osx-3.7:
     <<: *osx-tests-template
@@ -401,10 +412,12 @@ workflows:
   version: 2
   test:
     jobs:
+      - test-3.9
       - test-3.8
       - test-3.7
       - test-3.6
       - test-3.5
+      - test-osx-3.9
       - test-osx-3.8
       - test-osx-3.7
       - test-osx-3.6
