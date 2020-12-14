@@ -1,3 +1,4 @@
-dimod==0.9.0
-networkx==2.0
-ortools>=6.6.4659,<8.0.0; platform_machine != "x86"
+dimod==0.9.11
+networkx==2.4
+ortools==8.0.8283; platform_machine != "x86" and python_version == "3.9"
+ortools>=6.6.4659,<8.0.0; platform_machine != "x86" and python_version < "3.9"

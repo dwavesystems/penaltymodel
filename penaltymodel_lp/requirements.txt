@@ -1,4 +1,4 @@
-dimod==0.9.0
-dwavebinarycsp==0.0.10
+dimod==0.9.11
 numpy==1.18.1
-scipy==1.4.1
+scipy==1.5.4; python_version == "3.9"
+scipy==1.4.1; python_version < "3.9"
