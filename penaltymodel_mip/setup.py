@@ -7,7 +7,7 @@ from setuptools import setup
 exec(open("./penaltymodel/mip/package_info.py").read())
 
 install_requires = ['dimod>=0.6.0,<0.10.0',
-                    'networkx>=2.0,<3.0',
+                    'networkx>=2.4,<3.0',
                     'ortools>=6.6.4659,<9.0.0',
                     'penaltymodel>=0.16.0,<0.17.0',
                     ]

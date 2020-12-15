@@ -6,7 +6,7 @@ exec(open("./penaltymodel/core/package_info.py").read())
 
 install_requires = ['dimod>=0.6.3,<0.10.0',
                     'six>=1.11.0,<2.0.0',
-                    'networkx>=2.0,<3.0'
+                    'networkx>=2.4,<3.0'
                     ]
 
 extras_require = {'all': ['penaltymodel_cache>=0.3.0,<0.4.0',
