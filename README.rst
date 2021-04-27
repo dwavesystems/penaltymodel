@@ -136,8 +136,6 @@ With all of the pieces, we can now build the penalty model.
 
 .. index-end-marker
 
-This project is part of the `D-Wave Ocean <todo>`_ software stack.
-
 Installation
 ------------
 
