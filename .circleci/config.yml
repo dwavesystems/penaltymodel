@@ -63,7 +63,7 @@ jobs:
           command: |
             . env/bin/activate
             coverage run -a -m unittest discover -s penaltymodel_core/
-        
+
       - run: &cache-tests-template
           name: cache tests
           command: |
@@ -99,6 +99,12 @@ jobs:
           command: |
             . env/bin/activate
             make -C docs/ doctest
+
+      - run:
+          name: linkcheck
+          command: |
+            . env/bin/activate
+            make -C docs/ linkcheck
 
       - run:
           name: codecov
@@ -142,7 +148,7 @@ jobs:
     steps:
       - checkout
 
-      - run: 
+      - run:
           name: install pyenv
           command: |
             brew install pyenv

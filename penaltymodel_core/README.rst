@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/pypi/v/penaltymodel.svg
-    :target: https://pypi.python.org/pypi/penaltymodel
+    :target: https://pypi.org/project/penaltymodel
 
 D-Wave Penalty Model - Core
 ===========================
@@ -24,7 +24,7 @@ To install:
 To build from souce:
 
 .. code-block:: bash
-    
+
     cd penatlymodel_core
     pip install -r requirements.txt
     python setup.py install

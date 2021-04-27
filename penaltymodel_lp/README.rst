@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/pypi/v/penaltymodel-lp.svg
-    :target: https://pypi.python.org/pypi/penaltymodel-lp
+    :target: https://pypi.org/project/penaltymodel-lp
 
 Penalty Model - Linear Programming
 ==================================================
@@ -31,7 +31,7 @@ To install:
 To build from souce:
 
 .. code-block:: bash
-    
+
     cd penaltymodel_lp
     pip install -r requirements.txt
     python setup.py install

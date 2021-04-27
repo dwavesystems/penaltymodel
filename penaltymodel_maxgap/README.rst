@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/pypi/v/penaltymodel-maxgap.svg
-    :target: https://pypi.python.org/pypi/penaltymodel-maxgap
+    :target: https://pypi.org/project/penaltymodel-maxgap
 
 D-Wave Penalty Model Max-gap
 ============================
@@ -54,4 +54,3 @@ License
 Released under the Apache License 2.0. See LICENSE
 
 The bundled Z3_ solver used by pysmt_ is licensed under the MIT license.
-
