@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/pypi/v/penaltymodel-mip.svg
-    :target: https://pypi.python.org/pypi/penaltymodel-mip
+    :target: https://pypi.org/project/penaltymodel-mip
 
 Penalty Model - Mixed-Integer (Linear) Programming
 ==================================================
@@ -31,7 +31,7 @@ To install:
 To build from souce:
 
 .. code-block:: bash
-    
+
     cd penaltymodel_mip
     pip install -r requirements.txt
     python setup.py install

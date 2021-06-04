@@ -101,6 +101,12 @@ jobs:
             make -C docs/ doctest
 
       - run:
+          name: linkcheck
+          command: |
+            . env/bin/activate
+            make -C docs/ linkcheck
+
+      - run:
           name: codecov
           command: |
             . env/bin/activate
