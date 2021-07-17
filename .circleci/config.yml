@@ -160,7 +160,7 @@ jobs:
           name: create virtualenv
           command: |
             eval "$(pyenv init -)"
-            pyenv local $PYTHON
+            pyenv local << parameters.python-version >>
             python -m pip install virtualenv
             python -m virtualenv env
 
