@@ -23,6 +23,14 @@ from pysmt.shortcuts import LE, GE
 from pysmt.typing import REAL
 
 
+try:
+    from dimod import DictBQM as BQM
+    class_kwarg = dict(default_dtype=object)
+except ImportError:
+    from dimod import BinaryQuadraticModel as BQM
+    class_kwarg = dict()
+
+
 def limitReal(x, max_denominator=1000000):
     """Creates an pysmt Real constant from x.
 
@@ -39,7 +47,7 @@ def limitReal(x, max_denominator=1000000):
     return Real((f.numerator, f.denominator))
 
 
-class Theta(dimod.BinaryQuadraticModel):
+class Theta(BQM, **class_kwarg):
     def __init__(self, *args, **kwargs):
         """Theta is a BQM where the biases are pysmt Symbols.
 
@@ -74,7 +82,7 @@ class Theta(dimod.BinaryQuadraticModel):
 
         theta = cls.empty(dimod.SPIN)
 
-        theta.add_offset(Symbol('offset', REAL))
+        theta.offset += Symbol('offset', REAL)
 
         def Linear(v):
             """Create a Symbol for the linear bias including the energy range
@@ -129,4 +137,4 @@ class Theta(dimod.BinaryQuadraticModel):
                      for (u, v), bias in self.quadratic.items())
         offset = float(model.get_py_value(self.offset))
 
-        return dimod.BinaryQuadraticModel(linear, quadratic, offset, dimod.SPIN)
+        return BQM(linear, quadratic, offset, dimod.SPIN)
