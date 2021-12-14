@@ -1,3 +1,5 @@
 dimod==0.9.11
-numpy==1.19.4
-scipy==1.5.4
+numpy==1.19.1;python_version<"3.9"
+numpy==1.19.4;python_version>="3.9"
+scipy==1.5.2;python_version<"3.9"
+scipy==1.7.3;python_version>="3.9"

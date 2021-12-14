@@ -9,8 +9,8 @@ FACTORY_ENTRYPOINT = 'penaltymodel_factory'
 
 install_requires = ['dimod>=0.8.0,<0.11.0',
                     'penaltymodel>=0.16.0,<0.17.0',
-                    'scipy>=1.5.4,<2.0.0',
-                    'numpy>=1.19.4,<2.0.0',
+                    'scipy>=1.5.2,<2.0.0',
+                    'numpy>=1.19.1,<2.0.0',
                     ]
 
 packages = ['penaltymodel',
