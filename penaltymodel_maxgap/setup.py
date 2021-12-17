@@ -39,12 +39,12 @@ class PysmtSolverInstall(install):
         shutil.rmtree(install_dir)
 
 
-setup_requires = ['pysmt==0.8.0']
+setup_requires = ['pysmt==0.9.0']
 
 install_requires = ['dimod>=0.8.0,<0.11.0,!=0.10.0,!=0.10.1',
                     'dwave_networkx>=0.6.0',
                     'penaltymodel>=0.16.0,<0.17.0',
-                    'pysmt==0.8.0',
+                    'pysmt>=0.8.0,<0.10.0',
                     ]
 
 extras_require = {}
