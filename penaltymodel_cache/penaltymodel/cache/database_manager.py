@@ -22,7 +22,6 @@ import json
 import struct
 import base64
 
-from six import itervalues
 import penaltymodel.core as pm
 
 import dimod
@@ -290,13 +289,13 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
     if 'offset' not in encoded_data:
         encoded_data['offset'] = offset
     if 'max_quadratic_bias' not in encoded_data:
-        encoded_data['max_quadratic_bias'] = max(itervalues(quadratic), default=0)
+        encoded_data['max_quadratic_bias'] = max(quadratic.values(), default=0)
     if 'min_quadratic_bias' not in encoded_data:
-        encoded_data['min_quadratic_bias'] = min(itervalues(quadratic), default=0)
+        encoded_data['min_quadratic_bias'] = min(quadratic.values(), default=0)
     if 'max_linear_bias' not in encoded_data:
-        encoded_data['max_linear_bias'] = max(itervalues(linear), default=0)
+        encoded_data['max_linear_bias'] = max(linear.values(), default=0)
     if 'min_linear_bias' not in encoded_data:
-        encoded_data['min_linear_bias'] = min(itervalues(linear), default=0)
+        encoded_data['min_linear_bias'] = min(linear.values(), default=0)
 
     insert = \
         """

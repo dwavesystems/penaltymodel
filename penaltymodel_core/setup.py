@@ -5,7 +5,6 @@ from setuptools import setup
 exec(open("./penaltymodel/core/package_info.py").read())
 
 install_requires = ['dimod>=0.8.0,<0.11.0',
-                    'six>=1.11.0,<2.0.0',
                     'networkx>=2.4,<3.0'
                     ]
 
@@ -30,7 +29,8 @@ classifiers = [
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9'
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
     ]
 
 python_requires = '>=3.6'

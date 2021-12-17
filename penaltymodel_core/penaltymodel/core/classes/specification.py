@@ -16,7 +16,6 @@
 Specification
 -------------
 """
-from __future__ import absolute_import
 
 from numbers import Number
 import itertools
@@ -24,7 +23,6 @@ import itertools
 import networkx as nx
 
 import dimod
-from six import itervalues, iteritems, iterkeys
 
 
 __all__ = ['Specification']
@@ -172,7 +170,7 @@ class Specification(object):
             if not isinstance(feasible_configurations, dict):
                 feasible_configurations = {config: 0.0 for config in feasible_configurations}
             else:
-                if not all(isinstance(en, Number) for en in itervalues(feasible_configurations)):
+                if not all(isinstance(en, Number) for en in feasible_configurations.values()):
                     raise ValueError("the energy fo each configuration should be numeric")
         except TypeError:
             raise TypeError("expected decision_variables to be an iterable")
@@ -232,8 +230,8 @@ class Specification(object):
                 quad_ranges[u] = {}
 
         # next let's propgate and check what is already present
-        for u, neighbors in iteritems(quad_ranges):
-            for v, rang in iteritems(neighbors):
+        for u, neighbors in quad_ranges.items():
+            for v, rang in neighbors.items():
                 # check the range
                 rang = Specification._check_range(rang)
 
@@ -302,8 +300,8 @@ class Specification(object):
         ising_quadratic_ranges = self.ising_quadratic_ranges
 
         try:
-            old_labels = set(iterkeys(mapping))
-            new_labels = set(itervalues(mapping))
+            old_labels = set(mapping.keys())
+            new_labels = set(mapping.values())
         except TypeError:
             raise ValueError("mapping targets must be hashable objects")
 
@@ -319,8 +317,8 @@ class Specification(object):
                                  vartype=self.vartype,  # does not change
                                  ising_linear_ranges={mapping.get(v, v): ising_linear_ranges[v] for v in graph},
                                  ising_quadratic_ranges={mapping.get(v, v): {mapping.get(u, u): r
-                                                                             for u, r in iteritems(neighbors)}
-                                                         for v, neighbors in iteritems(ising_quadratic_ranges)})
+                                                                             for u, r in neighbors.items()}
+                                                         for v, neighbors in ising_quadratic_ranges.items()})
         else:
             # now we need the ising_linear_ranges and ising_quadratic_ranges
             shared = old_labels & new_labels
@@ -335,7 +333,7 @@ class Specification(object):
                 old_to_intermediate = {}
                 intermediate_to_new = {}
 
-                for old, new in iteritems(mapping):
+                for old, new in mapping.items():
                     if old == new:
                         # we can remove self-labels
                         continue
@@ -372,7 +370,7 @@ class Specification(object):
                     del ising_linear_ranges[v]
 
             # need to do the deeper level first
-            for neighbors in itervalues(ising_quadratic_ranges):
+            for neighbors in ising_quadratic_ranges.values():
                 for v in list(neighbors):
                     if v in mapping:
                         neighbors[mapping[v]] = neighbors[v]
