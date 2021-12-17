@@ -16,11 +16,9 @@
 PenaltyModel
 ------------
 """
-from __future__ import absolute_import
 
 from numbers import Number
 
-from six import iteritems
 import networkx as nx
 
 from dimod import BinaryQuadraticModel, Vartype
@@ -160,12 +158,12 @@ class PenaltyModel(Specification):
         ising_quadratic_ranges = self.ising_quadratic_ranges
         if self.vartype is Vartype.SPIN:
             # check the ising energy ranges
-            for v, bias in iteritems(model.linear):
+            for v, bias in model.linear.items():
                 min_, max_ = ising_linear_ranges[v]
                 if bias < min_ or bias > max_:
                     raise ValueError(("variable {} has bias {} outside of the specified range [{}, {}]"
                                       ).format(v, bias, min_, max_))
-            for (u, v), bias in iteritems(model.quadratic):
+            for (u, v), bias in model.quadratic.items():
                 min_, max_ = ising_quadratic_ranges[u][v]
                 if bias < min_ or bias > max_:
                     raise ValueError(("interaction {}, {} has bias {} outside of the specified range [{}, {}]"

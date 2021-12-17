@@ -14,7 +14,6 @@
 
 """This module has the primary public-facing methods for the project.
 """
-from six import iteritems
 
 import penaltymodel.core as pm
 
@@ -123,5 +122,5 @@ def _graph_canonicalization(graph):
         inverse_mapping = dict(enumerate(sorted(graph)))
     except TypeError:
         inverse_mapping = dict(enumerate(graph))
-    mapping = {v: idx for idx, v in iteritems(inverse_mapping)}
+    mapping = {v: idx for idx, v in inverse_mapping.items()}
     return mapping, inverse_mapping
