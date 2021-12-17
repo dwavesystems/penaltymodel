@@ -128,7 +128,7 @@ jobs:
       python-version:
         type: string
     macos:
-      xcode: "12.2.0"
+      xcode: 13.2.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
 
@@ -144,7 +144,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-12.2.0
+            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-13.2.0
 
       - run:
           name: install python
@@ -154,7 +154,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.pyenv
-          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-12.2.0
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-13.2.0
 
       - run:
           name: create virtualenv
@@ -387,9 +387,14 @@ workflows:
           name: test-linux-<< matrix.python-version >>-dimod<< matrix.dimod-version >>
           matrix:
             parameters:
-              python-version: &python-versions [3.6.8, 3.7.9, 3.8.9, 3.9.4]
+              python-version: &python-versions [3.6.8, 3.7.9, 3.8.9, 3.9.4, 3.10.0]
               # 0.8.0 is the smallest supported by all packages
-              dimod-version: [==0.8.0, <0.10, <0.11]
+              dimod-version: [==0.8.0, ~=0.9.0, ~=0.10.0]
+            exclude:
+              - python-version: 3.10.0
+                dimod-version: ==0.8.0
+              - python-version: 3.10.0
+                dimod-version: ~=0.9.0
       - test-osx:
           name: test-osx-<< matrix.python-version >>
           matrix:
