@@ -1,4 +1,4 @@
-# Copyright 2019 D-Wave Systems Inc.
+# Copyright 2021 D-Wave Systems Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -11,39 +11,87 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-#
-# ================================================================================================
+
+# developer note: this combines all of the tests from maxgap and mip
+# before we merged. There is likely a lot of redundancy
+
+import itertools
 import unittest
 
 import dimod
 import dwave_networkx as dnx
 import networkx as nx
 
-from pysmt.environment import reset_env
+from penaltymodel import generate, ImpossiblePenaltyModel
 
-import penaltymodel.core as pm
-import penaltymodel.maxgap as maxgap
-
-from penaltymodel.maxgap.generation import MAX_GAP_DELTA
+MAX_GAP_DELTA = 0.01
 
 
-class TestGeneration(unittest.TestCase):
-    def setUp(self):
-        self.env = reset_env()
+class TestGenerate(unittest.TestCase):
+    def check_bqm_table(self, bqm, gap, table, decision):
+        """check that the bqm has ground states matching table"""
+        response = dimod.ExactSolver().sample(bqm)
+
+        highest_feasible_energy = max(table.values()) if isinstance(table, dict) else 0
+
+        # Looping though ExactSolver results and comparing with BQM
+        seen_gap = float('inf')
+        seen_table = set()
+        for sample, energy in response.data(['sample', 'energy']):
+            self.assertAlmostEqual(bqm.energy(sample), energy)  # sanity check
+
+            config = tuple(sample[v] for v in decision)
+
+            # Configurations with energies < highest feasible energy
+            if energy < highest_feasible_energy + .001:
+                self.assertIn(config, table)
+
+                # If there's no specific target energy to match, we've already
+                # satisfied the configuration by being less than the highest
+                # feasible energy
+                if not isinstance(table, dict):
+                    seen_table.add(config)
+                    continue
+
+                # Check configuration against specific target energy
+                # Note: For a given valid decision configuration, there could
+                #   be different sets of decision + auxiliary configurations. We
+                #   only need one of those sets to match the specific target
+                #   energy, while the remaining sets can be above that target.
+                self.assertGreaterEqual(energy, table[config])
+
+                # If configuration matches target energy, the configuration
+                # should be added to the seen_table
+                if round(table[config]-energy, ndigits=7) == 0:
+                    seen_table.add(config)
+
+            # Get smallest gap among non-table configurations
+            elif config not in table:
+                seen_gap = min(seen_gap, energy - highest_feasible_energy)
+
+        # Verify that all table configurations have been accounted for
+        for config in table:
+            self.assertIn(config, seen_table)
+
+        self.assertEqual(seen_gap, gap)
+        self.assertGreater(gap, 0)
+
+    def check_bqm_graph(self, bqm, graph):
+        """bqm and graph have the same structure"""
+        self.assertEqual(len(bqm.linear), len(graph.nodes))
+        self.assertEqual(len(bqm.quadratic), len(graph.edges))
+
+        for v in bqm.linear:
+            self.assertIn(v, graph)
+        for u, v in bqm.quadratic:
+            self.assertIn(u, graph.adj[v])
 
     def generate_and_check(self, graph, configurations, decision_variables,
-                           linear_energy_ranges, quadratic_energy_ranges,
-                           min_classical_gap, known_classical_gap=0):
-        """Checks that MaxGap's BQM and gap obeys the constraints set by configurations,
-        linear and quadratic energy ranges, and min classical gap.
+                           *, known_classical_gap=0, **kwargs):
 
-        Args:
-            known_classical_gap: a known gap for this graph and configuration
-        """
-        bqm, gap = maxgap.generate(graph, configurations, decision_variables,
-                                   linear_energy_ranges,
-                                   quadratic_energy_ranges,
-                                   min_classical_gap)
+        bqm, gap, aux = generate(graph, configurations, decision_variables, **kwargs)
+
+        min_classical_gap = kwargs.get('min_classical_gap', 2)
 
         # Check gap
         # Note: Due to the way MaxGap searches for the maximum gap, if
@@ -90,16 +138,17 @@ class TestGeneration(unittest.TestCase):
             else:
                 best_gap = min(best_gap, energy - highest_feasible_energy)
 
+        min_lin, max_lin = kwargs.get('linear_bound', (-2, 2))
+        min_quad, max_quad = kwargs.get('quadratic_bound', (-1, 1))
+
         # check energy ranges
         for v, bias in bqm.linear.items():
-            min_, max_ = linear_energy_ranges[v]
-            self.assertGreaterEqual(bias, min_)
-            self.assertLessEqual(bias, max_)
+            self.assertGreaterEqual(bias, min_lin)
+            self.assertLessEqual(bias, max_lin)
 
         for (u, v), bias in bqm.quadratic.items():
-            min_, max_ = quadratic_energy_ranges.get((u, v), quadratic_energy_ranges.get((v, u), None))
-            self.assertGreaterEqual(bias, min_)
-            self.assertLessEqual(bias, max_)
+            self.assertGreaterEqual(bias, min_quad)
+            self.assertLessEqual(bias, max_quad)
 
         self.assertAlmostEqual(best_gap, gap)
 
@@ -111,14 +160,7 @@ class TestGeneration(unittest.TestCase):
                           (+1, +1, -1): 0}
         decision_variables = (0, 1, 8)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
-
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_disjoint_decision_accross_subgraphs(self):
         graph = dnx.chimera_graph(1, 1, 3)
@@ -128,28 +170,15 @@ class TestGeneration(unittest.TestCase):
                           (+1, +1, -1, -1): 0}
         decision_variables = (0, 1, 3, 8)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
-
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_empty(self):
         # this should test things like empty graphs and empty configs
         graph = nx.Graph()
         configurations = {}
         decision_variables = tuple()
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
 
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_impossible(self):
         graph = nx.path_graph(3)
@@ -158,41 +187,22 @@ class TestGeneration(unittest.TestCase):
                           (+1, -1, -1): 0,
                           (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
 
-        with self.assertRaises(pm.ImpossiblePenaltyModel):
-            maxgap.generate(graph, configurations, decision_variables,
-                            linear_energy_ranges,
-                            quadratic_energy_ranges,
-                            min_classical_gap)
+        with self.assertRaises(ImpossiblePenaltyModel):
+            generate(graph, configurations, decision_variables)
 
     def test_K1(self):
         graph = nx.complete_graph(1)
         configurations = {(+1,): 0}
         decision_variables = [0]
-        linear_energy_ranges = {0: (-2, 2)}
-        quadratic_energy_ranges = {}
-        min_classical_gap = 2
-
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_K1_multiple_energies(self):
         graph = nx.complete_graph(1)
         configurations = {(+1,): .1, (-1,): -.3}
         decision_variables = [0]
-        linear_energy_ranges = {0: (-2, 2)}
-        quadratic_energy_ranges = {}
-        min_classical_gap = 2
 
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_K33(self):
         graph = nx.Graph()
@@ -205,29 +215,15 @@ class TestGeneration(unittest.TestCase):
                           (-1, +1, -1): 0,
                           (+1, -1, -1): 0,
                           (+1, +1, +1): 0}
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 2
 
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_K3_one_aux(self):
         graph = nx.complete_graph(3)
-
         configurations = {(-1, -1): 0, (1, 1): 0}
-
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
         decision_variables = [0, 1]
-        min_classical_gap = 2
 
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_K4(self):
         graph = nx.complete_graph(4)
@@ -235,14 +231,7 @@ class TestGeneration(unittest.TestCase):
         configurations = {(-1, -1, -1, -1): 0, (1, 1, 1, 1): 0}
         decision_variables = list(graph)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-        min_classical_gap = 1
-
-        self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+        self.generate_and_check(graph, configurations, decision_variables)
 
     def test_min_gap_equals_max_gap(self):
         # Make sure that a model is always grabbed, even when min_gap == max_gap
@@ -251,24 +240,13 @@ class TestGeneration(unittest.TestCase):
         config = {(-1,): -1}
         graph = nx.complete_graph(decision_variables)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
+        bqm, gap, aux = generate(graph, config, decision_variables,
+                                 min_classical_gap=min_gap)
 
-        bqm, gap = maxgap.generate(graph, config, decision_variables,
-                                   linear_energy_ranges,
-                                   quadratic_energy_ranges,
-                                   min_gap,
-                                   None)
-
-        # Check that a model was found
-        self.assertIsNotNone(bqm.linear)
-        self.assertIsNotNone(bqm.quadratic)
-        self.assertIsNotNone(bqm.offset)
-        self.assertEqual(min_gap, gap)  # Min gap is also the max classical gap in this case
+        self.assertEqual(bqm, dimod.BinaryQuadraticModel({'a': 2}, {}, 1, 'SPIN'))
+        self.assertEqual(min_gap, gap)
 
     def test_min_gap_no_aux(self):
-        """Verify min_classical_gap parameter works
-        """
         # Set up problem
         decision_variables = ['a', 'b', 'c']
         or_gate = {(-1, -1, -1): 0,
@@ -277,28 +255,18 @@ class TestGeneration(unittest.TestCase):
                    (1, 1, 1): 0}
         graph = nx.complete_graph(decision_variables)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
         # Run problem with a min_classical_gap that is too large
-        with self.assertRaises(pm.ImpossiblePenaltyModel):
+        with self.assertRaises(ImpossiblePenaltyModel):
             large_min_gap = 3
-            maxgap.generate(graph, or_gate, decision_variables,
-                            linear_energy_ranges,
-                            quadratic_energy_ranges,
-                            large_min_gap,
-                            None)
+            generate(graph, or_gate, decision_variables,
+                     min_classical_gap=large_min_gap)
 
         # Lowering min_classical_gap should lead to a bqm being found
         min_classical_gap = 1.5
         self.generate_and_check(graph, or_gate, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap=min_classical_gap)
 
     def test_min_gap_with_aux(self):
-        """Verify min_classical_gap parameter works
-        """
         decision_variables = ['a', 'b', 'c']
         xor_gate = {(-1, -1, -1): 0,
                     (-1, 1, 1): 0,
@@ -306,24 +274,16 @@ class TestGeneration(unittest.TestCase):
                     (1, 1, -1): 0}
         graph = nx.complete_graph(decision_variables + ['aux0'])
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
         # Run problem with a min_classical_gap that is too large
-        with self.assertRaises(pm.ImpossiblePenaltyModel):
+        with self.assertRaises(ImpossiblePenaltyModel):
             large_min_gap = 3
-            maxgap.generate(graph, xor_gate, decision_variables,
-                            linear_energy_ranges,
-                            quadratic_energy_ranges,
-                            large_min_gap,
-                            None)
+            generate(graph, xor_gate, decision_variables,
+                     min_classical_gap=large_min_gap)
 
         # Lowering min_classical_gap should lead to a bqm being found
         min_classical_gap = .5
         self.generate_and_check(graph, xor_gate, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap=min_classical_gap)
 
     def test_negative_min_gap_feasible_bqm(self):
         # Regardless of the negative min classical gap, this feasible BQM should return its usual
@@ -333,35 +293,24 @@ class TestGeneration(unittest.TestCase):
         graph = nx.complete_graph(decision_variables)
         min_classical_gap = -2
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
         self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+                                min_classical_gap=min_classical_gap)
 
-    def test_negative_min_gap_impossible_bqm(self):
-        """XOR Gate problem without auxiliary variables
-        Note: Regardless of the negative gap, this BQM should remain impossible.
-        """
-        negative_gap = -3
-        decision_variables = ['a', 'b', 'c']
-        xor_gate = {(-1, -1, -1): 0,
-                    (-1, 1, 1): 0,
-                    (1, -1, 1): 0,
-                    (1, 1, -1): 0}
-        graph = nx.complete_graph(decision_variables)
+    # def test_negative_min_gap_impossible_bqm(self):
+    #     """XOR Gate problem without auxiliary variables
+    #     Note: Regardless of the negative gap, this BQM should remain impossible.
+    #     """
+    #     negative_gap = -3
+    #     decision_variables = ['a', 'b', 'c']
+    #     xor_gate = {(-1, -1, -1): 0,
+    #                 (-1, 1, 1): 0,
+    #                 (1, -1, 1): 0,
+    #                 (1, 1, -1): 0}
+    #     graph = nx.complete_graph(decision_variables)
 
-        linear_energy_ranges = {v: (-2., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., 1.) for u, v in graph.edges}
-
-        with self.assertRaises(pm.ImpossiblePenaltyModel):
-            maxgap.generate(graph, xor_gate, decision_variables,
-                            linear_energy_ranges,
-                            quadratic_energy_ranges,
-                            negative_gap,
-                            None)
+    #     with self.assertRaises(ImpossiblePenaltyModel):
+    #         generate(graph, xor_gate, decision_variables,
+    #                  min_classical_gap=negative_gap)
 
     def test_restricted_energy_ranges(self):
         """Create asymmetric energy ranges and test against that."""
@@ -371,14 +320,13 @@ class TestGeneration(unittest.TestCase):
                           (+1, -1, -1): 0,
                           (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
-        linear_energy_ranges = {v: (-1., 2.) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1., .5) for u, v in graph.edges}
-        min_classical_gap = 2
+        linear_bound = (-1., 2.)
+        quadratic_bound = (-1, .5)
 
         self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap)
+                                linear_bound=linear_bound,
+                                quadratic_bound=quadratic_bound,
+                                )
 
     def test_negative_feasible_positive_infeasible(self):
         """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
@@ -391,17 +339,11 @@ class TestGeneration(unittest.TestCase):
         configurations = {(1,): -0.5}
         graph = nx.complete_graph(decision_variables)
 
-        linear_energy_ranges = {v: (-2, 2) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
-
         # Known solution: -2*a + 1.5
         known_classical_gap = 4
 
         self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap,
-                                known_classical_gap)
+                                known_classical_gap=known_classical_gap)
 
     def test_positive_feasible_positive_infeasible(self):
         """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
@@ -415,17 +357,12 @@ class TestGeneration(unittest.TestCase):
                           (-1, -1): 0}
         graph = nx.complete_graph(decision_variables + ['c'])
 
-        linear_energy_ranges = {v: (-2, 2) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
-
         # Known solution: 2*a + 2*b -2*c + a*b + a*c + b*c + 7
         known_classical_gap = 8
 
         self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap,
-                                known_classical_gap)
+                                min_classical_gap=min_classical_gap,
+                                known_classical_gap=known_classical_gap)
 
     def test_negative_feasible_negative_infeasible(self):
         """Testing that gap is wrt the energy of the highest feasible state, rather than wrt zero.
@@ -437,14 +374,99 @@ class TestGeneration(unittest.TestCase):
         configurations = {(1,): -10}
         graph = nx.complete_graph(decision_variables + ['b', 'c'])
 
-        linear_energy_ranges = {v: (-2, 2) for v in graph}
-        quadratic_energy_ranges = {(u, v): (-1, 1) for u, v in graph.edges}
 
         # Known solution: -2*a - 2*b - 2*c - a*b - a*c - b*c - 1
         known_classical_gap = 8
 
         self.generate_and_check(graph, configurations, decision_variables,
-                                linear_energy_ranges,
-                                quadratic_energy_ranges,
-                                min_classical_gap,
-                                known_classical_gap)
+                                min_classical_gap=min_classical_gap,
+                                known_classical_gap=known_classical_gap)
+
+    def test_impossible_AND_3path(self):
+        """AND gate cannot exist on a 3-path"""
+        graph = nx.path_graph(3)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
+        decision_variables = (0, 1, 2)
+
+        with self.assertRaises(ImpossiblePenaltyModel):
+            generate(graph, configurations, decision_variables)
+
+    def test_empty_no_aux(self):
+        graph = nx.Graph()
+        configurations = {}
+        decision = []
+
+        bqm, gap, aux = generate(graph, configurations, decision)
+
+        self.check_bqm_graph(bqm, graph)
+
+    def test_empty_some_aux(self):
+        graph = nx.complete_graph(3)
+        configurations = {}
+        decision = []
+
+        bqm, gap, aux = generate(graph, configurations, decision)
+
+        self.check_bqm_graph(bqm, graph)
+
+    def test_AND_K4(self):
+        """A typical use case, an AND gate on a K4."""
+        graph = nx.complete_graph(4)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
+        decision_variables = (0, 1, 2)
+
+        bqm, gap, aux = generate(graph, configurations, decision_variables)
+
+        self.check_bqm_table(bqm, gap, configurations, decision_variables)
+
+    def test_NAE3SAT_4cycle(self):
+        """A typical use case, an AND gate on a K4."""
+        graph = nx.cycle_graph(4)
+        configurations = {config: 0 for config in itertools.product((-1, 1), repeat=3) if len(set(config)) > 1}
+        decision_variables = (0, 1, 2)
+
+        bqm, gap, aux = generate(graph, configurations, decision_variables)
+
+        self.check_bqm_table(bqm, gap, configurations, decision_variables)
+
+    def test_return_auxiliary_AND_K3(self):
+
+        graph = nx.complete_graph(3)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
+        decision_variables = (0, 1, 2)
+
+        bqm, gap, aux_configs = generate(graph, configurations, decision_variables)
+
+        # no aux variables
+        self.assertEqual(aux_configs,
+                         {(-1, -1, -1): {},
+                          (-1, +1, -1): {},
+                          (+1, -1, -1): {},
+                          (+1, +1, +1): {}})
+
+    def test_return_auxiliary_AND_K5(self):
+
+        graph = nx.complete_graph(5)
+        configurations = {(-1, -1, -1): 0,
+                          (-1, +1, -1): 0,
+                          (+1, -1, -1): 0,
+                          (+1, +1, +1): 0}
+        decision_variables = (0, 1, 2)
+
+        bqm, gap, aux_configs = generate(graph, configurations, decision_variables)
+
+        for config in configurations:
+            sample = dict(zip(decision_variables, config))
+
+            sample.update(aux_configs[config])
+
+            self.assertAlmostEqual(bqm.energy(sample), 0.0)

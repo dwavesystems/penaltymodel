@@ -4,16 +4,13 @@ from setuptools import setup
 # add __version__, __author__, __authoremail__, __description__ to this namespace
 exec(open("./penaltymodel/core/package_info.py").read())
 
-install_requires = ['dimod>=0.8.0,<0.11.0',
-                    'networkx>=2.4,<3.0'
+install_requires = ['dimod>=0.10.0,<0.11.0',
+                    'networkx>=2.4,<3.0',
+                    'numpy>=1.19.1',
+                    'scipy>=1.5.2',
                     ]
 
-extras_require = {'all': ['penaltymodel_cache>=0.3.0,<0.4.0',
-                          'penaltymodel_lp>=0.1.0,<0.2.0',
-                          'penaltymodel_maxgap>=0.5.0,<0.6.0',
-                          "penaltymodel_mip>=0.2.0,<0.3.0; platform_machine!='x86' and python_version!='3.4'"
-                          ]
-                  }
+extras_require = {'all': []}
 
 packages = ['penaltymodel',
             'penaltymodel.core',

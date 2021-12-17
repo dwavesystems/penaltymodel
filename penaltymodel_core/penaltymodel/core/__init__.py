@@ -1,9 +1,6 @@
-from __future__ import absolute_import
-
 from penaltymodel.core.classes import *
 import penaltymodel.core.classes
 
-from penaltymodel.core.exceptions import *
 import penaltymodel.core.exceptions
 
 from penaltymodel.core.interface import *
