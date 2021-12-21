@@ -1,4 +1,4 @@
-# Copyright 2017 D-Wave Systems Inc.
+# Copyright 2021 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,32 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Utilities for access to the sqlite cache.
-
-"""
+import contextlib
 import sqlite3
 import os
 import json
 import struct
-import base64
 
-import penaltymodel.core as pm
+from typing import Dict, Iterator, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import dimod
+import homebase
+import networkx as nx
 
-from penaltymodel.cache.schema import schema
-from penaltymodel.cache.cache_manager import cache_file
+from penaltymodel.core.package_info import __version__  # todo: move
+from penaltymodel.exceptions import MissingPenaltyModel
 
-__all__ = ["cache_connect",
-           "insert_graph", "iter_graph",
-           "insert_feasible_configurations", "iter_feasible_configurations",
-           "insert_ising_model", "iter_ising_model",
-           "insert_penalty_model", "iter_penalty_model_from_specification"]
+__all__ = ['PenaltyModelCache']
 
 
-def cache_connect(database=None):
-    """Returns a connection object to a sqlite database.
+class PenaltyModel(NamedTuple):
+    bqm: dimod.BinaryQuadraticModel
+    table: Dict[Tuple[int, ...], float]
+    decision_variables: Sequence[int]
+    classical_gap: float
+
+
+class PenaltyModelCache(contextlib.AbstractContextManager):
+    """
 
     Args:
         database (str, optional): The path to the database the user wishes
@@ -45,273 +46,95 @@ def cache_connect(database=None):
             :func:`.cache_file`. If the special database name ':memory:'
             is given, then a temporary database is created in memory.
 
-    Returns:
-        :class:`sqlite3.Connection`
-
     """
-    if database is None:
-        database = cache_file()
 
-    if os.path.isfile(database):
-        # just connect to the database as-is
-        conn = sqlite3.connect(database)
-    else:
-        # we need to populate the database
-        conn = sqlite3.connect(database)
-        conn.executescript(schema)
-
-    with conn as cur:
-        # turn on foreign keys, allows deletes to cascade.
-        cur.execute("PRAGMA foreign_keys = ON;")
-
-    conn.row_factory = sqlite3.Row
-
-    return conn
-
-
-def insert_graph(cur, nodelist, edgelist, encoded_data=None):
-    """Insert a graph into the cache.
-
-    A graph is stored by number of nodes, number of edges and a
-    json-encoded list of edges.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-        nodelist (list): The nodes in the graph.
-        edgelist (list): The edges in the graph.
-        encoded_data (dict, optional): If a dictionary is provided, it
-            will be populated with the serialized data. This is useful for
-            preventing encoding the same information many times.
-
-    Notes:
-        This function assumes that the nodes are index-labeled and range
-        from 0 to num_nodes - 1.
-
-        In order to minimize the total size of the cache, it is a good
-        idea to sort the nodelist and edgelist before inserting.
-
-    Examples:
-        >>> nodelist = [0, 1, 2]
-        >>> edgelist = [(0, 1), (1, 2)]
-        >>> with pmc.cache_connect(':memory:') as cur:
-        ...     pmc.insert_graph(cur, nodelist, edgelist)
-
-        >>> nodelist = [0, 1, 2]
-        >>> edgelist = [(0, 1), (1, 2)]
-        >>> encoded_data = {}
-        >>> with pmc.cache_connect(':memory:') as cur:
-        ...     pmc.insert_graph(cur, nodelist, edgelist, encoded_data)
-        >>> encoded_data['num_nodes']
-        3
-        >>> encoded_data['num_edges']
-        2
-        >>> encoded_data['edges']
-        '[[0,1],[1,2]]'
-
-    """
-    if encoded_data is None:
-        encoded_data = {}
-
-    if 'num_nodes' not in encoded_data:
-        encoded_data['num_nodes'] = len(nodelist)
-    if 'num_edges' not in encoded_data:
-        encoded_data['num_edges'] = len(edgelist)
-    if 'edges' not in encoded_data:
-        encoded_data['edges'] = json.dumps(edgelist, separators=(',', ':'))
-
-    insert = \
+    database_schema = \
         """
-        INSERT OR IGNORE INTO graph(num_nodes, num_edges, edges)
-        VALUES (:num_nodes, :num_edges, :edges);
-        """
+        CREATE TABLE IF NOT EXISTS graph(
+            num_nodes INTEGER NOT NULL,
+            num_edges INTEGER NOT NULL,
+            edges TEXT NOT NULL,  -- json list of lists, should be sorted (with each edge sorted)
+            id INTEGER PRIMARY KEY,
+            CONSTRAINT graph UNIQUE (num_nodes, edges)
+        );
 
-    cur.execute(insert, encoded_data)
-
-
-def iter_graph(cur):
-    """Iterate over all graphs in the cache.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-
-    Yields:
-        tuple: A 2-tuple containing:
-
-            list: The nodelist for a graph in the cache.
-
-            list: the edgelist for a graph in the cache.
-
-    Examples:
-        >>> nodelist = [0, 1, 2]
-        >>> edgelist = [(0, 1), (1, 2)]
-        >>> with pmc.cache_connect(':memory:') as cur:
-        ...     pmc.insert_graph(cur, nodelist, edgelist)
-        ...     list(pmc.iter_graph(cur))
-        [([0, 1, 2], [[0, 1], [1, 2]])]
-
-    """
-    select = """SELECT num_nodes, num_edges, edges from graph;"""
-    for num_nodes, num_edges, edges in cur.execute(select):
-        yield list(range(num_nodes)), json.loads(edges)
-
-
-def insert_feasible_configurations(cur, feasible_configurations, encoded_data=None):
-    """Insert a group of feasible configurations into the cache.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-        feasible_configurations (dict[tuple[int]): The set of feasible
-            configurations. Each key should be a tuple of variable assignments.
-            The values are the relative energies.
-        encoded_data (dict, optional): If a dictionary is provided, it
-            will be populated with the serialized data. This is useful for
-            preventing encoding the same information many times.
-
-    Examples:
-        >>> feasible_configurations = {(-1, -1): 0.0, (+1, +1): 0.0}
-        >>> with pmc.cache_connect(':memory:') as cur:
-        ...     pmc.insert_feasible_configurations(cur, feasible_configurations)
-
-    """
-    if encoded_data is None:
-        encoded_data = {}
-
-    if 'num_variables' not in encoded_data:
-        encoded_data['num_variables'] = len(next(iter(feasible_configurations)))
-    if 'num_feasible_configurations' not in encoded_data:
-        encoded_data['num_feasible_configurations'] = len(feasible_configurations)
-    if 'feasible_configurations' not in encoded_data or 'energies' not in encoded_data:
-        encoded = {_serialize_config(config): en for config, en in feasible_configurations.items()}
-
-        configs, energies = zip(*sorted(encoded.items()))
-        encoded_data['feasible_configurations'] = json.dumps(configs, separators=(',', ':'))
-        encoded_data['energies'] = json.dumps(energies, separators=(',', ':'))
-
-    insert = """
-            INSERT OR IGNORE INTO feasible_configurations(
+        CREATE TABLE IF NOT EXISTS feasible_configurations(
+            num_variables INTEGER NOT NULL,
+            num_feasible_configurations INTEGER NOT NULL,
+            feasible_configurations TEXT NOT NULL,
+            energies BLOB NOT NULL,
+            id INTEGER PRIMARY KEY,
+            CONSTRAINT feasible_configurations UNIQUE (
                 num_variables,
-                num_feasible_configurations,
                 feasible_configurations,
                 energies)
-            VALUES (
-                :num_variables,
-                :num_feasible_configurations,
-                :feasible_configurations,
-                :energies);
-            """
+        );
 
-    cur.execute(insert, encoded_data)
+        CREATE TABLE IF NOT EXISTS binary_quadratic_model(
+            bqm_data BLOB NOT NULL,
+            max_quadratic_bias REAL NOT NULL,
+            min_quadratic_bias REAL NOT NULL,
+            max_linear_bias REAL NOT NULL,
+            min_linear_bias REAL NOT NULL,
+            graph_id INTEGER NOT NULL,
+            id INTEGER PRIMARY KEY,
+            CONSTRAINT ising_model UNIQUE (bqm_data, graph_id),
+            FOREIGN KEY (graph_id) REFERENCES graph(id) ON DELETE CASCADE
+        );
 
+        CREATE TABLE IF NOT EXISTS penalty_model(
+            decision_variables TEXT NOT NULL,
+            classical_gap REAL NOT NULL,
+            feasible_configurations_id INT,
+            bqm_id INT,
+            id INTEGER PRIMARY KEY,
+            CONSTRAINT penalty_model UNIQUE (decision_variables, feasible_configurations_id, bqm_id),
+            FOREIGN KEY (feasible_configurations_id) REFERENCES feasible_configurations(id) ON DELETE CASCADE,
+            FOREIGN KEY (bqm_id) REFERENCES binary_quadratic_model(id) ON DELETE CASCADE
+        );
 
-def _serialize_config(config):
-    """Turns a config into an integer treating each of the variables as spins.
+        CREATE VIEW IF NOT EXISTS penalty_model_view AS
+        SELECT
+            num_variables,
+            num_feasible_configurations,
+            feasible_configurations,
+            energies,
 
-    Examples:
-        >>> _serialize_config((0, 0, 1))
-        1
-        >>> _serialize_config((1, 1))
-        3
-        >>> _serialize_config((1, 0, 0))
-        4
+            num_nodes,
+            num_edges,
+            edges,
 
-    """
-    out = 0
-    for bit in config:
-        out = (out << 1) | (bit > 0)
+            bqm_data,
+            max_quadratic_bias,
+            min_quadratic_bias,
+            max_linear_bias,
+            min_linear_bias,
 
-    return out
-
-
-def iter_feasible_configurations(cur):
-    """Iterate over all of the sets of feasible configurations in the cache.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-
-    Yields:
-        dict[tuple(int): number]: The feasible_configurations.
-
-    """
-    select = \
+            decision_variables,
+            classical_gap,
+            penalty_model.id
+        FROM
+            binary_quadratic_model,
+            feasible_configurations,
+            graph,
+            penalty_model
+        WHERE
+            penalty_model.bqm_id = binary_quadratic_model.id
+            AND feasible_configurations.id = penalty_model.feasible_configurations_id
+            AND graph.id = binary_quadratic_model.graph_id;
         """
-        SELECT num_variables, feasible_configurations, energies
-        FROM feasible_configurations
+
+    insert_bqm_statement = \
         """
-    for num_variables, feasible_configurations, energies in cur.execute(select):
-        configs = json.loads(feasible_configurations)
-        energies = json.loads(energies)
-
-        yield {_decode_config(config, num_variables): energy
-               for config, energy in zip(configs, energies)}
-
-
-def _decode_config(c, num_variables):
-    """inverse of _serialize_config, always converts to spin."""
-    def bits(c):
-        n = 1 << (num_variables - 1)
-        for __ in range(num_variables):
-            yield 1 if c & n else -1
-            n >>= 1
-    return tuple(bits(c))
-
-
-def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data=None):
-    """Insert an Ising model into the cache.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-        nodelist (list): The nodes in the graph.
-        edgelist (list): The edges in the graph.
-        linear (dict): The linear bias associated with each node in nodelist.
-        quadratic (dict): The quadratic bias associated with teach edge in edgelist.
-        offset (float): The constant offset applied to the ising problem.
-        encoded_data (dict, optional): If a dictionary is provided, it
-            will be populated with the serialized data. This is useful for
-            preventing encoding the same information many times.
-
-    """
-    if encoded_data is None:
-        encoded_data = {}
-
-    # insert graph and partially populate encoded_data with graph info
-    insert_graph(cur, nodelist, edgelist, encoded_data=encoded_data)
-
-    # need to encode the biases
-    if 'linear_biases' not in encoded_data:
-        encoded_data['linear_biases'] = _serialize_linear_biases(linear, nodelist)
-    if 'quadratic_biases' not in encoded_data:
-        encoded_data['quadratic_biases'] = _serialize_quadratic_biases(quadratic, edgelist)
-    if 'offset' not in encoded_data:
-        encoded_data['offset'] = offset
-    if 'max_quadratic_bias' not in encoded_data:
-        encoded_data['max_quadratic_bias'] = max(quadratic.values(), default=0)
-    if 'min_quadratic_bias' not in encoded_data:
-        encoded_data['min_quadratic_bias'] = min(quadratic.values(), default=0)
-    if 'max_linear_bias' not in encoded_data:
-        encoded_data['max_linear_bias'] = max(linear.values(), default=0)
-    if 'min_linear_bias' not in encoded_data:
-        encoded_data['min_linear_bias'] = min(linear.values(), default=0)
-
-    insert = \
-        """
-        INSERT OR IGNORE INTO ising_model(
-            linear_biases,
-            quadratic_biases,
-            offset,
+        INSERT OR IGNORE INTO binary_quadratic_model(
+            bqm_data,
             max_quadratic_bias,
             min_quadratic_bias,
             max_linear_bias,
             min_linear_bias,
             graph_id)
         SELECT
-            :linear_biases,
-            :quadratic_biases,
-            :offset,
+            :bqm_data,
             :max_quadratic_bias,
             :min_quadratic_bias,
             :max_linear_bias,
@@ -323,274 +146,328 @@ def insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encod
             edges = :edges;
         """
 
-    cur.execute(insert, encoded_data)
-
-
-def _serialize_linear_biases(linear, nodelist):
-    """Serializes the linear biases.
-
-    Args:
-        linear: a interable object where linear[v] is the bias
-            associated with v.
-        nodelist (list): an ordered iterable containing the nodes.
-
-    Returns:
-        str: base 64 encoded string of little endian 8 byte floats,
-            one for each of the biases in linear. Ordered according
-            to nodelist.
-
-    Examples:
-        >>> _serialize_linear_biases({1: -1, 2: 1, 3: 0}, [1, 2, 3])
-        'AAAAAAAA8L8AAAAAAADwPwAAAAAAAAAA'
-        >>> _serialize_linear_biases({1: -1, 2: 1, 3: 0}, [3, 2, 1])
-        'AAAAAAAAAAAAAAAAAADwPwAAAAAAAPC/'
-
-    """
-    linear_bytes = struct.pack('<' + 'd' * len(linear), *[linear[i] for i in nodelist])
-    return base64.b64encode(linear_bytes).decode('utf-8')
-
-
-def _serialize_quadratic_biases(quadratic, edgelist):
-    """Serializes the quadratic biases.
-
-    Args:
-        quadratic (dict): a dict of the form {edge1: bias1, ...} where
-            each edge is of the form (node1, node2).
-        edgelist (list): a list of the form [(node1, node2), ...].
-
-    Returns:
-        str: base 64 encoded string of little endian 8 byte floats,
-            one for each of the edges in quadratic. Ordered by edgelist.
-
-    Example:
-        >>> _serialize_quadratic_biases({(0, 1): -1, (1, 2): 1, (0, 2): .4},
-        ...                             [(0, 1), (1, 2), (0, 2)])
-        'AAAAAAAA8L8AAAAAAADwP5qZmZmZmdk/'
-
-    """
-    # assumes quadratic is upper-triangular or reflected in edgelist
-    quadratic_list = [quadratic[(u, v)] if (u, v) in quadratic else quadratic[(v, u)]
-                      for u, v in edgelist]
-    quadratic_bytes = struct.pack('<' + 'd' * len(quadratic), *quadratic_list)
-    return base64.b64encode(quadratic_bytes).decode('utf-8')
-
-
-def iter_ising_model(cur):
-    """Iterate over all of the Ising models in the cache.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-
-    Yields:
-        tuple: A 5-tuple consisting of:
-
-            list: The nodelist for a graph in the cache.
-
-            list: the edgelist for a graph in the cache.
-
-            dict: The linear biases of an Ising Model in the cache.
-
-            dict: The quadratic biases of an Ising Model in the cache.
-
-            float: The constant offset of an Ising Model in the cache.
-
-    """
-    select = \
+    insert_graph_statement = \
         """
-        SELECT linear_biases, quadratic_biases, num_nodes, edges, offset
-        FROM ising_model, graph
-        WHERE graph.id = ising_model.graph_id;
+        INSERT OR IGNORE INTO graph(num_nodes, num_edges, edges)
+        VALUES (:num_nodes, :num_edges, :edges);
         """
 
-    for linear_biases, quadratic_biases, num_nodes, edges, offset in cur.execute(select):
-        nodelist = list(range(num_nodes))
-        edgelist = json.loads(edges)
-        yield (nodelist, edgelist,
-               _decode_linear_biases(linear_biases, nodelist),
-               _decode_quadratic_biases(quadratic_biases, edgelist),
-               offset)
-
-
-def _decode_linear_biases(linear_string, nodelist):
-    """Inverse of _serialize_linear_biases.
-
-    Args:
-        linear_string (str): base 64 encoded string of little endian
-            8 byte floats, one for each of the nodes in nodelist.
-        nodelist (list): list of the form [node1, node2, ...].
-
-    Returns:
-        dict: linear biases in a dict.
-
-    Examples:
-        >>> _decode_linear_biases('AAAAAAAA8L8AAAAAAADwPwAAAAAAAAAA', [1, 2, 3])
-        {1: -1.0, 2: 1.0, 3: 0.0}
-        >>> _decode_linear_biases('AAAAAAAA8L8AAAAAAADwPwAAAAAAAAAA', [3, 2, 1])
-        {1: 0.0, 2: 1.0, 3: -1.0}
-
-    """
-    linear_bytes = base64.b64decode(linear_string)
-    return dict(zip(nodelist, struct.unpack('<' + 'd' * (len(linear_bytes) // 8), linear_bytes)))
-
-
-def _decode_quadratic_biases(quadratic_string, edgelist):
-    """Inverse of _serialize_quadratic_biases
-
-    Args:
-        quadratic_string (str) : base 64 encoded string of little
-            endian 8 byte floats, one for each of the edges.
-        edgelist (list): a list of edges of the form [(node1, node2), ...].
-
-    Returns:
-        dict: J. A dict of the form {edge1: bias1, ...} where each
-            edge is of the form (node1, node2).
-
-    Example:
-        >>> _decode_quadratic_biases('AAAAAAAA8L8AAAAAAADwP5qZmZmZmdk/',
-        ...                          [(0, 1), (1, 2), (0, 2)])
-        {(0, 1): -1.0, (0, 2): 0.4, (1, 2): 1.0}
-
-    """
-    quadratic_bytes = base64.b64decode(quadratic_string)
-    return {tuple(edge): bias for edge, bias in zip(edgelist,
-            struct.unpack('<' + 'd' * (len(quadratic_bytes) // 8), quadratic_bytes))}
-
-
-def insert_penalty_model(cur, penalty_model):
-    """Insert a penalty model into the database.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-        penalty_model (:class:`penaltymodel.PenaltyModel`): A penalty
-            model to be stored in the database.
-
-    Examples:
-        >>> import networkx as nx
-        >>> import penaltymodel.core as pm
-        >>> import dimod
-        >>> graph = nx.path_graph(3)
-        >>> decision_variables = (0, 2)
-        >>> feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        >>> spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
-        >>> linear = {v: 0 for v in graph}
-        >>> quadratic = {edge: -1 for edge in graph.edges}
-        >>> model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
-        >>> widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
-        >>> with pmc.cache_connect(':memory:') as cur:
-        ...     pmc.insert_penalty_model(cur, widget)
-
-    """
-    encoded_data = {}
-
-    linear, quadratic, offset = penalty_model.model.to_ising()
-    nodelist = sorted(linear)
-    edgelist = sorted(sorted(edge) for edge in penalty_model.graph.edges)
-
-    insert_graph(cur, nodelist, edgelist, encoded_data)
-    insert_feasible_configurations(cur, penalty_model.feasible_configurations, encoded_data)
-    insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset, encoded_data)
-
-    encoded_data['decision_variables'] = json.dumps(penalty_model.decision_variables, separators=(',', ':'))
-    encoded_data['classical_gap'] = penalty_model.classical_gap
-    encoded_data['ground_energy'] = penalty_model.ground_energy
-
-    insert = \
+    insert_penalty_model_statement = \
         """
         INSERT OR IGNORE INTO penalty_model(
             decision_variables,
             classical_gap,
-            ground_energy,
             feasible_configurations_id,
-            ising_model_id)
+            bqm_id)
         SELECT
             :decision_variables,
             :classical_gap,
-            :ground_energy,
             feasible_configurations.id,
-            ising_model.id
-        FROM feasible_configurations, ising_model, graph
+            binary_quadratic_model.id
+        FROM feasible_configurations, binary_quadratic_model, graph
         WHERE
             graph.edges = :edges AND
             graph.num_nodes = :num_nodes AND
-            ising_model.graph_id = graph.id AND
-            ising_model.linear_biases = :linear_biases AND
-            ising_model.quadratic_biases = :quadratic_biases AND
-            ising_model.offset = :offset AND
+            binary_quadratic_model.graph_id = graph.id AND
+            binary_quadratic_model.bqm_data = :bqm_data AND
             feasible_configurations.num_variables = :num_variables AND
-            feasible_configurations.num_feasible_configurations = :num_feasible_configurations AND
             feasible_configurations.feasible_configurations = :feasible_configurations AND
             feasible_configurations.energies = :energies;
         """
 
-    cur.execute(insert, encoded_data)
-
-
-def iter_penalty_model_from_specification(cur, specification):
-    """Iterate through all penalty models in the cache matching the
-    given specification.
-
-    Args:
-        cur (:class:`sqlite3.Cursor`): An sqlite3 cursor. This function
-            is meant to be run within a :obj:`with` statement.
-        specification (:class:`penaltymodel.Specification`): A specification
-            for a penalty model.
-
-    Yields:
-        :class:`penaltymodel.PenaltyModel`
-
-    """
-    encoded_data = {}
-
-    nodelist = sorted(specification.graph)
-    edgelist = sorted(sorted(edge) for edge in specification.graph.edges)
-    encoded_data['num_nodes'] = len(nodelist)
-    encoded_data['num_edges'] = len(edgelist)
-    encoded_data['edges'] = json.dumps(edgelist, separators=(',', ':'))
-    encoded_data['num_variables'] = len(next(iter(specification.feasible_configurations)))
-    encoded_data['num_feasible_configurations'] = len(specification.feasible_configurations)
-
-    encoded = {_serialize_config(config): en for config, en in specification.feasible_configurations.items()}
-    configs, energies = zip(*sorted(encoded.items()))
-    encoded_data['feasible_configurations'] = json.dumps(configs, separators=(',', ':'))
-    encoded_data['energies'] = json.dumps(energies, separators=(',', ':'))
-
-    encoded_data['decision_variables'] = json.dumps(specification.decision_variables, separators=(',', ':'))
-    encoded_data['classical_gap'] = json.dumps(specification.min_classical_gap, separators=(',', ':'))
-
-    select = \
+    insert_table_statement = \
         """
-        SELECT
-            linear_biases,
-            quadratic_biases,
-            offset,
-            decision_variables,
-            classical_gap,
-            ground_energy
-        FROM penalty_model_view
-        WHERE
-            -- graph:
-            num_nodes = :num_nodes AND
-            num_edges = :num_edges AND
-            edges = :edges AND
-            -- feasible_configurations:
-            num_variables = :num_variables AND
-            num_feasible_configurations = :num_feasible_configurations AND
-            feasible_configurations = :feasible_configurations AND
-            energies = :energies AND
-            -- decision variables:
-            decision_variables = :decision_variables AND
-            -- we could apply filters based on the energy ranges but in practice this seems slower
-            classical_gap >= :classical_gap
-        ORDER BY classical_gap DESC;
+        INSERT OR IGNORE INTO feasible_configurations(
+            num_variables,
+            num_feasible_configurations,
+            feasible_configurations,
+            energies)
+        VALUES (
+            :num_variables,
+            :num_feasible_configurations,
+            :feasible_configurations,
+            :energies);
         """
 
-    for row in cur.execute(select, encoded_data):
-        # we need to build the model
-        linear = _decode_linear_biases(row['linear_biases'], nodelist)
-        quadratic = _decode_quadratic_biases(row['quadratic_biases'], edgelist)
+    def __init__(self, database: Optional[Union[str, os.PathLike]] = None):
+        if database is None:
+            database = os.path.join(
+                homebase.user_data_dir(
+                    appname='dwave-penaltymodel-cache',
+                    app_author='dwave-systems',
+                    create=True,
+                    ),
+                f'penaltymodel_v{__version__}.db'
+                )
 
-        model = dimod.BinaryQuadraticModel(linear, quadratic, row['offset'], dimod.SPIN)  # always spin
+        if os.path.isfile(database):
+            conn = sqlite3.connect(database)
+        else:
+            conn = sqlite3.connect(database)
+            conn.executescript(self.database_schema)
 
-        yield pm.PenaltyModel.from_specification(specification, model, row['classical_gap'], row['ground_energy'])
+        with conn as cur:
+            # turn on foreign keys, allows deletes to cascade.
+            cur.execute("PRAGMA foreign_keys = ON;")
+
+        # give us mapping access to values returned by .execute
+        conn.row_factory = sqlite3.Row
+
+        self.conn = conn
+
+    def __exit__(self, *args):
+        # todo: make reentrant
+        self.close()
+
+    def close(self):
+        self.conn.close()
+
+    @staticmethod
+    def encode_graph(graph: Union[nx.Graph, dimod.BinaryQuadraticModel]
+                     ) -> Dict[str, Union[int, str]]:
+        """Encode a NetworkX graph or BQM to be stored in the cache."""
+        if isinstance(graph, nx.Graph):
+            nodes = graph.nodes
+            edges = graph.edges
+        else:
+            nodes = graph.linear
+            edges = graph.quadratic
+
+        return dict(
+            num_nodes=len(nodes),
+            num_edges=len(edges),
+            edges=json.dumps(sorted(map(sorted, edges)), separators=(',', ':')),
+            )
+
+    @staticmethod
+    def decode_graph(row: Dict[str, Union[int, str]]) -> nx.Graph:
+        """Decode a row in the cache to a NetworkX graph."""
+        graph = nx.Graph()
+        graph.add_nodes_from(range(row['num_nodes']))
+        graph.add_edges_from(json.loads(row['edges']))
+        return graph
+
+    def insert_graph(self, graph: nx.Graph):
+        """Insert a graph into the cache.
+
+        A graph is stored by number of nodes, number of edges and a
+        json-encoded list of edges.
+
+        Args:
+            graph: a NetworkX graph.
+
+        Notes:
+            This function assumes that the nodes are index-labeled and range
+            from 0 to num_nodes - 1.
+
+        """
+
+        if graph.nodes ^ range(len(graph.nodes)):
+            raise ValueError("graph nodes must be exactly range(num_nodes)")
+
+        with self.conn as cur:
+            cur.execute(self.insert_graph_statement, self.encode_graph(graph))
+
+    def iter_graphs(self) -> Iterator[nx.Graph]:
+        """Iterate over all graphs in the cache.
+
+        Yields:
+            All the graphs in the cache, as NetworkX graphs.
+
+        """
+        yield from map(self.decode_graph, self.conn.execute("SELECT num_nodes, edges from graph;"))
+
+    @staticmethod
+    def encode_table(table: Dict[Tuple[int, ...], float]) -> Dict[str, Union[int, str, bytes]]:
+        """Encode a table of feasible configurations to be stored in the cache."""
+
+        variable_counts = set(map(len, table))
+        if len(variable_counts) == 0:
+            num_variables = 0
+        elif len(variable_counts) == 1:
+            num_variables, = variable_counts
+        else:
+            raise ValueError
+
+        def config_to_int(config: Tuple[int, ...]) -> int:
+            out = 0
+            for bit in config:
+                out = (out << 1) | (bit > 0)
+            return out
+
+        configs, energies = zip(*sorted((config_to_int(k), v) for k, v in table.items()))
+
+        return dict(
+            num_variables=num_variables,
+            num_feasible_configurations=len(table),
+            feasible_configurations=json.dumps(configs, separators=(',', ':')),
+            energies=struct.pack('<' + 'd' * len(energies), *energies),
+            )
+
+    @staticmethod
+    def decode_table(row: Dict[str, Union[int, str, bytes]]) -> Dict[Tuple[int, ...], float]:
+        num_variables = row['num_variables']
+
+        def bits(c):
+            n = 1 << (num_variables - 1)
+            for __ in range(num_variables):
+                yield 1 if c & n else -1
+                n >>= 1
+
+        return dict(zip(
+            (tuple(bits(c)) for c in json.loads(row['feasible_configurations'])),
+            struct.unpack('<' + 'd' * (len(row['energies']) // 8), row['energies'])
+            ))
+
+    def insert_table(self, table: Dict[Tuple[int, ...], float]):
+        """Insert a group of feasible configurations into the cache.
+
+        Args:
+            table: The set of feasible configurations. Each key should be a
+                tuple of variable assignments. The values are the relative
+                energies.
+
+        """
+        with self.conn as cur:
+            cur.execute(self.insert_table_statement, self.encode_table(table))
+
+    def iter_tables(self) -> Iterator[Dict[Tuple[int, ...], float]]:
+        select = "SELECT num_variables, feasible_configurations, energies FROM feasible_configurations"
+        yield from map(self.decode_table, self.conn.execute(select))
+
+    @staticmethod
+    def encode_bqm(bqm: dimod.BinaryQuadraticModel) -> Dict[str, Union[float, bytes]]:
+        return dict(
+            max_quadratic_bias=bqm.quadratic.max(),
+            min_quadratic_bias=bqm.quadratic.min(),
+            max_linear_bias=bqm.linear.max(),
+            min_linear_bias=bqm.linear.min(),
+            bqm_data=bqm.to_file().read(),
+            )
+
+    @staticmethod
+    def decode_bqm(row: Dict[str, Union[bytes, str, int]]) -> dimod.BinaryQuadraticModel:
+        return dimod.BinaryQuadraticModel.from_file(row['bqm_data'])
+
+    def insert_binary_quadratic_model(self, bqm: dimod.BinaryQuadraticModel):
+        """
+        converted to SPIN
+        must be integer labelled
+
+        """
+        bqm = dimod.as_bqm(bqm, dtype=float)
+
+        if bqm.vartype is not dimod.SPIN:
+            bqm = bqm.change_vartype(dimod.SPIN, inplace=False)
+
+        if not bqm.variables.is_range:
+            if bqm.variables ^ range(bqm.num_variables):
+                raise ValueError("BQM variables must be a range of integers")
+            else:
+                new = dimod.BinaryQuadraticModel(bqm.num_variables, dimod.SPIN)
+                new.add_linear_from(bqm.linear)
+                new.add_quadratic_from(bqm.quadratic)
+                new.offset = bqm.offset
+                bqm = new
+
+        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm)
+
+        with self.conn as cur:
+            cur.execute(self.insert_graph_statement, parameters)
+            cur.execute(self.insert_bqm_statement, parameters)
+
+    def iter_binary_quadratic_models(self) -> Iterator[dimod.BinaryQuadraticModel]:
+        for bqm_data in self.conn.execute("SELECT bqm_data FROM binary_quadratic_model;"):
+            yield self.decode_bqm(bqm_data)
+
+    def insert_penalty_model(
+            self,
+            bqm: dimod.BinaryQuadraticModel,
+            table: Dict[Tuple[int, ...], float],
+            decision: Sequence[int],
+            classical_gap: float,
+            ):
+        """Does not check for correctness"""
+
+        # todo: test decision subset of bqm
+
+        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm) | self.encode_table(table)
+
+        parameters.update(
+            decision_variables=json.dumps(decision, separators=(',', ':')),
+            classical_gap=classical_gap,
+            )
+
+        with self.conn as cur:
+            cur.execute(self.insert_graph_statement, parameters)
+            cur.execute(self.insert_bqm_statement, parameters)
+            cur.execute(self.insert_table_statement, parameters)
+            cur.execute(self.insert_penalty_model_statement, parameters)
+
+    def iter_penalty_models(self) -> Iterator[PenaltyModel]:
+        for row in self.conn.execute("SELECT * FROM penalty_model_view;"):
+            yield PenaltyModel(
+                    self.decode_bqm(row),
+                    self.decode_table(row),
+                    json.loads(row['decision_variables']),
+                    row['classical_gap']
+                )
+
+    def retrieve(self,
+                 graph: nx.Graph,
+                 table: Mapping[Tuple[int, ...], float],
+                 decision: Sequence[int],
+                 *,
+                 linear_bound: Tuple[float, float] = (-2, 2),
+                 quadratic_bound: Tuple[float, float] = (-1, 1),
+                 min_classical_gap: float = 2,
+                 ) -> Tuple[dimod.BinaryQuadraticModel, float]:
+
+        parameters = self.encode_graph(graph)
+        parameters.update(self.encode_table(table))
+        parameters.update(
+            decision_variables=json.dumps(decision, separators=(',', ':')),
+            min_classical_gap=min_classical_gap,
+            min_linear_bias=linear_bound[0],
+            max_linear_bias=linear_bound[1],
+            min_quadratic_bias=quadratic_bound[0],
+            max_quadratic_bias=quadratic_bound[1],
+            )
+
+        # print(parameters)
+
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT bqm_data, classical_gap FROM penalty_model_view
+            WHERE
+                -- graph:
+                num_nodes = :num_nodes AND
+                num_edges = :num_edges AND
+                edges = :edges AND
+                -- feasible_configurations:
+                num_variables = :num_variables AND
+                feasible_configurations = :feasible_configurations AND
+                energies = :energies AND
+                -- decision variables:
+                decision_variables = :decision_variables AND
+                -- bounds
+                min_linear_bias >= :min_linear_bias AND
+                max_linear_bias <= :max_linear_bias AND
+                min_quadratic_bias >= :min_quadratic_bias AND
+                max_quadratic_bias <= :max_quadratic_bias AND
+                -- gap
+                classical_gap >= :min_classical_gap
+            ORDER BY classical_gap DESC;
+            """,
+            parameters
+            )
+
+        row = cur.fetchone()
+        cur.close()
+
+        if row is None:
+            raise MissingPenaltyModel(
+                "no penalty model with the given specification found in cache")
+
+        return self.decode_bqm(row), row['classical_gap']

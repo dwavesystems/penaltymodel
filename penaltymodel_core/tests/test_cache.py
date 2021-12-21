@@ -1,4 +1,4 @@
-# Copyright 2017 D-Wave Systems Inc.
+# Copyright 2021 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,216 +13,157 @@
 # limitations under the License.
 
 import unittest
-import time
-import sqlite3
-import os
-
-from collections import defaultdict
 
 import networkx as nx
-import penaltymodel.core as pm
 import dimod
 
-import penaltymodel.cache as pmc
+from penaltymodel import MissingPenaltyModel
+from penaltymodel.cache import PenaltyModelCache
 
 
-class TestConnectionAndConfiguration(unittest.TestCase):
-    """Test the creation of the database and tables"""
-    def test_connection(self):
-        """Connect to the default database. We will not be using the default
-        for many tests."""
-        conn = pmc.cache_connect()
-        self.assertIsInstance(conn, sqlite3.Connection)
-        conn.close()
+class TestPenaltyModelCache(unittest.TestCase):
 
+    def assertEqual(self, first, second, *args, **kwargs):
+        if isinstance(first, nx.Graph) and isinstance(second, nx.Graph):
+            self.assertEqual(first.nodes, second.nodes, *args, **kwargs)
+            self.assertEqual(first.edges, second.edges, *args, **kwargs)
+        else:
+            return super().assertEqual(first, second, *args, **kwargs)
 
-class TestDatabaseManager(unittest.TestCase):
-    """These tests assume that the database has been created or already
-    exists correctly"""
     def setUp(self):
-        # new connection for just this test
-        self.clean_connection = pmc.cache_connect(':memory:')
+        self.cache = PenaltyModelCache(':memory:')
 
     def tearDown(self):
-        # close the memory connection
-        self.clean_connection.close()
+        self.cache.close()
 
     def test_graph_insert_retrieve(self):
-        conn = self.clean_connection
+        cache = self.cache
 
         graph = nx.barbell_graph(8, 8)
         nodelist = sorted(graph)
         edgelist = sorted(sorted(edge) for edge in graph.edges)
 
-        with conn as cur:
-            pmc.insert_graph(cur, nodelist, edgelist)
+        cache.insert_graph(graph)
 
-            # should only be one graph
-            graphs = list(pmc.iter_graph(cur))
-            self.assertEqual(len(graphs), 1)
-            (nodelist_, edgelist_), = graphs
-            self.assertEqual(nodelist, nodelist_)
-            self.assertEqual(edgelist, edgelist_)
+        self.assertEqual(list(cache.iter_graphs())[0], graph)
 
-        # trying to reinsert should still result in only one graph
-        with conn as cur:
-            pmc.insert_graph(cur, nodelist, edgelist)
-            graphs = list(pmc.iter_graph(cur))
-            self.assertEqual(len(graphs), 1)
-
-        # inserting with an empty dict as encoded_data should populate it
-        encoded_data = {}
-        with conn as cur:
-            pmc.insert_graph(cur, nodelist, edgelist, encoded_data)
-        self.assertIn('num_nodes', encoded_data)
-        self.assertIn('num_edges', encoded_data)
-        self.assertIn('edges', encoded_data)
+        # insert it again, and check that there is still only one graph
+        cache.insert_graph(graph)
+        self.assertEqual(len(list(cache.iter_graphs())), 1)
 
         # now adding another graph should result in two items
         graph = nx.complete_graph(4)
-        nodelist = sorted(graph)
-        edgelist = sorted(sorted(edge) for edge in graph.edges)
-        with conn as cur:
-            pmc.insert_graph(cur, nodelist, edgelist)
-            graphs = list(pmc.iter_graph(cur))
-            self.assertEqual(len(graphs), 2)
+        cache.insert_graph(graph)
+        self.assertEqual(len(list(cache.iter_graphs())), 2)
 
     def test_feasible_configurations_insert_retrieve(self):
-        conn = self.clean_connection
+        cache = self.cache
 
-        feasible_configurations = {(-1, -1, -1): 0.0, (1, 1, 1): 0.0}
+        fc1 = {(-1, -1, -1): 0.0, (1, 1, 1): 0.0}
 
-        with conn as cur:
-            pmc.insert_feasible_configurations(cur, feasible_configurations)
-            fcs = list(pmc.iter_feasible_configurations(cur))
+        cache.insert_table(fc1)
+        fcs = list(cache.iter_tables())
+        self.assertEqual(len(fcs), 1)
+        self.assertEqual([fc1], fcs)
 
-            # should only be one and it should match
-            self.assertEqual(len(fcs), 1)
-            self.assertEqual([feasible_configurations], fcs)
+        # entering it again shouldn't change anything
+        cache.insert_table(fc1)
+        fcs = list(cache.iter_tables())
+        self.assertEqual(len(fcs), 1)
+        self.assertEqual([fc1], fcs)
 
-            # reinsert, should not add
-            pmc.insert_feasible_configurations(cur, feasible_configurations)
-            fcs = list(pmc.iter_feasible_configurations(cur))
+        # put two more in, one with different configs, one with different
+        # energies
+        fc2 = {(-1, -1, +1): 0.0, (1, 1, 1): 0.0}
+        cache.insert_table(fc2)
+        fc3 = {(-1, -1, -1): 0.0, (1, 1, 1): 1.0}
+        cache.insert_table(fc3)
 
-            # should only be one and it should match
-            self.assertEqual(len(fcs), 1)
-            self.assertEqual([feasible_configurations], fcs)
+        fcs = list(cache.iter_tables())
+        self.assertEqual(len(fcs), 3)
+        self.assertIn(fc1, fcs)
+        self.assertIn(fc2, fcs)
+        self.assertIn(fc3, fcs)
 
-        feasible_configurations2 = {(-1, -1, -1): 0.0, (1, 1, 1): 0.0, (1, -1, 1): .4}
-        with conn as cur:
-            pmc.insert_feasible_configurations(cur, feasible_configurations2)
-            fcs = list(pmc.iter_feasible_configurations(cur))
+        # finally test binary rather than spin
+        fc4 = {(0, 0, 0): 0.0, (1, 1, 1): 0.0}  # same as fc1
+        cache.insert_table(fc4)
+        fc5 = {(1, 1, 1): 1.5, (0, 1, 0): 5}
+        cache.insert_table(fc5)
 
-            self.assertIn(feasible_configurations2, fcs)
+        fcs = list(cache.iter_tables())
+        self.assertEqual(len(fcs), 4)
+        self.assertIn(fc1, fcs)
+        self.assertIn(fc2, fcs)
+        self.assertIn(fc3, fcs)
+        self.assertIn({(1, 1, 1): 1.5, (-1, 1, -1): 5}, fcs)  # comes out as spin
 
-    def test_ising_model_insert_retrieve(self):
-        conn = self.clean_connection
+    def test_bqm_insert_retrieve(self):
+        cache = self.cache
 
-        graph = nx.path_graph(5)
-        nodelist = sorted(graph)
-        edgelist = sorted(sorted(edge) for edge in graph.edges)
+        bqm0 = dimod.generators.gnp_random_bqm(10, .5, 'SPIN', random_state=53)
 
-        linear = {v: 0. for v in nodelist}
-        quadratic = {(u, v): -1. for u, v in edgelist}
-        offset = 0.0
+        cache.insert_binary_quadratic_model(bqm0)
+        self.assertEqual(list(cache.iter_binary_quadratic_models()), [bqm0])
 
-        with conn as cur:
-            pmc.insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset)
+        # insert again, should not duplicate
+        cache.insert_binary_quadratic_model(bqm0)
+        self.assertEqual(list(cache.iter_binary_quadratic_models()), [bqm0])
 
-            ims = list(pmc.iter_ising_model(cur))
+        # make a new bqm with reversed nodeorder
+        bqm2 = dimod.BinaryQuadraticModel('SPIN')
+        bqm2.add_linear_from((v, bqm0.get_linear(v)) for v in reversed(range(bqm0.num_variables)))
+        bqm2.add_quadratic_from(bqm0.iter_quadratic())
+        bqm2.offset = bqm0.offset
 
-            # should be only one and it should match
-            self.assertEqual(len(ims), 1)
-            (nodelist_, edgelist_, linear_, quadratic_, offset_), = ims
-            self.assertEqual(nodelist_, nodelist)
-            self.assertEqual(edgelist_, edgelist)
-            self.assertEqual(linear_, linear)
-            self.assertEqual(quadratic_, quadratic)
+        cache.insert_binary_quadratic_model(bqm2)
+        self.assertEqual(list(cache.iter_binary_quadratic_models()), [bqm0])
 
-        with conn as cur:
-            # reinsert
-            pmc.insert_ising_model(cur, nodelist, edgelist, linear, quadratic, offset)
+        bqm3 = dimod.BinaryQuadraticModel(bqm0, dtype=object)
+        cache.insert_binary_quadratic_model(bqm3)
+        self.assertEqual(list(cache.iter_binary_quadratic_models()), [bqm0])
 
-            ims = list(pmc.iter_ising_model(cur))
+    def test_and_gate_insert_retrieve(self):
+        cache = self.cache
 
-            # should be only one and it should match
-            self.assertEqual(len(ims), 1)
+        classical_gap = 2
+        bqm = dimod.generators.and_gate(0, 1, 2, strength=classical_gap).change_vartype('SPIN', inplace=True)
+        table = {(-1, -1, -1): 0,
+                 (-1, 1, -1): 0,
+                 (1, -1, -1): 0,
+                 (1, 1, 1): 0}
+        decision_variables = [0, 1, 2]
 
-    def test_penalty_model_insert_retrieve(self):
-        conn = self.clean_connection
+        cache.insert_penalty_model(bqm, table, decision_variables, classical_gap)
 
-        graph = nx.path_graph(3)
-        decision_variables = (0, 2)
-        feasible_configurations = {(-1, -1): 0., (+1, +1): 0.}
-        spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.SPIN)
+        li = list(cache.iter_penalty_models())
+        self.assertEqual(len(li), 1)
+        pm, = li
+        self.assertEqual(pm.bqm, bqm)
+        self.assertEqual(pm.table, table)
+        self.assertEqual(pm.decision_variables, decision_variables)
+        self.assertEqual(pm.classical_gap, classical_gap)
 
-        linear = {v: 0 for v in graph}
-        quadratic = {edge: -1 for edge in graph.edges}
-        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
+    def test_retrieve(self):
+        cache = self.cache
 
-        widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
+        table = {(-1, -1, -1): 0,
+                 (-1, 1, -1): 0,
+                 (1, -1, -1): 0,
+                 (1, 1, 1): 0}
+        decision_variables = [0, 1, 2]
 
-        with conn as cur:
-            pmc.insert_penalty_model(cur, widget)
+        # put some AND gates into the cache
+        bqm1 = dimod.generators.and_gate(0, 1, 2, strength=1).change_vartype('SPIN', inplace=True)
+        cache.insert_penalty_model(bqm1, table, decision_variables, classical_gap=1)
+        bqm2 = dimod.generators.and_gate(0, 1, 2, strength=2).change_vartype('SPIN', inplace=True)
+        cache.insert_penalty_model(bqm2, table, decision_variables, classical_gap=2)
 
-        with conn as cur:
-            pms = list(pmc.iter_penalty_model_from_specification(cur, spec))
+        bqm, classical_gap = cache.retrieve(nx.complete_graph(3), table, decision_variables)
+        self.assertEqual(bqm, bqm2)  # largest gap, fits within bounds
 
-            self.assertEqual(len(pms), 1)
-            widget_, = pms
-            self.assertEqual(widget_, widget)
+        bqm, classical_gap = cache.retrieve(nx.complete_graph(3), table, decision_variables, linear_bound=(-.5, .5), min_classical_gap=1)
+        self.assertEqual(bqm, bqm1)  # since this fits in the given bounds
 
-    def test_penalty_model_classical_gap_insert_retrieve(self):
-        """Verify that classical gap constraint searches work in the database.
-        """
-        conn = self.clean_connection
-
-        # Set up specifications for widget
-        decision_variables = ['a', 'b', 'c']
-        graph = nx.path_graph(decision_variables)
-        and_gate_configurations = {(-1, -1, -1): 0,
-                                   (-1, +1, -1): 0,
-                                   (+1, -1, -1): 0,
-                                   (+1, +1, +1): 0}
-        linear = {v: 0 for v in graph}
-        quadratic = {edge: -1 for edge in graph.edges}
-        model = dimod.BinaryQuadraticModel(linear, quadratic, 0.0, vartype=dimod.SPIN)
-
-        spec = pm.Specification(graph, decision_variables, and_gate_configurations, dimod.SPIN)
-        widget = pm.PenaltyModel.from_specification(spec, model, 2., -2)
-
-        # Insert widget into database
-        with conn as cur:
-            pmc.insert_penalty_model(cur, widget)
-
-        # Test specifications with varying classical gap sizes
-        max_gap = 2
-        spec_same_gap = pm.Specification(graph, decision_variables, and_gate_configurations,
-                                         dimod.SPIN, min_classical_gap=max_gap)
-        spec_smaller_gap = pm.Specification(graph, decision_variables, and_gate_configurations,
-                                            dimod.SPIN, min_classical_gap=max_gap-1)
-        spec_larger_gap = pm.Specification(graph, decision_variables, and_gate_configurations,
-                                           dimod.SPIN, min_classical_gap=max_gap+1)
-
-        # Find in database
-        with conn as cur:
-            # Search database for penalty models matching specifications
-            pms_same_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_same_gap))
-            pms_smaller_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_smaller_gap))
-            pms_larger_gap = list(pmc.iter_penalty_model_from_specification(cur, spec_larger_gap))
-
-            # Test specification that uses the max classical gap as its min_classical_gap
-            self.assertEqual(len(pms_same_gap), 1, 'Using max gap should return a penalty model.')
-            widget_same_gap_, = pms_same_gap
-            self.assertEqual(widget_same_gap_, widget)
-
-            # Specification uses a gap that is smaller than the expected max classical gap
-            self.assertEqual(len(pms_smaller_gap), 1, 'Using a gap that is less than the max gap'
-                                                      ' should return a penalty model.')
-            widget_smaller_gap_, = pms_smaller_gap
-            self.assertEqual(widget_smaller_gap_, widget)
-
-            # Specification uses a gap that is larger than the expected max classical gap
-            # Note: classical gap constraint shouldn't be satisfied in this case
-            self.assertEqual(len(pms_larger_gap), 0, 'Using a gap that exceeds the max gap should'
-                                                     ' not return a penalty model.')
+        with self.assertRaises(MissingPenaltyModel):
+            cache.retrieve(nx.complete_graph(3), table, decision_variables, linear_bound=(-.5, .5))

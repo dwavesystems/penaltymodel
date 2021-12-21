@@ -5,6 +5,7 @@ from setuptools import setup
 exec(open("./penaltymodel/core/package_info.py").read())
 
 install_requires = ['dimod>=0.10.0,<0.11.0',
+                    'homebase>=1.0.0,<2.0.0',
                     'networkx>=2.4,<3.0',
                     'numpy>=1.19.1',
                     'scipy>=1.5.2',
