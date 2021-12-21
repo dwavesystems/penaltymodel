@@ -33,19 +33,18 @@ Examples:
 Functions and Utilities
 -----------------------
 """
+import warnings
 
-from pkg_resources import iter_entry_points
-
-from penaltymodel.core.exceptions import FactoryException, ImpossiblePenaltyModel
+from penaltymodel.cache import PenaltyModelCache
+from penaltymodel.core.classes import PenaltyModel, Specification
+from penaltymodel.interface import get_penalty_model as _get_penalty_model
 
 __all__ = ['FACTORY_ENTRYPOINT', 'CACHE_ENTRYPOINT', 'get_penalty_model', 'penaltymodel_factory',
            'iter_factories', 'iter_caches']
 
+# endpoints kept for backwards compatibility, but they do nothing
 FACTORY_ENTRYPOINT = 'penaltymodel_factory'
-"""str: constant used when assigning entrypoints for factories."""
-
 CACHE_ENTRYPOINT = 'penaltymodel_cache'
-"""str: constant used when assigning entrypoints for caches."""
 
 
 def get_penalty_model(specification):
@@ -66,26 +65,39 @@ def get_penalty_model(specification):
             factory.
 
     """
+    warnings.warn(
+        "penaltymodel.core.get_penalty_model() function is deprecated "
+        "and will be removed in penaltymodel 1.2.0, "
+        "use penaltymodel.get_penalty_model() instead, which has a different "
+        "interface.",
+        DeprecationWarning, stacklevel=3)
 
-    # Iterate through the available factories until one gives a penalty model
-    for factory in iter_factories():
-        try:
-            pm = factory(specification)
-        except ImpossiblePenaltyModel as e:
-            # information about impossible models should be propagated
-            raise e
-        except FactoryException:
-            # any other type of factory exception, continue through the list
-            continue
+    # we used to specify them per variable, but now just do it globally
+    linear_bound = (
+        min((b for b, _ in specification.ising_linear_ranges.values()), default=-2),
+        max((b for _, b in specification.ising_linear_ranges.values()), default=2)
+        )
 
-        # if penalty model was found, broadcast to all of the caches. This could be done
-        # asynchronously
-        for cache in iter_caches():
-            cache(pm)
+    quadratic_bound = (
+        min((b for n in specification.ising_quadratic_ranges.values() for b, _ in n.values()), default=-1),
+        max((b for n in specification.ising_quadratic_ranges.values() for _, b in n.values()), default=1)
+        )
 
-        return pm
+    pm = _get_penalty_model(
+        specification.graph,
+        specification.feasible_configurations,
+        specification.decision_variables,
+        linear_bound=linear_bound,
+        quadratic_bound=quadratic_bound,
+        min_classical_gap=specification.min_classical_gap,
+        )
 
-    return None
+    return PenaltyModel.from_specification(
+        specification,
+        model=pm.bqm.change_vartype(specification.vartype, inplace=True),
+        classical_gap=pm.classical_gap,
+        ground_energy=min(specification.feasible_configurations.values(), default=0),
+        )
 
 
 def penaltymodel_factory(priority):
@@ -105,8 +117,12 @@ def penaltymodel_factory(priority):
         105
 
     """
+    warnings.warn(
+        "penaltymodel_factory() is deprecated and will be removed in penaltymodel 1.2.0",
+        DeprecationWarning, stacklevel=2)
+
+    # just do nothing
     def _entry_point(f):
-        f.priority = priority
         return f
     return _entry_point
 
@@ -119,13 +135,14 @@ def iter_factories():
         returns a :class:`.PenaltyModel`.
 
     """
-    # retrieve all of the factories with
-    factories = (entry.load() for entry in iter_entry_points(FACTORY_ENTRYPOINT))
+    warnings.warn(
+        "iter_factories() is deprecated and will be removed in penaltymodel 1.2.0, "
+        "use penaltymodel.get_penalty_model() directly instead.",
+        DeprecationWarning, stacklevel=2)
 
-    # sort the factories from highest priority to lowest. Any factory with unknown priority
-    # gets assigned priority -1000.
-    for factory in sorted(factories, key=lambda f: getattr(f, 'priority', -1000), reverse=True):
-        yield factory
+    # This used to iterate over installed factories, but now there is only one
+    # so just yield it
+    yield get_penalty_model
 
 
 def iter_caches():
@@ -136,5 +153,20 @@ def iter_caches():
         it.
 
     """
-    # for caches we don't need an order
-    return iter(entry.load() for entry in iter_entry_points(CACHE_ENTRYPOINT))
+    warnings.warn(
+        "iter_caches() is deprecated and will be removed in penaltymodel 1.2.0, "
+        "use penaltymodel.PenaltyModelCache directly instead.",
+        DeprecationWarning, stacklevel=2)
+
+    cache = PenaltyModelCache()
+
+    def cache_function(pm: PenaltyModel):
+        cache.insert_penalty_model(
+            pm.model,
+            pm.feasible_configurations,
+            pm.decision_variables,
+            pm.classical_gap)
+
+    # This used to iterate over installed caches, but now there is only one
+    # so just yield it
+    yield cache_function

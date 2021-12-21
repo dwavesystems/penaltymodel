@@ -18,7 +18,7 @@ import os
 import json
 import struct
 
-from typing import Dict, Iterator, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
 
 import dimod
 import homebase
@@ -26,15 +26,9 @@ import networkx as nx
 
 from penaltymodel.core.package_info import __version__  # todo: move
 from penaltymodel.exceptions import MissingPenaltyModel
+from penaltymodel.typing import PenaltyModel
 
 __all__ = ['PenaltyModelCache']
-
-
-class PenaltyModel(NamedTuple):
-    bqm: dimod.BinaryQuadraticModel
-    table: Dict[Tuple[int, ...], float]
-    decision_variables: Sequence[int]
-    classical_gap: float
 
 
 class PenaltyModelCache(contextlib.AbstractContextManager):
@@ -193,7 +187,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         if database is None:
             database = os.path.join(
                 homebase.user_data_dir(
-                    appname='dwave-penaltymodel-cache',
+                    app_name='dwave-penaltymodel-cache',
                     app_author='dwave-systems',
                     create=True,
                     ),
