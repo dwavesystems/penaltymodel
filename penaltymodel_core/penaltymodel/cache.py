@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import contextlib
+import functools
 import sqlite3
 import os
 import json
@@ -23,12 +24,20 @@ from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
 import dimod
 import homebase
 import networkx as nx
+import numpy as np
 
 from penaltymodel.core.package_info import __version__  # todo: move
 from penaltymodel.exceptions import MissingPenaltyModel
-from penaltymodel.typing import PenaltyModel
+from penaltymodel.typing import GraphLike, PenaltyModel
+from penaltymodel.utils import as_graph
 
-__all__ = ['PenaltyModelCache']
+__all__ = ['PenaltyModelCache', 'patch_cache']
+
+
+# developer note: we could use sqlite's adaptor's methods
+# but since those changes are applied globally and since we're using pretty
+# standard types (NumPy arrays and NetworkX graphs) it makes sense to
+# do it "by hand" rather than risk interfering with other's code.
 
 
 class PenaltyModelCache(contextlib.AbstractContextManager):
@@ -52,15 +61,15 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             CONSTRAINT graph UNIQUE (num_nodes, edges)
         );
 
-        CREATE TABLE IF NOT EXISTS feasible_configurations(
+        CREATE TABLE IF NOT EXISTS sampleset(
             num_variables INTEGER NOT NULL,
-            num_feasible_configurations INTEGER NOT NULL,
-            feasible_configurations TEXT NOT NULL,
+            num_samples INTEGER NOT NULL,
+            samples TEXT NOT NULL,
             energies BLOB NOT NULL,
             id INTEGER PRIMARY KEY,
-            CONSTRAINT feasible_configurations UNIQUE (
+            CONSTRAINT sampleset UNIQUE (
                 num_variables,
-                feasible_configurations,
+                samples,
                 energies)
         );
 
@@ -79,19 +88,19 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         CREATE TABLE IF NOT EXISTS penalty_model(
             decision_variables TEXT NOT NULL,
             classical_gap REAL NOT NULL,
-            feasible_configurations_id INT,
+            sampleset_id INT,
             bqm_id INT,
             id INTEGER PRIMARY KEY,
-            CONSTRAINT penalty_model UNIQUE (decision_variables, feasible_configurations_id, bqm_id),
-            FOREIGN KEY (feasible_configurations_id) REFERENCES feasible_configurations(id) ON DELETE CASCADE,
+            CONSTRAINT penalty_model UNIQUE (decision_variables, sampleset_id, bqm_id),
+            FOREIGN KEY (sampleset_id) REFERENCES sampleset(id) ON DELETE CASCADE,
             FOREIGN KEY (bqm_id) REFERENCES binary_quadratic_model(id) ON DELETE CASCADE
         );
 
         CREATE VIEW IF NOT EXISTS penalty_model_view AS
         SELECT
             num_variables,
-            num_feasible_configurations,
-            feasible_configurations,
+            num_samples,
+            samples,
             energies,
 
             num_nodes,
@@ -109,13 +118,15 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             penalty_model.id
         FROM
             binary_quadratic_model,
-            feasible_configurations,
+            sampleset,
             graph,
             penalty_model
         WHERE
             penalty_model.bqm_id = binary_quadratic_model.id
-            AND feasible_configurations.id = penalty_model.feasible_configurations_id
+            AND sampleset.id = penalty_model.sampleset_id
             AND graph.id = binary_quadratic_model.graph_id;
+
+        PRAGMA foreign_keys = ON;
         """
 
     insert_bqm_statement = \
@@ -151,35 +162,35 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         INSERT OR IGNORE INTO penalty_model(
             decision_variables,
             classical_gap,
-            feasible_configurations_id,
+            sampleset_id,
             bqm_id)
         SELECT
             :decision_variables,
             :classical_gap,
-            feasible_configurations.id,
+            sampleset.id,
             binary_quadratic_model.id
-        FROM feasible_configurations, binary_quadratic_model, graph
+        FROM sampleset, binary_quadratic_model, graph
         WHERE
             graph.edges = :edges AND
             graph.num_nodes = :num_nodes AND
             binary_quadratic_model.graph_id = graph.id AND
             binary_quadratic_model.bqm_data = :bqm_data AND
-            feasible_configurations.num_variables = :num_variables AND
-            feasible_configurations.feasible_configurations = :feasible_configurations AND
-            feasible_configurations.energies = :energies;
+            sampleset.num_variables = :num_variables AND
+            sampleset.samples = :samples AND
+            sampleset.energies = :energies;
         """
 
-    insert_table_statement = \
+    insert_sampleset_statement = \
         """
-        INSERT OR IGNORE INTO feasible_configurations(
+        INSERT OR IGNORE INTO sampleset(
             num_variables,
-            num_feasible_configurations,
-            feasible_configurations,
+            num_samples,
+            samples,
             energies)
         VALUES (
             :num_variables,
-            :num_feasible_configurations,
-            :feasible_configurations,
+            :num_samples,
+            :samples,
             :energies);
         """
 
@@ -194,20 +205,13 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 f'penaltymodel_v{__version__}.db'
                 )
 
-        if os.path.isfile(database):
-            conn = sqlite3.connect(database)
-        else:
-            conn = sqlite3.connect(database)
-            conn.executescript(self.database_schema)
+        self.conn = conn = sqlite3.connect(database)
 
-        with conn as cur:
-            # turn on foreign keys, allows deletes to cascade.
-            cur.execute("PRAGMA foreign_keys = ON;")
+        # add the main schema
+        conn.executescript(self.database_schema)
 
         # give us mapping access to values returned by .execute
         conn.row_factory = sqlite3.Row
-
-        self.conn = conn
 
     def __exit__(self, *args):
         # todo: make reentrant
@@ -217,15 +221,19 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         self.conn.close()
 
     @staticmethod
-    def encode_graph(graph: Union[nx.Graph, dimod.BinaryQuadraticModel]
+    def encode_graph(graph_like: Union[GraphLike, dimod.BinaryQuadraticModel]
                      ) -> Dict[str, Union[int, str]]:
         """Encode a NetworkX graph or BQM to be stored in the cache."""
-        if isinstance(graph, nx.Graph):
+        if isinstance(graph_like, dimod.BinaryQuadraticModel):
+            nodes = graph_like.linear.keys()
+            edges = graph_like.quadratic.keys()
+        else:
+            graph = as_graph(graph_like)
             nodes = graph.nodes
             edges = graph.edges
-        else:
-            nodes = graph.linear
-            edges = graph.quadratic
+
+        if nodes ^ range(len(nodes)):
+            raise ValueError
 
         return dict(
             num_nodes=len(nodes),
@@ -241,7 +249,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         graph.add_edges_from(json.loads(row['edges']))
         return graph
 
-    def insert_graph(self, graph: nx.Graph):
+    def insert_graph(self, graph_like: GraphLike):
         """Insert a graph into the cache.
 
         A graph is stored by number of nodes, number of edges and a
@@ -250,17 +258,12 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         Args:
             graph: a NetworkX graph.
 
-        Notes:
-            This function assumes that the nodes are index-labeled and range
-            from 0 to num_nodes - 1.
+        Raises:
+            ValueError: If the nodes of the graph are not labelled `[0, n)`.
 
         """
-
-        if graph.nodes ^ range(len(graph.nodes)):
-            raise ValueError("graph nodes must be exactly range(num_nodes)")
-
         with self.conn as cur:
-            cur.execute(self.insert_graph_statement, self.encode_graph(graph))
+            cur.execute(self.insert_graph_statement, self.encode_graph(graph_like))
 
     def iter_graphs(self) -> Iterator[nx.Graph]:
         """Iterate over all graphs in the cache.
@@ -272,62 +275,69 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         yield from map(self.decode_graph, self.conn.execute("SELECT num_nodes, edges from graph;"))
 
     @staticmethod
-    def encode_table(table: Dict[Tuple[int, ...], float]) -> Dict[str, Union[int, str, bytes]]:
-        """Encode a table of feasible configurations to be stored in the cache."""
+    def encode_sampleset(samples_like) -> Dict[str, Union[int, str, bytes]]:
+        samples, labels = dimod.as_samples(samples_like)
 
-        variable_counts = set(map(len, table))
-        if len(variable_counts) == 0:
-            num_variables = 0
-        elif len(variable_counts) == 1:
-            num_variables, = variable_counts
+        if not all(i == v for i, v in enumerate(labels)):
+            # we could mess with re-ordering but for now let's just do the
+            # simple thing
+            raise ValueError("sample labels must be labelled [0, n)")
+
+        num_samples, num_variables = samples.shape
+
+        if num_variables > 32:
+            raise ValueError("sample set must have 32 or fewer variables")
+
+        if isinstance(samples_like, dimod.SampleSet):
+            energies = samples_like.record.energy
         else:
-            raise ValueError
+            energies = np.zeros(num_samples)
 
-        def config_to_int(config: Tuple[int, ...]) -> int:
-            out = 0
-            for bit in config:
-                out = (out << 1) | (bit > 0)
-            return out
+        order = np.lexsort(samples.transpose(), axis=0)
+        samples = samples[order, :]
+        energies = energies[order]
 
-        configs, energies = zip(*sorted((config_to_int(k), v) for k, v in table.items()))
+        packed = dimod.serialization.utils.pack_samples(samples > 0).flatten().tolist()
 
         return dict(
             num_variables=num_variables,
-            num_feasible_configurations=len(table),
-            feasible_configurations=json.dumps(configs, separators=(',', ':')),
+            num_samples=num_samples,
+            samples=json.dumps(packed, separators=(',', ':')),
             energies=struct.pack('<' + 'd' * len(energies), *energies),
             )
 
     @staticmethod
-    def decode_table(row: Dict[str, Union[int, str, bytes]]) -> Dict[Tuple[int, ...], float]:
+    def decode_sampleset(row: Dict[str, Union[int, str, bytes]]) -> dimod.SampleSet:
         num_variables = row['num_variables']
 
-        def bits(c):
-            n = 1 << (num_variables - 1)
-            for __ in range(num_variables):
-                yield 1 if c & n else -1
-                n >>= 1
+        packed = np.atleast_2d(json.loads(row['samples'])).transpose()
+        samples = dimod.serialization.utils.unpack_samples(packed, num_variables, dtype=np.int8)
 
-        return dict(zip(
-            (tuple(bits(c)) for c in json.loads(row['feasible_configurations'])),
-            struct.unpack('<' + 'd' * (len(row['energies']) // 8), row['energies'])
-            ))
+        # convert to SPIN
+        samples = 2*samples-1
 
-    def insert_table(self, table: Dict[Tuple[int, ...], float]):
-        """Insert a group of feasible configurations into the cache.
+        energies = struct.unpack('<' + 'd' * (len(row['energies']) // 8), row['energies'])
+
+        return dimod.SampleSet.from_samples(samples, vartype='SPIN', energy=energies)
+
+    def insert_sampleset(self, samples_like):
+        """Insert a sample set into the cache.
 
         Args:
-            table: The set of feasible configurations. Each key should be a
-                tuple of variable assignments. The values are the relative
-                energies.
+            samples_like:
+                Samples to add to the cache.
+                'samples_like' is an extension of NumPy's array_like_.
+                See :func:`dimod.as_samples`.
+
+        .. _array_like: https://numpy.org/doc/stable/user/basics.creation.html
 
         """
         with self.conn as cur:
-            cur.execute(self.insert_table_statement, self.encode_table(table))
+            cur.execute(self.insert_sampleset_statement, self.encode_sampleset(samples_like))
 
-    def iter_tables(self) -> Iterator[Dict[Tuple[int, ...], float]]:
-        select = "SELECT num_variables, feasible_configurations, energies FROM feasible_configurations"
-        yield from map(self.decode_table, self.conn.execute(select))
+    def iter_samplesets(self):
+        select = "SELECT num_variables, num_samples, samples, energies FROM sampleset"
+        yield from map(self.decode_sampleset, self.conn.execute(select))
 
     @staticmethod
     def encode_bqm(bqm: dimod.BinaryQuadraticModel) -> Dict[str, Union[float, bytes]]:
@@ -377,15 +387,16 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
     def insert_penalty_model(
             self,
             bqm: dimod.BinaryQuadraticModel,
-            table: Dict[Tuple[int, ...], float],
-            decision: Sequence[int],
+            samples_like,
             classical_gap: float,
             ):
         """Does not check for correctness"""
 
         # todo: test decision subset of bqm
 
-        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm) | self.encode_table(table)
+        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm) | self.encode_sampleset(samples_like)
+
+        _, decision = dimod.as_samples(samples_like)
 
         parameters.update(
             decision_variables=json.dumps(decision, separators=(',', ':')),
@@ -395,40 +406,38 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         with self.conn as cur:
             cur.execute(self.insert_graph_statement, parameters)
             cur.execute(self.insert_bqm_statement, parameters)
-            cur.execute(self.insert_table_statement, parameters)
+            cur.execute(self.insert_sampleset_statement, parameters)
             cur.execute(self.insert_penalty_model_statement, parameters)
 
     def iter_penalty_models(self) -> Iterator[PenaltyModel]:
         for row in self.conn.execute("SELECT * FROM penalty_model_view;"):
             yield PenaltyModel(
                     self.decode_bqm(row),
-                    self.decode_table(row),
-                    json.loads(row['decision_variables']),
+                    self.decode_sampleset(row),
                     row['classical_gap']
                 )
 
     def retrieve(self,
                  graph: nx.Graph,
-                 table: Mapping[Tuple[int, ...], float],
-                 decision: Sequence[int],
+                 samples_like,
                  *,
                  linear_bound: Tuple[float, float] = (-2, 2),
                  quadratic_bound: Tuple[float, float] = (-1, 1),
                  min_classical_gap: float = 2,
                  ) -> Tuple[dimod.BinaryQuadraticModel, float]:
 
+        samples, labels = dimod.as_samples(samples_like)
+
         parameters = self.encode_graph(graph)
-        parameters.update(self.encode_table(table))
+        parameters.update(self.encode_sampleset(samples_like))
         parameters.update(
-            decision_variables=json.dumps(decision, separators=(',', ':')),
+            decision_variables=json.dumps(labels, separators=(',', ':')),
             min_classical_gap=min_classical_gap,
             min_linear_bias=linear_bound[0],
             max_linear_bias=linear_bound[1],
             min_quadratic_bias=quadratic_bound[0],
             max_quadratic_bias=quadratic_bound[1],
             )
-
-        # print(parameters)
 
         cur = self.conn.cursor()
         cur.execute(
@@ -441,7 +450,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 edges = :edges AND
                 -- feasible_configurations:
                 num_variables = :num_variables AND
-                feasible_configurations = :feasible_configurations AND
+                samples = :samples AND
                 energies = :energies AND
                 -- decision variables:
                 decision_variables = :decision_variables AND
@@ -465,3 +474,19 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 "no penalty model with the given specification found in cache")
 
         return self.decode_bqm(row), row['classical_gap']
+
+
+def patch_cache(database: Union[str, os.PathLike] = ':memory:'):
+    """A function decorator that passes in a PenaltyModelCache as a new argument.
+
+    Args:
+        database: The database location to use. Defaults to use memory.
+
+    """
+    def _patch(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            with PenaltyModelCache(database) as cache:
+                return f(*args, cache, **kwargs)
+        return wrapper
+    return _patch

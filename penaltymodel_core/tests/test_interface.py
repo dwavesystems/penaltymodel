@@ -1,4 +1,4 @@
-# Copyright 2021 D-Wave Systems Inc.
+# Copyright 2022 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Mapping, NamedTuple, Sequence, Tuple, Union
+import unittest
 
 import dimod
-import networkx as nx
+
+# from penaltymodel import get_penalty_model
 
 
-__all__ = ['GraphLike', 'PenaltyModel']
-
-
-class PenaltyModel(NamedTuple):
-    bqm: dimod.BinaryQuadraticModel
-    sampleset: dimod.SampleSet
-    classical_gap: float
-
-
-GraphLike = Union[int, Sequence[int], nx.Graph]
+# class TestGetPenaltyModel(unittest.TestCase):
+#     def test_single_labelled(self):
+#         model = get_penalty_model({'a': 1, 'b': 0})

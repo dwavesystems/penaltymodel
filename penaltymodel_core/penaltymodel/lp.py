@@ -22,9 +22,10 @@ import networkx as nx
 import numpy as np
 import scipy.optimize
 
-from dimod.typing import Variable
+from dimod.typing import GraphLike, Variable
 
 from penaltymodel.exceptions import ImpossiblePenaltyModel
+from penaltymodel.utils import as_graph
 
 __all__ = ['generate']
 
@@ -114,9 +115,8 @@ def next_auxiliary(state: Tuple[int, ...]) -> Tuple[int, ...]:
     return tuple(s)
 
 
-def generate(graph: nx.Graph,
-             table: Mapping[Tuple[int, ...], float],
-             decision: Sequence[Variable],
+def generate(graph_like: GraphLike,
+             samples_like,
              *,
              linear_bound: Tuple[float, float] = (-2, 2),
              quadratic_bound: Tuple[float, float] = (-1, 1),
@@ -127,16 +127,33 @@ def generate(graph: nx.Graph,
     gap is between the highest feasible and the lowest infeasible
 
     """
+    graph = as_graph(graph_like)
+    samples, decision = dimod.as_samples(samples_like)
 
     if any(v not in graph.nodes for v in decision):
         raise ValueError("the decision variables must be a subset of the graph nodes")
 
-    # let's make things easier for ourselves by casting the table into -1, +1
-    table = dict((tuple(2*(s > 0) - 1 for s in config), energy) for config, energy in table.items())
+    # let's make things easier for ourselves by casting the samples into -1, +1
+    if (samples == 0).any():
+        samples = 2*samples - 1
+    if not ((samples == +1) ^ (samples == -1)).all():
+        raise ValueError("given samples should be 0/1 or -1/+1")
 
     auxiliaries = list(graph.nodes - decision)
+    num_samples = samples.shape[0]
     num_variables = len(graph.nodes)
     num_auxiliary = num_variables - len(decision)
+
+    if isinstance(samples_like, dimod.SampleSet):
+        energies = samples_like.record.energy
+    else:
+        energies = np.zeros(num_samples)
+
+    # construct the table
+    if len(energies):
+        table = {tuple(map(int, state)): energy for state, energy in zip(samples, energies)}
+    else:
+        table = {}
 
     # todo: more correctness checks, max variables==8
 

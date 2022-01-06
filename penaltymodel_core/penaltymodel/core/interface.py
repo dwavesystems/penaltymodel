@@ -35,9 +35,12 @@ Functions and Utilities
 """
 import warnings
 
+import dimod
+
 from penaltymodel.cache import PenaltyModelCache
 from penaltymodel.core.classes import PenaltyModel, Specification
 from penaltymodel.interface import get_penalty_model as _get_penalty_model
+from penaltymodel.utils import table_to_sampleset
 
 __all__ = ['FACTORY_ENTRYPOINT', 'CACHE_ENTRYPOINT', 'get_penalty_model', 'penaltymodel_factory',
            'iter_factories', 'iter_caches']
@@ -85,8 +88,7 @@ def get_penalty_model(specification):
 
     pm = _get_penalty_model(
         specification.graph,
-        specification.feasible_configurations,
-        specification.decision_variables,
+        table_to_sampleset(specification.feasible_configurations, specification.decision_variables, specification.vartype),
         linear_bound=linear_bound,
         quadratic_bound=quadratic_bound,
         min_classical_gap=specification.min_classical_gap,
@@ -161,11 +163,8 @@ def iter_caches():
     cache = PenaltyModelCache()
 
     def cache_function(pm: PenaltyModel):
-        cache.insert_penalty_model(
-            pm.model,
-            pm.feasible_configurations,
-            pm.decision_variables,
-            pm.classical_gap)
+        sampleset = table_to_sampleset(pm.feasible_configurations, pm.decision_variables, pm.vartype)
+        cache.insert_penalty_model(pm.model, sampleset, pm.classical_gap)
 
     # This used to iterate over installed caches, but now there is only one
     # so just yield it

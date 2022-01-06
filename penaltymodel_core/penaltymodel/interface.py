@@ -16,6 +16,7 @@ import copy
 
 from typing import Mapping, Sequence, Tuple
 
+import dimod
 import networkx as nx
 
 from dimod.typing import Variable
@@ -23,12 +24,11 @@ from dimod.typing import Variable
 from penaltymodel.cache import PenaltyModelCache
 from penaltymodel.exceptions import MissingPenaltyModel
 from penaltymodel.lp import generate
-from penaltymodel.typing import PenaltyModel
+from penaltymodel.typing import GraphLike, PenaltyModel
 
 
-def get_penalty_model(graph: nx.Graph,
-                      table: Mapping[Tuple[int, ...], float],
-                      decision: Sequence[int],
+def get_penalty_model(graph_like: GraphLike,
+                      samples_like,
                       *,
                       linear_bound: Tuple[float, float] = (-2, 2),
                       quadratic_bound: Tuple[float, float] = (-1, 1),
@@ -39,7 +39,7 @@ def get_penalty_model(graph: nx.Graph,
     if use_cache:
         with PenaltyModelCache() as cache:
             try:
-                bqm, gap = cache.retrieve(graph, table, decision,
+                bqm, gap = cache.retrieve(graph_like, samples_like,
                                           linear_bound=linear_bound,
                                           quadratic_bound=quadratic_bound,
                                           min_classical_gap=min_classical_gap,
@@ -50,11 +50,10 @@ def get_penalty_model(graph: nx.Graph,
                 return PenaltyModel(
                     bqm=bqm, classical_gap=gap,
                     # everything should be immutable so deepcopy is overkill but might as well
-                    table=copy.deepcopy(table),
-                    decision_variables=copy.deepcopy(decision),
+                    sampleset=dimod.SampleSet.from_samples_bqm(samples_like, bqm)
                     )
 
-    bqm, gap, _ = generate(graph, table, decision,
+    bqm, gap, _ = generate(graph_like, samples_like,
                            linear_bound=linear_bound,
                            quadratic_bound=quadratic_bound,
                            min_classical_gap=min_classical_gap,
@@ -63,6 +62,5 @@ def get_penalty_model(graph: nx.Graph,
     return PenaltyModel(
         bqm=bqm, classical_gap=gap,
         # everything should be immutable so deepcopy is overkill but might as well
-        table=copy.deepcopy(table),
-        decision_variables=copy.deepcopy(decision),
+        sampleset=dimod.SampleSet.from_samples_bqm(samples_like, bqm),
         )

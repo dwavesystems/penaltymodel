@@ -23,6 +23,7 @@ import dwave_networkx as dnx
 import networkx as nx
 
 from penaltymodel import generate, ImpossiblePenaltyModel
+from penaltymodel.utils import table_to_sampleset
 
 MAX_GAP_DELTA = 0.01
 
@@ -89,7 +90,7 @@ class TestGenerate(unittest.TestCase):
     def generate_and_check(self, graph, configurations, decision_variables,
                            *, known_classical_gap=0, **kwargs):
 
-        bqm, gap, aux = generate(graph, configurations, decision_variables, **kwargs)
+        bqm, gap, aux = generate(graph, table_to_sampleset(configurations, decision_variables), **kwargs)
 
         min_classical_gap = kwargs.get('min_classical_gap', 2)
 
@@ -189,7 +190,7 @@ class TestGenerate(unittest.TestCase):
         decision_variables = (0, 1, 2)
 
         with self.assertRaises(ImpossiblePenaltyModel):
-            generate(graph, configurations, decision_variables)
+            generate(graph, table_to_sampleset(configurations, decision_variables))
 
     def test_K1(self):
         graph = nx.complete_graph(1)
@@ -240,7 +241,7 @@ class TestGenerate(unittest.TestCase):
         config = {(-1,): -1}
         graph = nx.complete_graph(decision_variables)
 
-        bqm, gap, aux = generate(graph, config, decision_variables,
+        bqm, gap, aux = generate(graph, table_to_sampleset(config, decision_variables),
                                  min_classical_gap=min_gap)
 
         self.assertEqual(bqm, dimod.BinaryQuadraticModel({'a': 2}, {}, 1, 'SPIN'))
@@ -258,7 +259,7 @@ class TestGenerate(unittest.TestCase):
         # Run problem with a min_classical_gap that is too large
         with self.assertRaises(ImpossiblePenaltyModel):
             large_min_gap = 3
-            generate(graph, or_gate, decision_variables,
+            generate(graph, table_to_sampleset(or_gate, decision_variables),
                      min_classical_gap=large_min_gap)
 
         # Lowering min_classical_gap should lead to a bqm being found
@@ -277,7 +278,7 @@ class TestGenerate(unittest.TestCase):
         # Run problem with a min_classical_gap that is too large
         with self.assertRaises(ImpossiblePenaltyModel):
             large_min_gap = 3
-            generate(graph, xor_gate, decision_variables,
+            generate(graph, table_to_sampleset(xor_gate, decision_variables),
                      min_classical_gap=large_min_gap)
 
         # Lowering min_classical_gap should lead to a bqm being found
@@ -392,23 +393,19 @@ class TestGenerate(unittest.TestCase):
         decision_variables = (0, 1, 2)
 
         with self.assertRaises(ImpossiblePenaltyModel):
-            generate(graph, configurations, decision_variables)
+            generate(graph, table_to_sampleset(configurations, decision_variables))
 
     def test_empty_no_aux(self):
         graph = nx.Graph()
-        configurations = {}
-        decision = []
+        sample = {}
 
-        bqm, gap, aux = generate(graph, configurations, decision)
+        bqm, gap, aux = generate(graph, sample)
 
         self.check_bqm_graph(bqm, graph)
 
     def test_empty_some_aux(self):
         graph = nx.complete_graph(3)
-        configurations = {}
-        decision = []
-
-        bqm, gap, aux = generate(graph, configurations, decision)
+        bqm, gap, aux = generate(graph, {})
 
         self.check_bqm_graph(bqm, graph)
 
@@ -421,7 +418,7 @@ class TestGenerate(unittest.TestCase):
                           (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
 
-        bqm, gap, aux = generate(graph, configurations, decision_variables)
+        bqm, gap, aux = generate(graph, table_to_sampleset(configurations, decision_variables))
 
         self.check_bqm_table(bqm, gap, configurations, decision_variables)
 
@@ -431,7 +428,7 @@ class TestGenerate(unittest.TestCase):
         configurations = {config: 0 for config in itertools.product((-1, 1), repeat=3) if len(set(config)) > 1}
         decision_variables = (0, 1, 2)
 
-        bqm, gap, aux = generate(graph, configurations, decision_variables)
+        bqm, gap, aux = generate(graph, table_to_sampleset(configurations, decision_variables))
 
         self.check_bqm_table(bqm, gap, configurations, decision_variables)
 
@@ -444,7 +441,7 @@ class TestGenerate(unittest.TestCase):
                           (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
 
-        bqm, gap, aux_configs = generate(graph, configurations, decision_variables)
+        bqm, gap, aux_configs = generate(graph, table_to_sampleset(configurations, decision_variables))
 
         # no aux variables
         self.assertEqual(aux_configs,
@@ -462,7 +459,7 @@ class TestGenerate(unittest.TestCase):
                           (+1, +1, +1): 0}
         decision_variables = (0, 1, 2)
 
-        bqm, gap, aux_configs = generate(graph, configurations, decision_variables)
+        bqm, gap, aux_configs = generate(graph, table_to_sampleset(configurations, decision_variables))
 
         for config in configurations:
             sample = dict(zip(decision_variables, config))
