@@ -5,10 +5,21 @@ Reference Documentation
 
 .. currentmodule:: penaltymodel
 
+Typing
+======
+
+.. autosummary::
+    :toctree: generated/
+    :template: class_only_docstring.rst
+
+    GraphLike
+    PenaltyModel
+
+
 Utilities
 =========
 
 .. autosummary::
-   :toctree: generated/
+    :toctree: generated/
 
-   as_graph
+    as_graph

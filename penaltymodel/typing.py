@@ -22,6 +22,8 @@ __all__ = ['GraphLike', 'PenaltyModel']
 
 
 class PenaltyModel(NamedTuple):
+    """A named tuple encoding a penalty model."""
+
     bqm: dimod.BinaryQuadraticModel
     sampleset: dimod.SampleSet
     classical_gap: float
