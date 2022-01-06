@@ -22,3 +22,6 @@ import dimod
 # class TestGetPenaltyModel(unittest.TestCase):
 #     def test_single_labelled(self):
 #         model = get_penalty_model({'a': 1, 'b': 0})
+
+# labelled
+# variable sizes
