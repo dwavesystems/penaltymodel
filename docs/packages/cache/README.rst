@@ -1,1 +1,0 @@
-../../../penaltymodel_cache/README.rst

@@ -15,21 +15,9 @@
 #
 import os
 import sys
-# sys.path.insert(0, os.path.abspath('.'))
 
 home_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-core_path = os.path.join(home_path, 'penaltymodel_core')
-cache_path = os.path.join(home_path, 'penaltymodel_cache')
-maxgap_path = os.path.join(home_path, 'penaltymodel_maxgap')
-mip_path = os.path.join(home_path, 'penaltymodel_mip')
-lp_path = os.path.join(home_path, 'penaltymodel_lp')
-
 sys.path.insert(0, home_path)
-sys.path.insert(0, core_path)
-sys.path.insert(0, cache_path)
-sys.path.insert(0, maxgap_path)
-sys.path.insert(0, mip_path)
-sys.path.insert(0, lp_path)
 
 
 # -- General configuration ------------------------------------------------
@@ -112,11 +100,7 @@ modindex_common_prefix = ['penaltymodel.']
 
 doctest_global_setup = \
     """
-import penaltymodel.core as pm
-import penaltymodel.cache as pmc
-import penaltymodel.maxgap as maxgap
-import penaltymodel.mip as mip
-import penaltymodel.lp as lp
+import penaltymodel
     """
 
 
@@ -149,78 +133,6 @@ def setup(app):
    app.add_css_file('cookie_notice.css')
    app.add_js_file('cookie_notice.js')
    app.add_config_value('target', 'repo', 'env')
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'penaltymodel.tex', u'penaltymodel Documentation',
-     u'D-Wave Systems Inc', 'manual'),
-]
-
-
-# -- Options for manual page output ---------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'projectname', u'penaltymodel Documentation',
-     [author], 1)
-]
-
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    (master_doc, 'penaltymodel', u'penaltymodel Documentation',
-     author, 'penaltymodel', 'One line description of project.',
-     'Miscellaneous'),
-]
-
-
-# -- Options for Epub output ----------------------------------------------
-
-# Bibliographic Dublin Core info.
-epub_title = project
-epub_author = author
-epub_publisher = author
-epub_copyright = copyright
-
-# The unique identifier of the text. This can be a ISBN number
-# or the project homepage.
-#
-# epub_identifier = ''
-
-# A unique identification for the text.
-#
-# epub_uid = ''
-
-# A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
-
 
 # Configuration for intersphinx.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),

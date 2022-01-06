@@ -1,1 +1,0 @@
-../../../penaltymodel_maxgap/README.rst
