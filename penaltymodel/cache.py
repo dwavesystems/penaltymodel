@@ -26,7 +26,7 @@ import homebase
 import networkx as nx
 import numpy as np
 
-from penaltymodel.core.package_info import __version__  # todo: move
+from penaltymodel import __version__
 from penaltymodel.exceptions import MissingPenaltyModel
 from penaltymodel.typing import GraphLike, PenaltyModel
 from penaltymodel.utils import as_graph
