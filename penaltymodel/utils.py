@@ -30,7 +30,7 @@ def as_graph(graph_like: GraphLike) -> nx.Graph:
 
     Args:
         graph_like:
-            A NetworkX graph, a list of nodes or a number.
+            A NetworkX :class:`~networkx.Graph`, a list of nodes or a number.
             If it is a list of nodes, then a complete graph with those nodes is
             returned.
             If it is a number, then the list of nodes is treated as

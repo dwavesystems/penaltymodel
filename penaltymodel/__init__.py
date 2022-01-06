@@ -21,3 +21,6 @@ import penaltymodel.exceptions
 
 from penaltymodel.lp import *
 import penaltymodel.lp
+
+from penaltymodel.utils import *
+import penaltymodel.utils
