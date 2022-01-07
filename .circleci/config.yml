@@ -201,30 +201,26 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions [3.6.12, 3.7.9, 3.8.6, 3.9.0, 3.10.0]
+              python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
               pip-constraints:
-                - dimod==0.10.9 scipy==1.5.2
-                - dimod~=0.10.0 scipy~=1.5.0
                 - dimod~=0.10.0 scipy~=1.6.0
                 - dimod~=0.10.0 scipy~=1.7.0
             exclude:
-                - python-version: 3.6.12
-                  pip-constraints: dimod~=0.10.0 scipy~=1.7.0  # py36 not support by scipy~=1.7.0
-                - python-version: 3.6.12
-                  pip-constraints: dimod~=0.10.0 scipy~=1.6.0  # py36 not support by scipy~=1.6.0
                 - python-version: 3.10.0
                   pip-constraints: dimod~=0.10.0 scipy~=1.6.0  # py310 not support by scipy~=1.6.0
-                - python-version: 3.10.0
-                  pip-constraints: dimod~=0.10.0 scipy~=1.5.0  # py310 not support by scipy~=1.5.0
-                - python-version: 3.10.0
-                  pip-constraints: dimod~=0.10.0 scipy==1.5.2  # py310 not support by scipy~=1.5.0
-                - python-version: 3.9.0
-                  pip-constraints: dimod~=0.10.0 scipy==1.5.2  # py39 not support by scipy==1.5.2
+      - test-linux:
+          name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
+          matrix:
+            parameters:
+              python-version: [3.6.12, 3.7.9, 3.8.6]
+              pip-constraints:
+                - dimod==0.10.9 scipy==1.5.2
+                - dimod~=0.10.0 scipy~=1.5.0
       - test-macos:
           name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
-              python-version: *python-versions
+              python-version: [3.6.12, 3.7.9, 3.8.6, 3.9.0, 3.10.0]
               xcode: ["13.2.0"]
 
       - test-docs
