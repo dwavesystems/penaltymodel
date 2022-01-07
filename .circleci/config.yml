@@ -1,11 +1,11 @@
 version: 2.1
-jobs:
 
+jobs:
   test-linux:
     parameters:
-      dimod-version:
-        type: string
       python-version:
+        type: string
+      pip-constraints:
         type: string
 
     docker:
@@ -14,432 +14,226 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          keys:
-            - env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ checksum "penaltymodel_mip/requirements.txt" }}-{{ checksum "penaltymodel_lp/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - restore_cache: &restore-cache-env
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
-      - run: &create-virtualenv-template
-          name: create virtual environement
+      - run: &create-virtualenv
+          name: Create virtual environment
           command: |
-            python -m virtualenv env
+            python -m venv env
 
-      - run:
-          name: install requirements
+      - run: &install-requirements
+          name: Install requirements
           command: |
             . env/bin/activate
-            pip install -r requirements.txt -r tests/requirements.txt -r docs/requirements.txt
-            pip install --upgrade 'dimod<< parameters.dimod-version >>'
+            pip install -U pip
+            pip install -r requirements.txt -r tests/requirements.txt
+            pip install wheel twine
+
+      - save_cache: &save-cache-env
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ~/.cache/pip
+
+      - run: &build-package
+          name: Build package
+          command: env/bin/python setup.py sdist bdist_wheel
+
+      - run: &install-package-with-constraints
+          name: Install package (with constraints)
+          command: |
+            . env/bin/activate
+            pip install . -c <(printf '%s\n' << parameters.pip-constraints >>)
+
+      - run: &run-python-tests
+          name: Run Python tests
+          command: env/bin/coverage run -m unittest discover
+
+      - run: &upload-python-code-coverage
+          name: Upload code coverage
+          command: |
+            . env/bin/activate
+            codecov     # calls `coverage xml`, so we must activate venv
+
+  test-macos:
+    parameters:
+      python-version:
+        type: string
+      xcode:
+        type: string
+
+    macos:
+      xcode: << parameters.xcode >>
+
+    steps:
+      - checkout
+
+      # install `python-version` and cache it
+      - run: &brew-install-pyenv
+          name: Install pyenv
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
+
+      - restore_cache: &restore-cache-pyenv
+          keys:
+            - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+
+      - when:
+          # backport https://github.com/python/cpython/pull/21113 to support macOS 11 when building py36
+          # see also: https://github.com/pyenv/pyenv/issues/1737.
+          condition:
+            matches:
+              pattern: "^3\\.6.*$"
+              value: << parameters.python-version >>
+          steps:
+            - run:
+                name: Install Python 3.6 with a patch for macOS 11
+                command: |
+                  curl -LO https://github.com/python/cpython/commit/8ea6353.patch
+                  pyenv install << parameters.python-version>> -s -p < 8ea6353.patch
+
+      - run: &pyenv-install-python
+          name: Install python
+          command: pyenv install << parameters.python-version >> -s
+
+      - run: &pyenv-set-system-python
+          name: Set system python
+          command: |
+            echo -e '\n\n# Initialize pyenv' >> ~/.bash_profile
+            echo 'eval "$(pyenv init --path 2>/dev/null || true)"' >> ~/.bash_profile
+            echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
+            pyenv global << parameters.python-version >>
+
+      - save_cache: &save-cache-pyenv
+          key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+          paths:
+            - ~/.pyenv
+
+      # install dependencies and cache them
+      - restore_cache: *restore-cache-env
+
+      - run: *create-virtualenv
+
+      - run: *install-requirements
+
+      - save_cache: *save-cache-env
+
+      - run: &install-package
+          name: Install package
+          command: env/bin/pip install .
+
+      - run: *run-python-tests
+
+  test-docs:
+    docker:
+      - image: circleci/python:3.7
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+
+      - run: *create-virtualenv
+
+      - run: *install-requirements
+
+      - run:
+          name: Install docs requirements
+          command: env/bin/pip install -r docs/requirements.txt
 
       - save_cache:
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
-            - ./env
-          key: env-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ checksum "penaltymodel_core/requirements.txt" }}-{{ checksum "penaltymodel_cache/requirements.txt" }}-{{ checksum "penaltymodel_maxgap/requirements.txt" }}-{{ checksum "penaltymodel_mip/requirements.txt" }}-{{ checksum "penaltymodel_lp/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+            - env
 
-      - run: &install-core-template
-          name: install penaltymodel
-          command: |
-            . env/bin/activate
-            pip install penaltymodel_core/ --no-deps
-
-      - run: &install-cache-template
-          name: install penaltymodel-cache
-          command: |
-            . env/bin/activate
-            pip install penaltymodel_cache/ --no-deps
-
-      - run: &install-maxgap-template
-          name: install penaltymodel-maxgap
-          command: |
-            . env/bin/activate
-            pip install penaltymodel_maxgap/ --no-deps
-
-      - run: &install-mip-template
-          name: install penaltymodel-mip
-          command: |
-            . env/bin/activate
-            pip install penaltymodel_mip/ --no-deps
-
-      - run: &install-lp-template
-          name: install penaltymodel-lp
-          command: |
-            . env/bin/activate
-            pip install penaltymodel_lp/ --no-deps
-
-      - run: &core-tests-template
-          name: core tests
-          command: |
-            . env/bin/activate
-            coverage run -a -m unittest discover -s penaltymodel_core/
-
-      - run: &cache-tests-template
-          name: cache tests
-          command: |
-            . env/bin/activate
-            coverage run -a -m unittest discover -s penaltymodel_cache/
-
-      - run: &maxgap-tests-template
-          name: maxgap tests
-          command: |
-            . env/bin/activate
-            coverage run -a -m unittest discover -s penaltymodel_maxgap/
-
-      - run: &lp-tests-template
-          name: lp tests
-          command: |
-            . env/bin/activate
-            coverage run -a -m unittest discover -s penaltymodel_lp/
-
-      - run: &mip-tests-template
-          name: mip tests
-          command: |
-            . env/bin/activate
-            coverage run -a -m unittest discover -s penaltymodel_mip/
-
-      - run: &integration-tests-template
-          name: integration tests
-          command: |
-            . env/bin/activate
-            python -m unittest discover tests/
+      - run: *install-package
 
       - run:
-          name: doctest
+          name: Build docs
+          command: |
+            . env/bin/activate
+            make -C docs/ html
+
+      - store_artifacts:
+          path: ./docs/build/html
+
+      - run:
+          name: Test docs
           command: |
             . env/bin/activate
             make -C docs/ doctest
 
       - run:
-          name: linkcheck
+          name: Test links
           command: |
             . env/bin/activate
             make -C docs/ linkcheck
 
-      - run:
-          name: codecov
-          command: |
-            . env/bin/activate
-            codecov
-
-  #
-  # MacOS tests
-  #
-
-  test-osx:
-    parameters:
-      python-version:
-        type: string
-    macos:
-      xcode: 13.2.0
-    environment:
-      HOMEBREW_NO_AUTO_UPDATE: 1
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - run:
-          name: install pyenv
-          command: |
-            brew install pyenv
-
-      - restore_cache:
-          keys:
-            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-13.2.0
-
-      - when:
-          # see https://github.com/pyenv/pyenv/issues/1643. We use an intermediate
-          # file so we can use the --skip-existing without raising errors from curl
-          condition:
-            equal: [3.6.8, << parameters.python-version>>]
-          steps:
-            - run:
-                name: Install Python 3.6 with a patch
-                command: |
-                  curl -sSL https://github.com/python/cpython/commit/8ea6353.patch > tmp.txt
-                  pyenv install -s --patch 3.6.8 < tmp.txt
-
-      - run:
-          name: install python
-          command: |
-            pyenv install << parameters.python-version>> -s
-
-      - save_cache:
-          paths:
-            - ~/.pyenv
-          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-13.2.0
-
-      - run:
-          name: create virtualenv
-          command: |
-            eval "$(pyenv init --path)"
-            eval "$(pyenv init -)"
-            pyenv local << parameters.python-version >>
-            python -m pip install virtualenv
-            python -m virtualenv env
-
-      - restore_cache:
-          keys:
-          - v2-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run:
-          name: install requirements
-          command: |
-            . env/bin/activate
-            pip install -r requirements.txt -r tests/requirements.txt
-
-      - save_cache:
-          paths:
-            - ./env
-          key: v2-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
-      - run: *install-core-template
-
-      - run: *install-cache-template
-
-      - run: *install-maxgap-template
-
-      - run: *install-mip-template
-
-      - run: *install-lp-template
-
-      - run: *core-tests-template
-
-      - run: *cache-tests-template
-
-      - run: *maxgap-tests-template
-
-      - run: *mip-tests-template
-
-      - run: *lp-tests-template
-
-      - run: *integration-tests-template
-
-  deploy-core:
+  pypi-deploy:
     docker:
-      - image: circleci/python:3.6-jessie
-
-    working_directory: ~/repo
+      - image: circleci/python:3.9
 
     steps:
       - checkout
 
-      - run: *create-virtualenv-template
+      - restore_cache: *restore-cache-env
 
-      - run: *install-core-template
+      - run: *create-virtualenv
 
-      - run:
-          name: verify version matches tag
-          command: |
-            . env/bin/activate
-            [[ "$(pip show penaltymodel 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/core-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
+      - run: *install-requirements
 
-      - run: &pypirc-file-template
-          name: init .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = dwtools-ci" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-            mkdir dist
+      - save_cache: *save-cache-env
+
+      - run: *build-package
+
+      - store_artifacts:
+          path: ./dist
 
       - run:
-          name: build sdist and bdist
-          command: |
-            . env/bin/activate
-            cd penaltymodel_core
-            python setup.py sdist
-            python setup.py bdist_wheel
-            mv dist/* ../dist/
+          name: Upload package to PyPI
+          command: env/bin/twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
 
-      - run: &twine-template
-          name: upload
-          command: |
-            . env/bin/activate
-            pip install twine
-            twine upload dist/*
-
-  deploy-maxgap:
-    docker:
-      - image: circleci/python:3.6-jessie
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - run: *create-virtualenv-template
-
-      - run: *install-core-template
-
-      - run: *install-maxgap-template
-
-      - run:
-          name: verify version matches tag
-          command: |
-            . env/bin/activate
-            [[ "$(pip show penaltymodel-maxgap 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/maxgap-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
-
-      - run: *pypirc-file-template
-
-      - run:
-          name: build sdist
-          command: |
-            . env/bin/activate
-            cd penaltymodel_maxgap
-            python setup.py sdist
-            mv dist/* ../dist/
-
-      - run: *twine-template
-
-  deploy-cache:
-    docker:
-      - image: circleci/python:3.6-jessie
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - run: *create-virtualenv-template
-
-      - run: *install-core-template
-
-      - run: *install-cache-template
-
-      - run:
-          name: verify version matches tag
-          command: |
-            . env/bin/activate
-            [[ "$(pip show penaltymodel-cache 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/cache-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
-
-      - run: *pypirc-file-template
-
-      - run:
-          name: build bdist and sdist
-          command: |
-            . env/bin/activate
-            cd penaltymodel_cache
-            python setup.py sdist
-            python setup.py bdist_wheel
-            mv dist/* ../dist/
-
-      - run: *twine-template
-
-  deploy-mip:
-    docker:
-      - image: circleci/python:3.6-jessie
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - run: *create-virtualenv-template
-
-      - run: *install-core-template
-
-      - run: *install-mip-template
-
-      - run:
-          name: verify version matches tag
-          command: |
-            . env/bin/activate
-            [[ "$(pip show penaltymodel-mip 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/mip-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
-
-      - run: *pypirc-file-template
-
-      - run:
-          name: build bdist and sdist
-          command: |
-            . env/bin/activate
-            cd penaltymodel_mip
-            python setup.py sdist
-            python setup.py bdist_wheel
-            mv dist/* ../dist/
-
-      - run: *twine-template
-
-  deploy-lp:
-    docker:
-      - image: circleci/python:3.6-jessie
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - run: *create-virtualenv-template
-
-      - run: *install-core-template
-
-      - run: *install-lp-template
-
-      - run:
-          name: verify version matches tag
-          command: |
-            . env/bin/activate
-            [[ "$(pip show penaltymodel-lp 2>/dev/null | grep Version)" == "Version: $(echo "$CIRCLE_TAG" | sed -E 's/lp-([0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]*)?)$/\1/')" ]]
-
-      - run: *pypirc-file-template
-
-      - run:
-          name: build bdist and sdist
-          command: |
-            . env/bin/activate
-            cd penaltymodel_lp
-            python setup.py sdist
-            python setup.py bdist_wheel
-            mv dist/* ../dist/
-
-      - run: *twine-template
 
 workflows:
-  version: 2
   test:
     jobs:
       - test-linux:
-          name: test-linux-<< matrix.python-version >>-dimod<< matrix.dimod-version >>
+          name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions [3.6.8, 3.7.9, 3.8.9, 3.9.4, 3.10.0]
-              # 0.8.0 is the smallest supported by all packages
-              dimod-version: [==0.8.0, ~=0.9.0, ~=0.10.0]
+              python-version: &python-versions [3.6.12, 3.7.9, 3.8.6, 3.9.0, 3.10.0]
+              pip-constraints:
+                - dimod==0.10.9 scipy==1.5.2
+                - dimod~=0.10.0 scipy~=1.5.0
+                - dimod~=0.10.0 scipy~=1.6.0
+                - dimod~=0.10.0 scipy~=1.7.0
             exclude:
-              - python-version: 3.10.0
-                dimod-version: ==0.8.0
-              - python-version: 3.10.0
-                dimod-version: ~=0.9.0
-      - test-osx:
-          name: test-osx-<< matrix.python-version >>
+                - python-version: 3.6.12
+                  pip-constraints: dimod~=0.10.0 scipy~=1.7.0  # py36 not support by scipy~=1.7.0
+                - python-version: 3.6.12
+                  pip-constraints: dimod~=0.10.0 scipy~=1.6.0  # py36 not support by scipy~=1.6.0
+                - python-version: 3.10.0
+                  pip-constraints: dimod~=0.10.0 scipy~=1.6.0  # py310 not support by scipy~=1.6.0
+                - python-version: 3.10.0
+                  pip-constraints: dimod~=0.10.0 scipy~=1.5.0  # py310 not support by scipy~=1.5.0
+                - python-version: 3.10.0
+                  pip-constraints: dimod~=0.10.0 scipy==1.5.2  # py310 not support by scipy~=1.5.0
+                - python-version: 3.9.0
+                  pip-constraints: dimod~=0.10.0 scipy==1.5.2  # py39 not support by scipy==1.5.2
+      - test-macos:
+          name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
               python-version: *python-versions
-      - deploy-core:
+              xcode: ["13.2.0"]
+
+      - test-docs
+
+  deploy:
+    jobs:
+      - pypi-deploy:
           filters:
             tags:
-              only: /^core-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-            branches:
-              ignore: /.*/
-      - deploy-cache:
-          filters:
-            tags:
-              only: /^cache-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-            branches:
-              ignore: /.*/
-      - deploy-maxgap:
-          filters:
-            tags:
-              only: /^maxgap-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-            branches:
-              ignore: /.*/
-      - deploy-mip:
-          filters:
-            tags:
-              only: /^mip-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
-            branches:
-              ignore: /.*/
-      - deploy-lp:
-          filters:
-            tags:
-              only: /^lp-[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+              only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
             branches:
               ignore: /.*/
