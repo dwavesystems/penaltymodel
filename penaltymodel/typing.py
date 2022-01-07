@@ -12,21 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Mapping, NamedTuple, Sequence, Tuple, Union
+from typing import Sequence, Union
 
-import dimod
 import networkx as nx
 
 
-__all__ = ['GraphLike', 'PenaltyModel']
-
-
-class PenaltyModel(NamedTuple):
-    """A named tuple encoding a penalty model."""
-
-    bqm: dimod.BinaryQuadraticModel
-    sampleset: dimod.SampleSet
-    classical_gap: float
+__all__ = ['GraphLike']
 
 
 GraphLike = Union[int, Sequence[int], nx.Graph]

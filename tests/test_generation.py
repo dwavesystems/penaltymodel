@@ -19,7 +19,6 @@ import itertools
 import unittest
 
 import dimod
-import dwave_networkx as dnx
 import networkx as nx
 
 from penaltymodel import generate, ImpossiblePenaltyModel
@@ -154,7 +153,9 @@ class TestGenerate(unittest.TestCase):
         self.assertAlmostEqual(best_gap, gap)
 
     def test_disjoint(self):
-        graph = dnx.chimera_graph(1, 1, 3)
+        graph = nx.Graph()
+        for u, v in itertools.product([0, 1, 2], [3, 4, 5]):
+            graph.add_edge(u, v)
         graph.add_edge(8, 9)
 
         configurations = {(-1, -1, -1): 0,
@@ -164,7 +165,9 @@ class TestGenerate(unittest.TestCase):
         self.generate_and_check(graph, configurations, decision_variables)
 
     def test_disjoint_decision_accross_subgraphs(self):
-        graph = dnx.chimera_graph(1, 1, 3)
+        graph = nx.Graph()
+        for u, v in itertools.product([0, 1, 2], [3, 4, 5]):
+            graph.add_edge(u, v)
         graph.add_edge(8, 9)
 
         configurations = {(-1, -1, +1, -1): 0,
@@ -315,7 +318,9 @@ class TestGenerate(unittest.TestCase):
 
     def test_restricted_energy_ranges(self):
         """Create asymmetric energy ranges and test against that."""
-        graph = dnx.chimera_graph(1, 1, 3)
+        graph = nx.Graph()
+        for u, v in itertools.product([0, 1, 2], [3, 4, 5]):
+            graph.add_edge(u, v)
         configurations = {(-1, -1, -1): 0,
                           (-1, +1, -1): 0,
                           (+1, -1, -1): 0,

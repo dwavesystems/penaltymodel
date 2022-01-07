@@ -126,14 +126,14 @@ class TestRetrieve(unittest.TestCase):
 
         samples = [[-1, -1, -1], [-1, +1, -1], [+1, -1, -1], [+1, +1, +1]]
 
-        bqm, classical_gap = cache.retrieve(nx.complete_graph(3), samples)
+        bqm, classical_gap = cache.retrieve(samples, nx.complete_graph(3))
         self.assertEqual(bqm, bqm2)  # largest gap, fits within bounds
 
-        bqm, classical_gap = cache.retrieve(nx.complete_graph(3), samples, linear_bound=(-.5, .5), min_classical_gap=1)
+        bqm, classical_gap = cache.retrieve(samples, nx.complete_graph(3), linear_bound=(-.5, .5), min_classical_gap=1)
         self.assertEqual(bqm, bqm1)  # since this fits in the given bounds
 
         with self.assertRaises(MissingPenaltyModel):
-            cache.retrieve(nx.complete_graph(3), samples, linear_bound=(-.5, .5))
+            cache.retrieve(samples, nx.complete_graph(3), linear_bound=(-.5, .5))
 
 
 class TestSampleSetCache(unittest.TestCase):

@@ -86,9 +86,9 @@ def get_penalty_model(specification):
         max((b for n in specification.ising_quadratic_ranges.values() for _, b in n.values()), default=1)
         )
 
-    pm = _get_penalty_model(
-        specification.graph,
+    bqm, gap = _get_penalty_model(
         table_to_sampleset(specification.feasible_configurations, specification.decision_variables, specification.vartype),
+        specification.graph,
         linear_bound=linear_bound,
         quadratic_bound=quadratic_bound,
         min_classical_gap=specification.min_classical_gap,
@@ -96,8 +96,8 @@ def get_penalty_model(specification):
 
     return PenaltyModel.from_specification(
         specification,
-        model=pm.bqm.change_vartype(specification.vartype, inplace=True),
-        classical_gap=pm.classical_gap,
+        model=bqm.change_vartype(specification.vartype, inplace=True),
+        classical_gap=gap,
         ground_energy=min(specification.feasible_configurations.values(), default=0),
         )
 

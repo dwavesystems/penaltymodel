@@ -18,8 +18,10 @@ import sqlite3
 import os
 import json
 import struct
+import tempfile
+import threading
 
-from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterator, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import dimod
 import homebase
@@ -28,16 +30,22 @@ import numpy as np
 
 from penaltymodel import __version__
 from penaltymodel.exceptions import MissingPenaltyModel
-from penaltymodel.typing import GraphLike, PenaltyModel
+from penaltymodel.typing import GraphLike
 from penaltymodel.utils import as_graph
 
-__all__ = ['PenaltyModelCache', 'patch_cache']
+__all__ = ['PenaltyModelCache', 'patch_cache', 'isolated_cache']
 
 
 # developer note: we could use sqlite's adaptor's methods
 # but since those changes are applied globally and since we're using pretty
 # standard types (NumPy arrays and NetworkX graphs) it makes sense to
 # do it "by hand" rather than risk interfering with other's code.
+
+
+class PenaltyModel(NamedTuple):
+    bqm: dimod.BinaryQuadraticModel
+    sampleset: dimod.SampleSet
+    classical_gap: float
 
 
 class PenaltyModelCache(contextlib.AbstractContextManager):
@@ -194,9 +202,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             :energies);
         """
 
-    def __init__(self, database: Optional[Union[str, os.PathLike]] = None):
-        if database is None:
-            database = os.path.join(
+    DATABASE = os.path.join(
                 homebase.user_data_dir(
                     app_name='dwave-penaltymodel-cache',
                     app_author='dwave-systems',
@@ -205,6 +211,9 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 f'penaltymodel_v{__version__}.db'
                 )
 
+    def __init__(self, database: Optional[Union[str, os.PathLike]] = None):
+        if database is None:
+            database = self.DATABASE
         self.conn = conn = sqlite3.connect(database)
 
         # add the main schema
@@ -233,7 +242,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             edges = graph.edges
 
         if nodes ^ range(len(nodes)):
-            raise ValueError
+            raise ValueError("nodes must be index-labelled")
 
         return dict(
             num_nodes=len(nodes),
@@ -392,11 +401,20 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             ):
         """Does not check for correctness"""
 
-        # todo: test decision subset of bqm
+        samples, decision = samples_like = dimod.as_samples(samples_like)
+
+        # do some input checking
+        if not all(v in bqm.variables for v in decision):
+            raise ValueError("bqm's variables must be a superset of the "
+                             "samples_like's variables")
+
+        if bqm.variables ^ range(bqm.num_variables):
+            mapping = {v: i for i, v in enumerate(decision)}
+            mapping.update((v, i) for i, v in enumerate(bqm.variables ^ decision, len(mapping)))
+
+            return self.insert_penalty_model(bqm.relabel_variables(mapping, inplace=False), samples, classical_gap)
 
         parameters = self.encode_graph(bqm) | self.encode_bqm(bqm) | self.encode_sampleset(samples_like)
-
-        _, decision = dimod.as_samples(samples_like)
 
         parameters.update(
             decision_variables=json.dumps(decision, separators=(',', ':')),
@@ -418,8 +436,8 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 )
 
     def retrieve(self,
-                 graph: nx.Graph,
                  samples_like,
+                 graph_like,
                  *,
                  linear_bound: Tuple[float, float] = (-2, 2),
                  quadratic_bound: Tuple[float, float] = (-1, 1),
@@ -427,6 +445,24 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                  ) -> Tuple[dimod.BinaryQuadraticModel, float]:
 
         samples, labels = dimod.as_samples(samples_like)
+        graph = as_graph(graph_like)
+
+        # do some input checking
+        if not all(v in graph.nodes for v in labels):
+            raise ValueError("graph_like's nodes must be a superset of the "
+                             "samples_like's variables")
+
+        if graph.nodes ^ range(len(graph.nodes)):
+            mapping = {v: i for i, v in enumerate(labels)}
+            mapping.update((v, i) for i, v in enumerate(graph.nodes ^ labels, len(mapping)))
+
+            bqm, gap = self.retrieve(samples, nx.relabel_nodes(graph, mapping, copy=True),
+                                     linear_bound=linear_bound,
+                                     quadratic_bound=quadratic_bound,
+                                     min_classical_gap=min_classical_gap)
+
+            inverse_mapping = dict((i, v) for v, i in mapping.items())
+            return bqm.relabel_variables(inverse_mapping, inplace=True), gap
 
         parameters = self.encode_graph(graph)
         parameters.update(self.encode_sampleset(samples_like))
@@ -490,3 +526,15 @@ def patch_cache(database: Union[str, os.PathLike] = ':memory:'):
                 return f(*args, cache, **kwargs)
         return wrapper
     return _patch
+
+
+@contextlib.contextmanager
+def isolated_cache(*args, **kwargs):
+    with tempfile.TemporaryDirectory() as d:
+        with threading.RLock():
+            current = PenaltyModelCache.DATABASE
+            PenaltyModelCache.DATABASE = os.path.join(d, 'tmp.db')
+            try:
+                yield
+            finally:
+                PenaltyModelCache.DATABASE = current

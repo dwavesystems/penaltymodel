@@ -100,7 +100,6 @@ modindex_common_prefix = ['penaltymodel.']
 
 doctest_global_setup = \
     """
-import penaltymodel
     """
 
 

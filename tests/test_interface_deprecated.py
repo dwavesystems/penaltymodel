@@ -26,7 +26,7 @@ from penaltymodel.core import iter_caches, iter_factories, get_penalty_model
 
 
 class TestInterfaceWithCache(unittest.TestCase):
-    @unittest.mock.patch('penaltymodel.cache.__version__', str(time.perf_counter()))  # mangle the database name
+    @penaltymodel.isolated_cache()
     def test_retrieval(self):
         # put some stuff in the database
 
@@ -45,7 +45,7 @@ class TestInterfaceWithCache(unittest.TestCase):
 
         self.assertEqual(widget, new_widget)
 
-    @unittest.mock.patch('penaltymodel.cache.__version__', str(time.perf_counter()))  # mangle the database name
+    @penaltymodel.isolated_cache()
     def test_generation(self):
         # put some stuff in the database
 
