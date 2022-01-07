@@ -97,7 +97,7 @@ class TestGenerate(unittest.TestCase):
         # Note: Due to the way MaxGap searches for the maximum gap, if
         #   known_classical_gap == "maximum possible gap", then `gap` can be
         #   slightly smaller than known_classical_gap.
-        self.assertGreaterEqual(gap, min_classical_gap)
+        self.assertGreaterEqual(round(gap, 9), min_classical_gap)
         self.assertGreaterEqual(gap, known_classical_gap - MAX_GAP_DELTA)
 
         # check that the bqm/graph have the same structure
