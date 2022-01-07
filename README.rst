@@ -1,40 +1,17 @@
+.. image:: https://img.shields.io/pypi/v/penaltymodel.svg
+    :target: https://pypi.python.org/pypi/penaltymodel
+
+.. image:: https://img.shields.io/pypi/pyversions/penaltymodel.svg
+    :target: https://pypi.python.org/pypi/penaltymodel
+
 .. image:: https://codecov.io/gh/dwavesystems/penaltymodel/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/dwavesystems/penaltymodel
-
-.. image:: https://readthedocs.com/projects/d-wave-systems-penaltymodel/badge/?version=latest
-    :target: https://docs.ocean.dwavesys.com/projects/penaltymodel/en/latest/?badge=latest
 
 .. image:: https://ci.appveyor.com/api/projects/status/cqfk8il1e4hgg7ih?svg=true
     :target: https://ci.appveyor.com/project/dwave-adtt/penaltymodel
 
 .. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/penaltymodel
-
-Included Packages
-=================
-
-+---------------------------------+---------------------------------+
-| penaltymodel                    | |core|                          |
-+---------------------------------+---------------------------------+
-| penaltymodel-cache              | |cache|                         |
-+---------------------------------+---------------------------------+
-| penaltymodel-maxgap             | |maxgap|                        |
-+---------------------------------+---------------------------------+
-| penaltymodel-mip                | |mip|                           |
-+---------------------------------+---------------------------------+
-| penaltymodel-lp                 | |lp|                            |
-+---------------------------------+---------------------------------+
-
-.. |core| image:: https://img.shields.io/pypi/v/penaltymodel.svg
-.. _core: https://pypi.python.org/pypi/penaltymodel
-.. |cache| image:: https://img.shields.io/pypi/v/penaltymodel-cache.svg
-.. _cache: https://pypi.python.org/pypi/penaltymodel-cache
-.. |maxgap| image:: https://img.shields.io/pypi/v/penaltymodel-maxgap.svg
-.. _maxgap: https://pypi.python.org/pypi/penaltymodel-maxgap
-.. |mip| image:: https://img.shields.io/pypi/v/penaltymodel-mip.svg
-.. _mip: https://pypi.python.org/pypi/penaltymodel-mip
-.. |lp| image:: https://img.shields.io/pypi/v/penaltymodel-lp.svg
-.. _lp: https://pypi.python.org/pypi/penaltymodel-lp
 
 .. index-start-marker
 
@@ -51,7 +28,7 @@ Before anything else, let's import that package we will need.
 
 .. code-block:: python
 
-    import penaltymodel.core as pm
+    import penaltymodel
     import dimod
     import networkx as nx
 
@@ -74,27 +51,16 @@ The rows of the truth table are exactly the feasible configurations.
 
 .. code-block:: python
 
-    feasible_configurations = {(0, 0, 0), (0, 1, 0), (1, 0, 0), (1, 1, 1)}
+    feasible_configurations = [{'x1': 0, 'x2': 0, 'z': 0},
+                               {'x1': 1, 'x2': 0, 'z': 0},
+                               {'x1': 0, 'x2': 1, 'z': 0},
+                               {'x1': 1, 'x2': 1, 'z': 1}]
 
-We also need a target graph and to label the decision variables. We create a node in the graph for each variable in the problem, and we add an edge between each node, represnting the interactions between the variables. In this case we allow an interaction between every variable, but more sparse interactions are possible. The labels of the nodes and the decision variables match.
-
-.. code-block:: python
-
-    graph = nx.Graph()
-    graph.add_edges_from([('x1', 'x2'), ('x1', 'z'), ('x2', 'z')])
-    decision_variables = ['x1', 'x2', 'z']
-
-We now have everything needed to build our Specification. We have binary variables so we select the appropriate variable type.
+At this point, we can get a penalty model
 
 .. code-block:: python
 
-    spec = pm.Specification(graph, decision_variables, feasible_configurations, dimod.BINARY)
-
-At this point, if we have any factories installed, we could use the factory interface to get an appropriate penalty model for our specification.
-
-.. code-block:: python
-
-    p_model = pm.get_penalty_model(spec)
+    bqm, gap = pm.get_penalty_model(feasible_configurations)
 
 However, if we know the QUBO, we can build the penalty model ourselves. We observe that for the equation:
 
