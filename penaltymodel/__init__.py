@@ -25,7 +25,6 @@ import penaltymodel.exceptions
 from penaltymodel.interface import *
 import penaltymodel.interface
 
-from penaltymodel.lp import *
 import penaltymodel.lp
 
 from penaltymodel.typing import *

@@ -27,7 +27,7 @@ from dimod.typing import GraphLike, Variable
 from penaltymodel.exceptions import ImpossiblePenaltyModel
 from penaltymodel.utils import as_graph
 
-__all__ = ['generate']
+__all__ = []
 
 
 class Index:
@@ -122,10 +122,10 @@ def generate(graph_like: GraphLike,
              quadratic_bound: Tuple[float, float] = (-1, 1),
              min_classical_gap: float = 2,
              ) -> Tuple[dimod.BinaryQuadraticModel, float, Dict[Tuple[int, ...], Tuple[int, ...]]]:
-    """TODO
+    """Generate a penalty model.
 
-    gap is between the highest feasible and the lowest infeasible
-
+    This function is considered internal, it is recommended to use
+    :func:`~penaltymodel.get_penalty_model` with ``use_cache=False`` instead.
     """
     graph = as_graph(graph_like)
     samples, decision = dimod.as_samples(samples_like)
