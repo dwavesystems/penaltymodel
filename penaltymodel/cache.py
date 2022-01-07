@@ -33,7 +33,7 @@ from penaltymodel.exceptions import MissingPenaltyModel
 from penaltymodel.typing import GraphLike
 from penaltymodel.utils import as_graph
 
-__all__ = ['PenaltyModelCache', 'patch_cache', 'isolated_cache']
+__all__ = ['PenaltyModelCache']
 
 
 # developer note: we could use sqlite's adaptor's methods
@@ -49,13 +49,22 @@ class PenaltyModel(NamedTuple):
 
 
 class PenaltyModelCache(contextlib.AbstractContextManager):
-    """
+    """Manage a database of penalty models.
+
+    Penalty models are stored in an :mod:`sqlite3` database.
+
+    This class can be used as a context manager to automatically close
+    the database connection on exit.
 
     Args:
-        database (str, optional): The path to the database the user wishes
-            to connect to. If not specified, a default is chosen using
-            :func:`.cache_file`. If the special database name ':memory:'
-            is given, then a temporary database is created in memory.
+        database:
+            The path to the database the user wishes to connect to.
+            The default path will depend on the operating system, certain
+            environmental variables and whether it is being run inside a
+            virtual environment.
+            See `homebase <https://github.com/dwavesystems/homebase>`_.
+            If the special database name ':memory:' is given, then a temporary
+            database is created in memory.
 
     """
 
@@ -202,18 +211,15 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             :energies);
         """
 
-    DATABASE = os.path.join(
-                homebase.user_data_dir(
-                    app_name='dwave-penaltymodel-cache',
-                    app_author='dwave-systems',
-                    create=True,
-                    ),
-                f'penaltymodel_v{__version__}.db'
-                )
+    database_name = f'penaltymodel_v{__version__}.db'
+    database_path = homebase.user_data_dir(app_name='dwave-penaltymodel-cache',
+                                           app_author='dwave-systems',
+                                           create=True,
+                                           )
 
     def __init__(self, database: Optional[Union[str, os.PathLike]] = None):
         if database is None:
-            database = self.DATABASE
+            database = os.path.join(self.database_path, self.database_name)
         self.conn = conn = sqlite3.connect(database)
 
         # add the main schema
@@ -227,6 +233,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         self.close()
 
     def close(self):
+        """Close the database connection."""
         self.conn.close()
 
     @staticmethod
@@ -259,13 +266,10 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         return graph
 
     def insert_graph(self, graph_like: GraphLike):
-        """Insert a graph into the cache.
-
-        A graph is stored by number of nodes, number of edges and a
-        json-encoded list of edges.
+        """Insert a graph into the database.
 
         Args:
-            graph: a NetworkX graph.
+            graph: a NetworkX graph, an integer or a list of nodes.
 
         Raises:
             ValueError: If the nodes of the graph are not labelled `[0, n)`.
@@ -275,10 +279,10 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             cur.execute(self.insert_graph_statement, self.encode_graph(graph_like))
 
     def iter_graphs(self) -> Iterator[nx.Graph]:
-        """Iterate over all graphs in the cache.
+        """Iterate over all of the graphs in the database.
 
         Yields:
-            All the graphs in the cache, as NetworkX graphs.
+            All the graphs in the database, as NetworkX graphs.
 
         """
         yield from map(self.decode_graph, self.conn.execute("SELECT num_nodes, edges from graph;"))
@@ -330,13 +334,16 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         return dimod.SampleSet.from_samples(samples, vartype='SPIN', energy=energies)
 
     def insert_sampleset(self, samples_like):
-        """Insert a sample set into the cache.
+        """Insert a sample set into the database.
 
         Args:
             samples_like:
-                Samples to add to the cache.
+                Samples to add to the database.
                 'samples_like' is an extension of NumPy's array_like_.
                 See :func:`dimod.as_samples`.
+
+        Raises:
+            ValueError: If the variables are not labelled `[0, n)`.
 
         .. _array_like: https://numpy.org/doc/stable/user/basics.creation.html
 
@@ -345,6 +352,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             cur.execute(self.insert_sampleset_statement, self.encode_sampleset(samples_like))
 
     def iter_samplesets(self):
+        """Iterate over all of the sample sets in the database."""
         select = "SELECT num_variables, num_samples, samples, energies FROM sampleset"
         yield from map(self.decode_sampleset, self.conn.execute(select))
 
@@ -363,9 +371,14 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
         return dimod.BinaryQuadraticModel.from_file(row['bqm_data'])
 
     def insert_binary_quadratic_model(self, bqm: dimod.BinaryQuadraticModel):
-        """
-        converted to SPIN
-        must be integer labelled
+        """Insert a binary quadratic model into the database.
+
+        Args:
+            bqm: A binary quadratic model.
+
+        Raises:
+            ValueError: If the variables of the binary quadratic model are not
+                labelled `[0, n)`.
 
         """
         bqm = dimod.as_bqm(bqm, dtype=float)
@@ -390,6 +403,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             cur.execute(self.insert_bqm_statement, parameters)
 
     def iter_binary_quadratic_models(self) -> Iterator[dimod.BinaryQuadraticModel]:
+        """Iterate over all of the binary quadratic models in the database."""
         for bqm_data in self.conn.execute("SELECT bqm_data FROM binary_quadratic_model;"):
             yield self.decode_bqm(bqm_data)
 
@@ -399,7 +413,21 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             samples_like,
             classical_gap: float,
             ):
-        """Does not check for correctness"""
+        """Insert a penalty model into the database.
+
+        Args:
+            bqm: A binary quadratic model.
+
+            samples_like: Samples to add to the database.
+                'samples_like' is an extension of NumPy's array_like_.
+                See :func:`dimod.as_samples`.
+
+            classical_gap: The classical gap. This is not checked for
+                correctness.
+
+        .. _array_like: https://numpy.org/doc/stable/user/basics.creation.html
+
+        """
 
         samples, decision = samples_like = dimod.as_samples(samples_like)
 
@@ -428,6 +456,7 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             cur.execute(self.insert_penalty_model_statement, parameters)
 
     def iter_penalty_models(self) -> Iterator[PenaltyModel]:
+        """Iterate over all of the penalty models in the database."""
         for row in self.conn.execute("SELECT * FROM penalty_model_view;"):
             yield PenaltyModel(
                     self.decode_bqm(row),
@@ -443,7 +472,56 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                  quadratic_bound: Tuple[float, float] = (-1, 1),
                  min_classical_gap: float = 2,
                  ) -> Tuple[dimod.BinaryQuadraticModel, float]:
+        """Retrieve a penalty model from the database.
 
+        Args:
+            samples_like:
+                The set of feasible states that form the ground states of the
+                generated binary quadratic model.
+
+                'samples_like' is an extension of NumPy's array_like_.
+                See :func:`dimod.as_samples`.
+
+                .. _array_like: https://numpy.org/doc/stable/user/basics.creation.html
+
+            graph_like:
+                Defines the structure of the desired binary quadratic model. Each
+                node in the graph represents a variable and each edge defines an
+                interaction between two variables.
+                Can be given as a :class:`networkx.Graph`, a :class:`int`, or as
+                a sequence of variable labels.
+
+                If given as a sequence of labels, the structure will be
+                fully-connected, with the variables labelled according to the
+                sequence.
+
+                If given as an int, the structure will be
+                fully-connected with the variables labelled ``range(n)``.
+
+                The nodes of the graph must be a superset of the labels of
+                ``samples_like``.
+
+                If not provided, defaults to a fully connected graph with nodes
+                that are the variables of ``samples_like``.
+
+            linear_bound:
+                The range allowed for the linear biases of the binary quadratic
+                model.
+
+            quadratic_bound:
+                The range allowed for the quadratic biases of the binary quadratic
+                model.
+
+            min_classical_gap:
+                This is a threshold value for the classical gap. It describes the
+                minimum energy gap between the highest feasible state and the
+                lowest infeasible state.
+
+        Returns:
+            A 2-tuple of the binary quadratic model and the classical gap. Note
+            that the binary quadratic model always has vartype ``'SPIN'``.
+
+        """
         samples, labels = dimod.as_samples(samples_like)
         graph = as_graph(graph_like)
 
@@ -530,11 +608,18 @@ def patch_cache(database: Union[str, os.PathLike] = ':memory:'):
 
 @contextlib.contextmanager
 def isolated_cache(*args, **kwargs):
+    """Temporarily isolate the cache.
+
+    Can be used as a decorator or a context manager.
+
+    This context manager is not reentrant.
+
+    """
     with tempfile.TemporaryDirectory() as d:
         with threading.RLock():
-            current = PenaltyModelCache.DATABASE
-            PenaltyModelCache.DATABASE = os.path.join(d, 'tmp.db')
+            current = PenaltyModelCache.database_path
+            PenaltyModelCache.database_path = d
             try:
                 yield
             finally:
-                PenaltyModelCache.DATABASE = current
+                PenaltyModelCache.database_path = current

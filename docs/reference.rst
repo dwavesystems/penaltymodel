@@ -14,6 +14,28 @@ The main function for penalty models is:
 In addition to :func:`get_penalty_model`, there are some more advanced
 interfaces available.
 
+Cache
+=====
+
+.. autoclass:: PenaltyModelCache
+
+Methods
+~~~~~~~
+
+.. autosummary::
+    :toctree: generated/
+
+    PenaltyModelCache.close
+    PenaltyModelCache.insert_binary_quadratic_model
+    PenaltyModelCache.insert_graph
+    PenaltyModelCache.insert_penalty_model
+    PenaltyModelCache.insert_sampleset
+    PenaltyModelCache.iter_binary_quadratic_models
+    PenaltyModelCache.iter_graphs
+    PenaltyModelCache.iter_penalty_models
+    PenaltyModelCache.iter_samplesets
+    PenaltyModelCache.retrieve
+
 Exceptions
 ==========
 

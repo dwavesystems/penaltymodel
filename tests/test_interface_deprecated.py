@@ -23,10 +23,11 @@ import penaltymodel
 
 from penaltymodel.core import Specification, PenaltyModel
 from penaltymodel.core import iter_caches, iter_factories, get_penalty_model
+from penaltymodel.cache import isolated_cache
 
 
 class TestInterfaceWithCache(unittest.TestCase):
-    @penaltymodel.isolated_cache()
+    @isolated_cache()
     def test_retrieval(self):
         # put some stuff in the database
 
@@ -45,7 +46,7 @@ class TestInterfaceWithCache(unittest.TestCase):
 
         self.assertEqual(widget, new_widget)
 
-    @penaltymodel.isolated_cache()
+    @isolated_cache()
     def test_generation(self):
         # put some stuff in the database
 

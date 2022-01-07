@@ -19,7 +19,8 @@ import unittest.mock
 import dimod
 import networkx as nx
 
-from penaltymodel import get_penalty_model, isolated_cache
+from penaltymodel import get_penalty_model
+from penaltymodel.cache import isolated_cache
 
 
 class TestGetPenaltyModel(unittest.TestCase):
