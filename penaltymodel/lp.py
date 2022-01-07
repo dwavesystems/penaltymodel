@@ -213,12 +213,29 @@ def generate(graph_like: GraphLike,
     upper_bound.remove(i)
     equality.append(i)
 
+    # need to determine a linprog method, which depends a bit on our scipy
+    # version, so let's tentatively assume that we have 'highs'
+    linprog_kwargs = dict(bounds=bounds,
+                          method='highs')
+    round_bases = False
+
     while True:
         A_eq = A[equality, :]
         b_eq = b[equality]
         A_ub = -A[upper_bound, :]  # negate because we want A_ub <= b_ub
         b_ub = -b[upper_bound]
-        res = scipy.optimize.linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=bounds, method='highs')
+
+        try:
+            res = scipy.optimize.linprog(c, A_ub, b_ub, A_eq, b_eq, **linprog_kwargs)
+        except ValueError:
+            # let's assume that we're on too low a version of scipy, change the
+            # method and try again. This new method is numerically stable but
+            # much slower. It also introduces small numerical issues
+            # linprog_kwargs.update(method='interior-point',
+            #                       options=dict(cholesky=False, lstsq=True))
+            linprog_kwargs.update(method='revised simplex')
+            round_biases = True
+            res = scipy.optimize.linprog(c, A_ub, b_ub, A_eq, b_eq, **linprog_kwargs)
 
         if res.success:
             if len(auxiliary_configurations) == len(table):
@@ -252,7 +269,7 @@ def generate(graph_like: GraphLike,
 
     # having found something feasible, let's do one last run, this time optimizing the gap
     c[indexer.gap()] = -1
-    res_opt = scipy.optimize.linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=bounds, method='highs')
+    res_opt = scipy.optimize.linprog(c, A_ub, b_ub, A_eq, b_eq, **linprog_kwargs)
     if res_opt.success:
         res = res_opt
         gap = res.x[indexer.gap()]
@@ -262,6 +279,13 @@ def generate(graph_like: GraphLike,
         gap = float('inf')
     else:
         raise RuntimeError("something went wrong")
+
+    # if round_biases:
+    #     # we had to use interior-point, which introduces some floating
+    #     # point errors, so let's try to clean them up roughly.
+    #     # raise NotImplementedError
+    #     res.x = np.round(res.x, 6)
+    #     gap = np.round(gap, 6)
 
     # let's make the BQM!
     bqm = dimod.BinaryQuadraticModel('SPIN')

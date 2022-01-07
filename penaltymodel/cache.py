@@ -396,7 +396,8 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
                 new.offset = bqm.offset
                 bqm = new
 
-        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm)
+        parameters = self.encode_graph(bqm)
+        parameters.update(self.encode_bqm(bqm))
 
         with self.conn as cur:
             cur.execute(self.insert_graph_statement, parameters)
@@ -442,8 +443,9 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
 
             return self.insert_penalty_model(bqm.relabel_variables(mapping, inplace=False), samples, classical_gap)
 
-        parameters = self.encode_graph(bqm) | self.encode_bqm(bqm) | self.encode_sampleset(samples_like)
-
+        parameters = self.encode_graph(bqm)
+        parameters.update(self.encode_bqm(bqm))
+        parameters.update(self.encode_sampleset(samples_like))
         parameters.update(
             decision_variables=json.dumps(decision, separators=(',', ':')),
             classical_gap=classical_gap,

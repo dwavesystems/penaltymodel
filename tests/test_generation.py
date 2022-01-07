@@ -148,7 +148,7 @@ class TestGenerate(unittest.TestCase):
 
         for (u, v), bias in bqm.quadratic.items():
             self.assertGreaterEqual(bias, min_quad)
-            self.assertLessEqual(bias, max_quad)
+            self.assertLessEqual(round(bias, 9), max_quad)
 
         self.assertAlmostEqual(best_gap, gap)
 
