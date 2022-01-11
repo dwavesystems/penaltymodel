@@ -25,8 +25,10 @@ from dimod.typing import Variable
 
 from penaltymodel.cache import PenaltyModelCache
 from penaltymodel.exceptions import MissingPenaltyModel
-from penaltymodel.lp import generate
+from penaltymodel.generation import generate
 from penaltymodel.typing import GraphLike
+
+__all__ = ['get_penalty_model']
 
 
 def get_penalty_model(samples_like,

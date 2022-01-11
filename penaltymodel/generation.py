@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""TODO"""
+"""The module is considered internal."""
 
 from collections import OrderedDict
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple

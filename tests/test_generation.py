@@ -21,7 +21,7 @@ import unittest
 import dimod
 import networkx as nx
 
-from penaltymodel import generate, ImpossiblePenaltyModel
+from penaltymodel.generation import generate, ImpossiblePenaltyModel
 from penaltymodel.utils import table_to_sampleset
 
 MAX_GAP_DELTA = 0.01
