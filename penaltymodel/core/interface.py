@@ -37,7 +37,7 @@ import warnings
 
 import dimod
 
-from penaltymodel.cache import PenaltyModelCache
+from penaltymodel.database import PenaltyModelCache
 from penaltymodel.core.classes import PenaltyModel, Specification
 from penaltymodel.interface import get_penalty_model as _get_penalty_model
 from penaltymodel.utils import table_to_sampleset

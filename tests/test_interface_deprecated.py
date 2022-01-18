@@ -23,7 +23,7 @@ import penaltymodel
 
 from penaltymodel.core import Specification, PenaltyModel
 from penaltymodel.core import iter_caches, iter_factories, get_penalty_model
-from penaltymodel.cache import isolated_cache
+from penaltymodel.database import isolated_cache
 
 
 class TestInterfaceWithCache(unittest.TestCase):

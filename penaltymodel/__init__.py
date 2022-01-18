@@ -16,8 +16,8 @@ __version__ = '1.0.0.dev0'
 
 import penaltymodel.core
 
-from penaltymodel.cache import *
-import penaltymodel.cache
+from penaltymodel.database import *
+import penaltymodel.database
 
 from penaltymodel.exceptions import *
 import penaltymodel.exceptions

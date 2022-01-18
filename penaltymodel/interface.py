@@ -23,7 +23,7 @@ import networkx as nx
 
 from dimod.typing import Variable
 
-from penaltymodel.cache import PenaltyModelCache
+from penaltymodel.database import PenaltyModelCache
 from penaltymodel.exceptions import MissingPenaltyModel
 from penaltymodel.generation import generate
 from penaltymodel.typing import GraphLike

@@ -19,7 +19,7 @@ import networkx as nx
 import numpy as np
 
 from penaltymodel import MissingPenaltyModel
-from penaltymodel.cache import patch_cache
+from penaltymodel.database import patch_cache
 
 
 class TestBQMCache(unittest.TestCase):
