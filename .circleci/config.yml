@@ -212,7 +212,7 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: [3.6.12, 3.7.9, 3.8.6]
+              python-version: [3.7.9, 3.8.6]
               pip-constraints:
                 - dimod==0.10.9 scipy==1.5.2
                 - dimod~=0.10.0 scipy~=1.5.0
@@ -220,7 +220,7 @@ workflows:
           name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
-              python-version: [3.6.12, 3.7.9, 3.8.6, 3.9.0, 3.10.0]
+              python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
               xcode: ["13.2.0"]
 
       - test-docs
