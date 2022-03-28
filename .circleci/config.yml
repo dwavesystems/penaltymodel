@@ -155,7 +155,7 @@ jobs:
             make -C docs/ html
 
       - store_artifacts:
-          path: ./docs/build/html
+          path: ./docs/build/_html
 
       - run:
           name: Test docs
