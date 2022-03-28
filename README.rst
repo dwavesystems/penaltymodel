@@ -13,10 +13,10 @@
 .. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/penaltymodel
 
-.. index-start-marker
-
 penaltymodel
 ============
+
+.. index-start-marker
 
 One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipedia.org/wiki/Constraint_satisfaction_problem>`_) using an `Ising model <https://en.wikipedia.org/wiki/Ising_model>`_ or a `QUBO <https://en.wikipedia.org/wiki/Quadratic_unconstrained_binary_optimization>`_, is to map each individual constraint in the CSP to a 'small' Ising model or QUBO. This mapping is called a *penalty model*.
 

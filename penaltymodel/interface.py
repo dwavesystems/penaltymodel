@@ -46,7 +46,7 @@ def get_penalty_model(samples_like,
             The set of feasible states that form the ground states of the
             generated binary quadratic model.
 
-            'samples_like' is an extension of NumPy's array_like_.
+            ``samples_like`` is an extension of NumPy's array_like_.
             See :func:`dimod.as_samples`.
 
             .. _array_like: https://numpy.org/doc/stable/user/basics.creation.html
