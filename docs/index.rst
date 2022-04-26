@@ -2,40 +2,23 @@
 
 .. _index_penalty:
 
+.. sdk-start-marker
+
+============
+penaltymodel
+============
+
 .. include:: README.rst
   :start-after: index-start-marker
   :end-before: index-end-marker
 
-Documentation
--------------
-
-.. only:: html
-
-  :Release: |version|
-  :Date: |today|
-
-.. note:: This documentation is for the latest version of
-   `penaltymodel <https://github.com/dwavesystems/penaltymodel>`_.
-   Documentation for the version currently installed by
-   `dwave-ocean-sdk <https://github.com/dwavesystems/dwave-ocean-sdk>`_
-   is here: :std:doc:`penaltymodel <oceandocs:docs_penalty/sdk_index>`.
-
-.. sdk-start-marker
-
 .. toctree::
   :maxdepth: 1
 
-  packages/index
+  reference
+  Source <https://github.com/dwavesystems/penaltymodel>
 
 .. sdk-end-marker
-
-.. toctree::
-  :caption: Code
-  :maxdepth: 1
-
-  Source <https://github.com/dwavesystems/penaltymodel>
-  installation
-  license
 
 .. toctree::
   :caption: Ocean Software

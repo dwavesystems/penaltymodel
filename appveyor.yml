@@ -4,30 +4,16 @@ environment:
 
     # https://www.appveyor.com/docs/build-environment/#python
 
-    # - PYTHON: "C:\\Python34-x64"
-    - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python38-x64"
     - PYTHON: "C:\\Python39-x64"
     - PYTHON: "C:\\Python310-x64"
 
 install:
-  - "%PYTHON%\\python.exe --version"
-  - "%PYTHON%\\python.exe -c \"import platform; print(platform.machine())\""
   - "%PYTHON%\\python.exe -m pip install --upgrade pip"
   - "%PYTHON%\\python.exe -m pip install -r requirements.txt -r tests\\requirements.txt"
-  - "%PYTHON%\\python.exe -m pip install penaltymodel_core\\"
-  - "%PYTHON%\\python.exe -m pip install penaltymodel_cache\\"
-  - "%PYTHON%\\python.exe -m pip install penaltymodel_maxgap\\"
-  - "%PYTHON%\\python.exe -m pip install penaltymodel_mip\\"
-  - "%PYTHON%\\python.exe -m pip install penaltymodel_lp\\"
 
 build: off
 
 test_script:
-  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_core"
-  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_cache"
-  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_maxgap"
-  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_mip"
-  - "%PYTHON%\\python.exe -m unittest discover -s penaltymodel_lp"
-  - "%PYTHON%\\python.exe -m unittest discover tests/"
+  - "%PYTHON%\\python.exe -m unittest discover"
