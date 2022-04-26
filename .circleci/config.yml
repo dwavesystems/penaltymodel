@@ -9,7 +9,7 @@ jobs:
         type: string
 
     docker:
-      - image: circleci/python:<< parameters.python-version >>
+      - image: cimg/python:<< parameters.python-version >>
 
     steps:
       - checkout
@@ -26,9 +26,8 @@ jobs:
           name: Install requirements
           command: |
             . env/bin/activate
-            pip install -U pip
+            pip install -U pip wheel twine setuptools
             pip install -r requirements.txt -r tests/requirements.txt
-            pip install wheel twine
 
       - save_cache: &save-cache-env
           key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
@@ -77,20 +76,6 @@ jobs:
           keys:
             - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
 
-      - when:
-          # backport https://github.com/python/cpython/pull/21113 to support macOS 11 when building py36
-          # see also: https://github.com/pyenv/pyenv/issues/1737.
-          condition:
-            matches:
-              pattern: "^3\\.6.*$"
-              value: << parameters.python-version >>
-          steps:
-            - run:
-                name: Install Python 3.6 with a patch for macOS 11
-                command: |
-                  curl -LO https://github.com/python/cpython/commit/8ea6353.patch
-                  pyenv install << parameters.python-version>> -s -p < 8ea6353.patch
-
       - run: &pyenv-install-python
           name: Install python
           command: pyenv install << parameters.python-version >> -s
@@ -125,26 +110,23 @@ jobs:
 
   test-docs:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
 
     steps:
       - checkout
 
-      - restore_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - restore_cache: *restore-cache-env
 
       - run: *create-virtualenv
 
-      - run: *install-requirements
-
       - run:
-          name: Install docs requirements
-          command: env/bin/pip install -r docs/requirements.txt
+          name: Install requirements
+          command: |
+            . env/bin/activate
+            pip install -U pip wheel twine setuptools
+            pip install -r requirements.txt -r tests/requirements.txt -r docs/requirements.txt
 
-      - save_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-          paths:
-            - env
+      - save_cache: *save-cache-env
 
       - run: *install-package
 
@@ -155,7 +137,7 @@ jobs:
             make -C docs/ html
 
       - store_artifacts:
-          path: ./docs/build/_html
+          path: ./docs/_build/html
 
       - run:
           name: Test docs
@@ -171,7 +153,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
 
     steps:
       - checkout
@@ -203,19 +185,14 @@ workflows:
             parameters:
               python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
               pip-constraints:
-                - dimod~=0.10.0 scipy~=1.6.0
-                - dimod~=0.10.0 scipy~=1.7.0
+                # test the min and max (as of April 2022) version ranges
+                - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
+                - dimod==0.11.0rc1 scipy~=1.8.0 numpy~=1.22.0
             exclude:
                 - python-version: 3.10.0
-                  pip-constraints: dimod~=0.10.0 scipy~=1.6.0  # py310 not support by scipy~=1.6.0
-      - test-linux:
-          name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
-          matrix:
-            parameters:
-              python-version: [3.7.9, 3.8.6]
-              pip-constraints:
-                - dimod==0.10.9 scipy==1.5.2
-                - dimod~=0.10.0 scipy~=1.5.0
+                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
+                - python-version: 3.7.9
+                  pip-constraints: dimod==0.11.0rc1 scipy~=1.8.0 numpy~=1.22.0
       - test-macos:
           name: test-macos-<< matrix.python-version >>
           matrix:

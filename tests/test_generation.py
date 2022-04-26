@@ -20,7 +20,6 @@ import unittest
 
 import dimod
 import networkx as nx
-import scipy
 
 from penaltymodel.generation import generate, ImpossiblePenaltyModel
 from penaltymodel.utils import table_to_sampleset
@@ -153,7 +152,6 @@ class TestGenerate(unittest.TestCase):
 
         self.assertAlmostEqual(best_gap, gap)
 
-    @unittest.skipIf(int(scipy.__version__.split('.')[1]) < 6, "too slow on scipy<1.6")
     def test_disjoint(self):
         graph = nx.Graph()
         for u, v in itertools.product([0, 1, 2], [3, 4, 5]):
@@ -166,7 +164,6 @@ class TestGenerate(unittest.TestCase):
 
         self.generate_and_check(graph, configurations, decision_variables)
 
-    @unittest.skipIf(int(scipy.__version__.split('.')[1]) < 6, "too slow on scipy<1.6")
     def test_disjoint_decision_accross_subgraphs(self):
         graph = nx.Graph()
         for u, v in itertools.product([0, 1, 2], [3, 4, 5]):
