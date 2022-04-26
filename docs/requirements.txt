@@ -1,2 +1,3 @@
 sphinx
 sphinx_rtd_theme
+reno[sphinx]==3.3.0

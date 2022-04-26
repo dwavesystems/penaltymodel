@@ -1,0 +1,15 @@
+---
+prelude: >
+    Significantly simplify the penaltymodel ecosystem. ``penaltymodel`` is now a single
+    package with a simplified interface.
+features:
+  - Combine the penaltymodel namespace packages into a single package.
+  - Add ``penaltymodel.get_penalty_model()`` function as a new main interface for the package.
+upgrade:
+  - Drop support for Python 3.6.
+  - Drop support for ``penaltymodel-mip``.
+  - Drop support for ``penaltymodel-lp``.
+  - Drop support for ``penaltymodel-cache``.
+  - Drop support for ``penaltymodel-maxgap``.
+deprecations:
+  - The functions under ``penaltymodel.core`` are deprecated.

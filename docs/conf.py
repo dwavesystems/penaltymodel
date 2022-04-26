@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.ifconfig',
+    'reno.sphinxext',
 ]
 
 autosummary_generate = True

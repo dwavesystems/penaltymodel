@@ -2,8 +2,6 @@
 
 .. _index_penalty:
 
-.. sdk-start-marker
-
 ============
 penaltymodel
 ============
@@ -16,9 +14,8 @@ penaltymodel
   :maxdepth: 1
 
   reference
+  release_notes
   Source <https://github.com/dwavesystems/penaltymodel>
-
-.. sdk-end-marker
 
 .. toctree::
   :caption: Ocean Software
