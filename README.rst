@@ -22,7 +22,7 @@ One approach to solve a constraint satisfaction problem (`CSP <https://en.wikipe
 
 Imagine that we want to map an AND clause to a QUBO. In other words, we want the solutions
 to the QUBO (the solutions that minimize the energy) to be exactly the valid configurations
-of an AND gate. Let :math:`z = AND(x_1, x_2)`.
+of an AND gate. Let ``z = AND(x_1, x_2)``.
 
 Before anything else, let's import that package we will need.
 
@@ -39,7 +39,7 @@ Below is the truth table representing an AND clause.
    :name: tbl_ANDgate
 
    ====================  ====================  ==================
-   :math:`x_1`           :math:`x_2`           :math:`z`
+   ``x_1``               ``x_2``               ``z``
    ====================  ====================  ==================
    0                     0                     0
    0                     1                     0
@@ -64,7 +64,7 @@ At this point, we can get a penalty model
 
 However, if we know the QUBO, we can build the penalty model ourselves. We observe that for the equation:
 
-.. math::
+.. code-block::
 
     E(x_1, x_2, z) = x_1 x_2 - 2(x_1 + x_2) z + 3 z + 0
 
@@ -82,7 +82,7 @@ We can see that the energy is minimized on exactly the desired feasible configur
                                    0.0,
                                    dimod.BINARY)
 
-We know from the table that our ground energy is :math:`0`, but we can calculate it using the qubo to check that this is true for the feasible configuration :math:`(0, 1, 0)`.
+We know from the table that our ground energy is ``0``, but we can calculate it using the qubo to check that this is true for the feasible configuration ``(0, 1, 0)``.
 
 .. code-block:: python
 
