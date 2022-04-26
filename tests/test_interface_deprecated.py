@@ -68,3 +68,8 @@ class TestIterFactories(unittest.TestCase):
             factory, = iter_factories()
 
         self.assertIs(factory, get_penalty_model)
+
+
+class TestCoreNamespace(unittest.TestCase):
+    def test_import(self):
+        from penaltymodel.core import ImpossiblePenaltyModel
