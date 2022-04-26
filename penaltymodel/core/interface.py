@@ -70,7 +70,7 @@ def get_penalty_model(specification):
     """
     warnings.warn(
         "penaltymodel.core.get_penalty_model() function is deprecated "
-        "and will be removed in penaltymodel 1.2.0, "
+        "and will be removed in penaltymodel 2.0.0, "
         "use penaltymodel.get_penalty_model() instead, which has a different "
         "interface.",
         DeprecationWarning, stacklevel=3)
@@ -120,7 +120,7 @@ def penaltymodel_factory(priority):
 
     """
     warnings.warn(
-        "penaltymodel_factory() is deprecated and will be removed in penaltymodel 1.2.0",
+        "penaltymodel_factory() is deprecated and will be removed in penaltymodel 2.0.0",
         DeprecationWarning, stacklevel=2)
 
     # just do nothing
@@ -138,7 +138,7 @@ def iter_factories():
 
     """
     warnings.warn(
-        "iter_factories() is deprecated and will be removed in penaltymodel 1.2.0, "
+        "iter_factories() is deprecated and will be removed in penaltymodel 2.0.0, "
         "use penaltymodel.get_penalty_model() directly instead.",
         DeprecationWarning, stacklevel=2)
 
@@ -156,7 +156,7 @@ def iter_caches():
 
     """
     warnings.warn(
-        "iter_caches() is deprecated and will be removed in penaltymodel 1.2.0, "
+        "iter_caches() is deprecated and will be removed in penaltymodel 2.0.0, "
         "use penaltymodel.PenaltyModelCache directly instead.",
         DeprecationWarning, stacklevel=2)
 
