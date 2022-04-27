@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Restore ability to import exceptions from the ``penaltymodel.core`` namespace.
+    This was accidentally removed in 1.0.0.
