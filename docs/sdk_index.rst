@@ -8,8 +8,12 @@ penaltymodel
   :start-after: index-start-marker
   :end-before: index-end-marker
 
-.. toctree::
-  :maxdepth: 1
+.. include:: index.rst
+   :start-after: sdk-start-marker
+   :end-before: sdk-end-marker
 
-  reference
-  Source <https://github.com/dwavesystems/penaltymodel>
+.. toctree::
+   :caption: Code
+   :maxdepth: 1
+
+   Source <https://github.com/dwavesystems/penaltymodel>
