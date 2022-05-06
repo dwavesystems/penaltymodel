@@ -25,6 +25,24 @@ from penaltymodel.database import isolated_cache
 
 class TestGetPenaltyModel(unittest.TestCase):
     @isolated_cache()
+    def test_different_energy_levels(self):
+        samples_like = dimod.SampleSet.from_samples([[-1, -1, -1], [1, 1, 1]], energy=[0, .5], vartype='BINARY')
+
+        bqm, gap = get_penalty_model(samples_like)
+
+        self.assertAlmostEqual(bqm.energy([-1, -1, -1]), 0)
+        self.assertAlmostEqual(bqm.energy([1, 1, 1]), .5)
+
+    @isolated_cache()
+    def test_different_energy_levels_graph_like(self):
+        samples_like = dimod.SampleSet.from_samples([[-1, -1, -1], [1, 1, 1]], energy=[0, .5], vartype='BINARY')
+
+        bqm, gap = get_penalty_model(samples_like, graph_like=nx.complete_graph(3))
+
+        self.assertAlmostEqual(bqm.energy([-1, -1, -1]), 0)
+        self.assertAlmostEqual(bqm.energy([1, 1, 1]), .5)
+
+    @isolated_cache()
     def test_single_labelled(self):
         bqm, gap = get_penalty_model({'a': 1, 'b': 0})
 

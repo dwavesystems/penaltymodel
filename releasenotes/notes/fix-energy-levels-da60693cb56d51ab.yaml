@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    ``get_penalty_model()`` no longer ignores the desired energy levels when
+    no graph is provided.
