@@ -437,7 +437,9 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             raise ValueError("bqm's variables must be a superset of the "
                              "samples_like's variables")
 
-        if bqm.variables ^ range(bqm.num_variables):
+        # we need the variables to be labelled [0, n) and for the decision
+        # variables to be sorted
+        if bqm.variables ^ range(bqm.num_variables) or any(i != v for i, v in enumerate(decision)):
             mapping = {v: i for i, v in enumerate(decision)}
             mapping.update((v, i) for i, v in enumerate(bqm.variables ^ decision, len(mapping)))
 
@@ -532,7 +534,9 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
             raise ValueError("graph_like's nodes must be a superset of the "
                              "samples_like's variables")
 
-        if graph.nodes ^ range(len(graph.nodes)):
+        # we need the nodes/variables to be labelled [0, n). The variables
+        # also need to be sorted
+        if graph.nodes ^ range(len(graph.nodes)) or any(i != v for i, v in enumerate(labels)):
             mapping = {v: i for i, v in enumerate(labels)}
             mapping.update((v, i) for i, v in enumerate(graph.nodes ^ labels, len(mapping)))
 

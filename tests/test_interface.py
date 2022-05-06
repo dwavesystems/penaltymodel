@@ -25,6 +25,24 @@ from penaltymodel.database import isolated_cache
 
 class TestGetPenaltyModel(unittest.TestCase):
     @isolated_cache()
+    def test_different_energy_levels(self):
+        samples_like = dimod.SampleSet.from_samples([[-1, -1, -1], [1, 1, 1]], energy=[0, .5], vartype='BINARY')
+
+        bqm, gap = get_penalty_model(samples_like)
+
+        self.assertAlmostEqual(bqm.energy([-1, -1, -1]), 0)
+        self.assertAlmostEqual(bqm.energy([1, 1, 1]), .5)
+
+    @isolated_cache()
+    def test_different_energy_levels_graph_like(self):
+        samples_like = dimod.SampleSet.from_samples([[-1, -1, -1], [1, 1, 1]], energy=[0, .5], vartype='BINARY')
+
+        bqm, gap = get_penalty_model(samples_like, graph_like=nx.complete_graph(3))
+
+        self.assertAlmostEqual(bqm.energy([-1, -1, -1]), 0)
+        self.assertAlmostEqual(bqm.energy([1, 1, 1]), .5)
+
+    @isolated_cache()
     def test_single_labelled(self):
         bqm, gap = get_penalty_model({'a': 1, 'b': 0})
 
@@ -49,3 +67,22 @@ class TestGetPenaltyModel(unittest.TestCase):
         self.assertEqual(len(ground), 4)
         for sample in ground.samples():
             self.assertEqual(sample['d'] > 0 and sample['b'] > 0, sample['f'] > 0)
+
+    @isolated_cache()
+    def test_unorded_range_labels(self):
+        # NAE
+        samples_like = ([(0, 0, 1, 0),
+                         (0, 1, 1, 1),
+                         (1, 0, 1, 1),
+                         (0, 1, 0, 0),
+                         (1, 0, 0, 0),
+                         (1, 1, 0, 1)],
+                        (0, 1, 3, 2))
+
+        bqm, gap = get_penalty_model(samples_like)
+
+        ground = dimod.ExactSolver().sample(bqm).lowest().aggregate()
+
+        self.assertEqual(len(ground), 6)
+        for sample in ground.samples():
+            self.assertTrue(len(set(sample.values())) > 1)

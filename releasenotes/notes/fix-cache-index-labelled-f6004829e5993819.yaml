@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Samples-like with variables that are integer labelled, but not ordered,
+    no longer raise an error.

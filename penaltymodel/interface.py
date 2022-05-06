@@ -128,7 +128,7 @@ def get_penalty_model(samples_like,
 
     # by default, just make a compelte graph from the samples
     if graph_like is None:
-        samples_like = samples, labels = dimod.as_samples(samples_like)
+        samples, labels = dimod.as_samples(samples_like)
         graph_like = nx.complete_graph(labels)
 
     if use_cache:
