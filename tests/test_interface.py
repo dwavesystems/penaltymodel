@@ -49,3 +49,22 @@ class TestGetPenaltyModel(unittest.TestCase):
         self.assertEqual(len(ground), 4)
         for sample in ground.samples():
             self.assertEqual(sample['d'] > 0 and sample['b'] > 0, sample['f'] > 0)
+
+    @isolated_cache()
+    def test_unorded_range_labels(self):
+        # NAE
+        samples_like = ([(0, 0, 1, 0),
+                         (0, 1, 1, 1),
+                         (1, 0, 1, 1),
+                         (0, 1, 0, 0),
+                         (1, 0, 0, 0),
+                         (1, 1, 0, 1)],
+                        (0, 1, 3, 2))
+
+        bqm, gap = get_penalty_model(samples_like)
+
+        ground = dimod.ExactSolver().sample(bqm).lowest().aggregate()
+
+        self.assertEqual(len(ground), 6)
+        for sample in ground.samples():
+            self.assertTrue(len(set(sample.values())) > 1)
