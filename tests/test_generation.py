@@ -143,11 +143,11 @@ class TestGenerate(unittest.TestCase):
 
         # check energy ranges
         for v, bias in bqm.linear.items():
-            self.assertGreaterEqual(bias, min_lin)
-            self.assertLessEqual(bias, max_lin)
+            self.assertGreaterEqual(round(bias, 9), min_lin)
+            self.assertLessEqual(round(bias, 9), max_lin)
 
         for (u, v), bias in bqm.quadratic.items():
-            self.assertGreaterEqual(bias, min_quad)
+            self.assertGreaterEqual(round(bias, 9), min_quad)
             self.assertLessEqual(round(bias, 9), max_quad)
 
         self.assertAlmostEqual(best_gap, gap)
