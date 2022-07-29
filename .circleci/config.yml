@@ -185,14 +185,14 @@ workflows:
             parameters:
               python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
               pip-constraints:
-                # test the min and max (as of April 2022) version ranges
+                # test the min and max (as of July 2022) version ranges
                 - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
-                - dimod==0.11.0rc1 scipy~=1.8.0 numpy~=1.22.0
+                - dimod~=0.11.0 scipy~=1.9.0 numpy~=1.23.0
             exclude:
                 - python-version: 3.10.0
                   pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
                 - python-version: 3.7.9
-                  pip-constraints: dimod==0.11.0rc1 scipy~=1.8.0 numpy~=1.22.0
+                  pip-constraints: dimod~=0.11.0 scipy~=1.9.0 numpy~=1.23.0
       - test-macos:
           name: test-macos-<< matrix.python-version >>
           matrix:
