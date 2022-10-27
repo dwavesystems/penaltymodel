@@ -28,7 +28,7 @@ Before anything else, let's import that package we will need.
 
 .. code-block:: python
 
-    import penaltymodel
+    import penaltymodel as pm
     import dimod
     import networkx as nx
 
