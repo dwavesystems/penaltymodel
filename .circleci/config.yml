@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.2.0
+
 jobs:
   test-linux:
     parameters:
@@ -108,6 +111,39 @@ jobs:
 
       - run: *run-python-tests
 
+  test-win:
+    parameters:
+      python-version:
+        type: string
+
+    executor:
+      name: win/default
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install python and create virtualenv
+          command: |
+            nuget install python -Version << parameters.python-version >> -ExcludeVersion -OutputDirectory .
+            .\python\tools\python.exe --version
+            .\python\tools\python.exe -m pip install virtualenv
+            .\python\tools\python.exe -m virtualenv env
+
+      - run:
+          name: Install dependencies
+          command: |
+            env\Scripts\activate.ps1
+            python --version
+            pip install -r requirements.txt
+            pip install -r tests\requirements.txt
+
+      - run:
+          name: Run unittests
+          command: |
+            env\Scripts\activate.ps1
+            python -m unittest discover
+
   test-docs:
     docker:
       - image: cimg/python:3.7
@@ -199,7 +235,10 @@ workflows:
             parameters:
               python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
               xcode: ["13.2.0"]
-
+      - test-win:
+          matrix:
+            parameters:
+              python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
       - test-docs
 
   deploy:
