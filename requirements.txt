@@ -1,6 +1,13 @@
-dimod==0.10.10
+dimod==0.12.13
+
 homebase==1.0.1
-networkx==2.4
-numpy==1.21.6
-scipy==1.7.3
+
+networkx==3.0
+
+numpy==1.20.0;python_version<"3.10"
+oldest-supported-numpy;python_version>="3.10"
+
+scipy==1.7.3;python_version<"3.11"
+scipy==1.11.2;python_version>="3.11"
+
 reno==3.3.0
