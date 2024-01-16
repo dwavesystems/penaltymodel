@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.2.0
+
 jobs:
   test-linux:
     parameters:
@@ -38,17 +41,17 @@ jobs:
           name: Build package
           command: env/bin/python setup.py sdist bdist_wheel
 
-      - run: &install-package-with-constraints
+      - run:
           name: Install package (with constraints)
           command: |
             . env/bin/activate
-            pip install . -c <(printf '%s\n' << parameters.pip-constraints >>)
+            pip install . -c <(printf '%s\n' << parameters.pip-constraints >>) --only-binary=dimod --only-binary=numpy --only-binary=scipy --only-binary=networkx
 
       - run: &run-python-tests
           name: Run Python tests
           command: env/bin/coverage run -m unittest discover
 
-      - run: &upload-python-code-coverage
+      - run:
           name: Upload code coverage
           command: |
             . env/bin/activate
@@ -68,7 +71,7 @@ jobs:
       - checkout
 
       # install `python-version` and cache it
-      - run: &brew-install-pyenv
+      - run:
           name: Install pyenv
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
 
@@ -80,7 +83,7 @@ jobs:
           name: Install python
           command: pyenv install << parameters.python-version >> -s
 
-      - run: &pyenv-set-system-python
+      - run:
           name: Set system python
           command: |
             echo -e '\n\n# Initialize pyenv' >> ~/.bash_profile
@@ -108,9 +111,49 @@ jobs:
 
       - run: *run-python-tests
 
+  test-win:
+    parameters:
+      python-version:
+        type: string
+
+    executor:
+      name: win/default
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install python and create virtualenv
+          shell: bash -eo pipefail
+          command: |
+            # resolve python MAJOR.MINOR version to latest MAJOR.MINOR.PATCH version available on NuGet
+            full_version=$(
+              curl -s 'https://azuresearch-usnc.nuget.org/query?q=python' \
+              | jq -r '.data[] | select(.id == "python") .versions[] | .version' \
+              | awk -F. -v ver='<< parameters.python-version >>' \
+                  'index($0, ver".") == 1 && $3 >= m { m = $3; v = $0 } END { print v }'
+            )
+            nuget install python -Version "$full_version" -ExcludeVersion
+            python/tools/python -V
+            python/tools/python -m venv env
+
+      - run:
+          name: Install dependencies
+          command: |
+            env\Scripts\activate.ps1
+            python --version
+            pip install -r requirements.txt
+            pip install -r tests\requirements.txt
+
+      - run:
+          name: Run unittests
+          command: |
+            env\Scripts\activate.ps1
+            python -m unittest discover
+
   test-docs:
     docker:
-      - image: cimg/python:3.7
+      - image: cimg/python:3.9
 
     steps:
       - checkout
@@ -183,23 +226,33 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
+              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
               pip-constraints:
-                # test the min and max (as of July 2022) version ranges
-                - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
-                - dimod~=0.11.0 scipy~=1.9.0 numpy~=1.23.0
+                # test the min and max (as of Jan 2024) version ranges
+                - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+                - dimod~=0.12.0 scipy~=1.11.0 numpy~=1.26.0 networkx~=3.0
             exclude:
-                - python-version: 3.10.0
-                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0
-                - python-version: 3.7.9
-                  pip-constraints: dimod~=0.11.0 scipy~=1.9.0 numpy~=1.23.0
+                # SciPy~=1.11.0 and NumPy~=1.26.0 do not support 3.8
+                - python-version: "3.8"
+                  pip-constraints: dimod~=0.12.0 scipy~=1.11.0 numpy~=1.26.0 networkx~=3.0
+
+                # SciPy 1.6.0 not supported on 3.10+
+                - python-version: "3.10"
+                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+                - python-version: "3.11"
+                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+                - python-version: "3.12"
+                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
       - test-macos:
           name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
-              python-version: [3.7.9, 3.8.6, 3.9.0, 3.10.0]
-              xcode: ["13.2.0"]
-
+              python-version: *python-versions
+              xcode: ["14.3.0"]
+      - test-win:
+          matrix:
+            parameters:
+              python-version: *python-versions
       - test-docs
 
   deploy:

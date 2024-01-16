@@ -358,13 +358,14 @@ class PenaltyModelCache(contextlib.AbstractContextManager):
 
     @staticmethod
     def encode_bqm(bqm: dimod.BinaryQuadraticModel) -> Dict[str, Union[float, bytes]]:
-        return dict(
-            max_quadratic_bias=bqm.quadratic.max(),
-            min_quadratic_bias=bqm.quadratic.min(),
-            max_linear_bias=bqm.linear.max(),
-            min_linear_bias=bqm.linear.min(),
-            bqm_data=bqm.to_file().read(),
-            )
+        with bqm.to_file() as f:
+            return dict(
+                max_quadratic_bias=bqm.quadratic.max(),
+                min_quadratic_bias=bqm.quadratic.min(),
+                max_linear_bias=bqm.linear.max(),
+                min_linear_bias=bqm.linear.min(),
+                bqm_data=f.read(),
+                )
 
     @staticmethod
     def decode_bqm(row: Dict[str, Union[bytes, str, int]]) -> dimod.BinaryQuadraticModel:
@@ -621,8 +622,18 @@ def isolated_cache(*args, **kwargs):
     This context manager is not reentrant.
 
     """
-    with tempfile.TemporaryDirectory() as d:
-        with threading.RLock():
+    import sys
+
+    if sys.version_info[:2] >= (3, 10):
+        # Added in 3.10
+        # We need ignore_cleanup_errors for Windows, it will still make a "best effort"
+        # to remove the directory.
+        kwarg = dict(ignore_cleanup_errors=True)
+    else:
+        kwarg = dict()
+
+    with threading.RLock():
+        with tempfile.TemporaryDirectory(**kwarg) as d:
             current = PenaltyModelCache.database_path
             PenaltyModelCache.database_path = d
             try:

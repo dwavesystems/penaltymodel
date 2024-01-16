@@ -1,0 +1,6 @@
+---
+features:
+  - Add testing and support for Python 3.11 and 3.12.
+  - Add support for and test with NetworkX 3.x.
+upgrade:
+  - Drop support for Python 3.7.
