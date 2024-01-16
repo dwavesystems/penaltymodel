@@ -41,7 +41,7 @@ jobs:
           name: Build package
           command: env/bin/python setup.py sdist bdist_wheel
 
-      - run: &install-package-with-constraints
+      - run:
           name: Install package (with constraints)
           command: |
             . env/bin/activate
@@ -51,7 +51,7 @@ jobs:
           name: Run Python tests
           command: env/bin/coverage run -m unittest discover
 
-      - run: &upload-python-code-coverage
+      - run:
           name: Upload code coverage
           command: |
             . env/bin/activate
@@ -71,7 +71,7 @@ jobs:
       - checkout
 
       # install `python-version` and cache it
-      - run: &brew-install-pyenv
+      - run:
           name: Install pyenv
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
 
