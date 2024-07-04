@@ -36,7 +36,6 @@ Next, we need to determine the feasible configurations that we wish to target (b
 Below is the truth table representing an AND clause.
 
 .. table:: AND Gate
-   :name: tbl_ANDgate
 
    ====================  ====================  ==================
    ``x_1``               ``x_2``               ``z``
