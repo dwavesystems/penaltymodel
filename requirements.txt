@@ -4,7 +4,7 @@ homebase==1.0.1
 
 networkx==3.0
 
-numpy==1.20.0;python_version<"3.10"
+numpy==1.21.0;python_version<"3.10"  # oldest that supports arm on macos
 oldest-supported-numpy;python_version>="3.10"
 
 scipy==1.7.3;python_version<"3.11"
