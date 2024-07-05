@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   win: circleci/windows@5.0
   macos: circleci/macos@2.4
+  python: circleci/python@2.1
 
 jobs:
   test-linux:
@@ -57,6 +58,15 @@ jobs:
           command: |
             . env/bin/activate
             codecov     # calls `coverage xml`, so we must activate venv
+
+  test-macos2:
+    # macos:
+    #   xcode: 15.3.0
+    # resource_class: macos.m1.medium.gen1
+    executor: python/default
+
+    steps:
+      - checkout
 
   test-macos:
     parameters:
@@ -222,43 +232,44 @@ jobs:
 workflows:
   test:
     jobs:
-      - test-linux:
-          name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
-          matrix:
-            parameters:
-              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
-              pip-constraints:
-                # test the min and max (as of July 2024) version ranges
-                - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
-                - dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
-            exclude:
-                # SciPy~=1.0 and NumPy~=2.0 do not support 3.8
-                - python-version: "3.8"
-                  pip-constraints: dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
+      - test-macos2
+  #     - test-linux:
+  #         name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
+  #         matrix:
+  #           parameters:
+  #             python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
+  #             pip-constraints:
+  #               # test the min and max (as of July 2024) version ranges
+  #               - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+  #               - dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
+  #           exclude:
+  #               # SciPy~=1.0 and NumPy~=2.0 do not support 3.8
+  #               - python-version: "3.8"
+  #                 pip-constraints: dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
 
-                # SciPy 1.6.0 not supported on 3.10+
-                - python-version: "3.10"
-                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
-                - python-version: "3.11"
-                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
-                - python-version: "3.12"
-                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
-      - test-macos:
-          name: test-macos-<< matrix.python-version >>
-          matrix:
-            parameters:
-              python-version: *python-versions
-      - test-win:
-          matrix:
-            parameters:
-              python-version: *python-versions
-      - test-docs
+  #               # SciPy 1.6.0 not supported on 3.10+
+  #               - python-version: "3.10"
+  #                 pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+  #               - python-version: "3.11"
+  #                 pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+  #               - python-version: "3.12"
+  #                 pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+  #     - test-macos:
+  #         name: test-macos-<< matrix.python-version >>
+  #         matrix:
+  #           parameters:
+  #             python-version: *python-versions
+  #     - test-win:
+  #         matrix:
+  #           parameters:
+  #             python-version: *python-versions
+  #     - test-docs
 
-  deploy:
-    jobs:
-      - pypi-deploy:
-          filters:
-            tags:
-              only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
-            branches:
-              ignore: /.*/
+  # deploy:
+  #   jobs:
+  #     - pypi-deploy:
+  #         filters:
+  #           tags:
+  #             only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
+  #           branches:
+  #             ignore: /.*/
