@@ -1,7 +1,8 @@
 version: 2.1
 
 orbs:
-  win: circleci/windows@2.2.0
+  win: circleci/windows@5.0
+  macos: circleci/macos@2.4
 
 jobs:
   test-linux:
@@ -61,11 +62,10 @@ jobs:
     parameters:
       python-version:
         type: string
-      xcode:
-        type: string
 
     macos:
-      xcode: << parameters.xcode >>
+      xcode: 15.3.0
+    resource_class: macos.m1.medium.gen1
 
     steps:
       - checkout
@@ -77,7 +77,7 @@ jobs:
 
       - restore_cache: &restore-cache-pyenv
           keys:
-            - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+            - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-15.3.0
 
       - run: &pyenv-install-python
           name: Install python
@@ -92,7 +92,7 @@ jobs:
             pyenv global << parameters.python-version >>
 
       - save_cache: &save-cache-pyenv
-          key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+          key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-15.3.0
           paths:
             - ~/.pyenv
 
@@ -228,13 +228,13 @@ workflows:
             parameters:
               python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
               pip-constraints:
-                # test the min and max (as of Jan 2024) version ranges
+                # test the min and max (as of July 2024) version ranges
                 - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
-                - dimod~=0.12.0 scipy~=1.11.0 numpy~=1.26.0 networkx~=3.0
+                - dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
             exclude:
-                # SciPy~=1.11.0 and NumPy~=1.26.0 do not support 3.8
+                # SciPy~=1.0 and NumPy~=2.0 do not support 3.8
                 - python-version: "3.8"
-                  pip-constraints: dimod~=0.12.0 scipy~=1.11.0 numpy~=1.26.0 networkx~=3.0
+                  pip-constraints: dimod~=0.12.0 scipy~=1.0 numpy~=2.0 networkx~=3.0
 
                 # SciPy 1.6.0 not supported on 3.10+
                 - python-version: "3.10"
@@ -248,7 +248,6 @@ workflows:
           matrix:
             parameters:
               python-version: *python-versions
-              xcode: ["14.3.0"]
       - test-win:
           matrix:
             parameters:
