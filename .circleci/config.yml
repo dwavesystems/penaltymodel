@@ -13,7 +13,7 @@ jobs:
         type: string
 
     docker:
-      - image: cimg/python:<< parameters.python-version >>
+      - image: python:<< parameters.python-version >>
 
     steps:
       - checkout
@@ -152,7 +152,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: cimg/python:3.9
+      - image: python:3.9
 
     steps:
       - checkout
@@ -195,7 +195,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: cimg/python:3.9
+      - image: python:3.9
 
     steps:
       - checkout
