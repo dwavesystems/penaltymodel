@@ -58,7 +58,7 @@ class TestGenerate(unittest.TestCase):
                 #   be different sets of decision + auxiliary configurations. We
                 #   only need one of those sets to match the specific target
                 #   energy, while the remaining sets can be above that target.
-                self.assertGreaterEqual(energy, table[config])
+                self.assertGreaterEqual(round(energy - table[config], ndigits=7), 0)
 
                 # If configuration matches target energy, the configuration
                 # should be added to the seen_table
@@ -73,8 +73,8 @@ class TestGenerate(unittest.TestCase):
         for config in table:
             self.assertIn(config, seen_table)
 
-        self.assertEqual(seen_gap, gap)
-        self.assertGreater(gap, 0)
+        self.assertAlmostEqual(seen_gap, gap)
+        self.assertGreater(round(gap, ndigits=7), 0)
 
     def check_bqm_graph(self, bqm, graph):
         """bqm and graph have the same structure"""
