@@ -1,43 +1,76 @@
-..  -*- coding: utf-8 -*-
-
-.. _index_penalty:
+.. _index_penaltymodel:
 
 ============
 penaltymodel
 ============
 
-.. include:: README.rst
-  :start-after: index-start-marker
-  :end-before: index-end-marker
+.. dropdown:: About penaltymodel
 
-.. sdk-start-marker
+    .. include:: README.rst
+        :start-after: start_penaltymodel_about
+        :end-before: end_penaltymodel_about
 
-.. toctree::
-  :maxdepth: 1
+    For more information, see :ref:`concept_penalty`.
 
-  reference
-  release_notes
+Reference Documentation
+=======================
 
-.. sdk-end-marker
+.. currentmodule:: penaltymodel
 
-.. toctree::
-  :caption: Code
-  :maxdepth: 1
+This package implements the generation and caching of :term:`penalty model`\ s.
+The main function for penalty models is :func:`get_penalty_model`. In addition,
+the package provides some more-advanced interfaces.
 
-  Source <https://github.com/dwavesystems/penaltymodel>
+Function
+--------
 
-.. toctree::
-  :caption: Ocean Software
-  :maxdepth: 1
+.. autofunction:: get_penalty_model
 
-  Ocean Home <https://ocean.dwavesys.com/>
-  Ocean Documentation <https://docs.ocean.dwavesys.com>
-  Ocean Glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>
+Cache
+-----
 
-.. toctree::
-  :caption: D-Wave
-  :maxdepth: 1
+.. autoclass:: PenaltyModelCache
 
-  D-Wave <https://www.dwavesys.com>
-  Leap <https://cloud.dwavesys.com/leap/>
-  D-Wave System Documentation <https://docs.dwavesys.com/docs/latest/index.html>
+Methods
+~~~~~~~
+
+.. autosummary::
+    :toctree: generated/
+
+    PenaltyModelCache.close
+    PenaltyModelCache.insert_binary_quadratic_model
+    PenaltyModelCache.insert_graph
+    PenaltyModelCache.insert_penalty_model
+    PenaltyModelCache.insert_sampleset
+    PenaltyModelCache.iter_binary_quadratic_models
+    PenaltyModelCache.iter_graphs
+    PenaltyModelCache.iter_penalty_models
+    PenaltyModelCache.iter_samplesets
+    PenaltyModelCache.retrieve
+
+Exceptions
+----------
+
+.. autosummary::
+    :toctree: generated/
+
+    ImpossiblePenaltyModel
+    MissingPenaltyModel
+
+Utilities
+---------
+
+.. autosummary::
+    :toctree: generated/
+
+    as_graph
+
+Release Notes
+=============
+
+*   `Release_notes <https://github.com/dwavesystems/penaltymodel/releases>`_
+
+Source
+======
+
+*   `Source code <https://github.com/dwavesystems/penaltymodel>`_
