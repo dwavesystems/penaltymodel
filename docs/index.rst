@@ -12,13 +12,6 @@ penaltymodel
 
     For more information, see :ref:`concept_penalty`.
 
-Release Notes and Source
-========================
-
-*   `Release notes <https://github.com/dwavesystems/penaltymodel/releases>`_
-*   `Source code <https://github.com/dwavesystems/penaltymodel>`_
-
-
 Reference Documentation
 =======================
 

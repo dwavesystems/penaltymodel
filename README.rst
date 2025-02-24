@@ -35,15 +35,11 @@ For more information, see
 Installation
 ------------
 
-.. installation-start-marker
-
 To install the core package:
 
 .. code-block:: bash
 
     pip install penaltymodel
-
-.. installation-end-marker
 
 License
 -------
@@ -53,14 +49,17 @@ Released under the Apache License 2.0
 Contributing
 ------------
 
-Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
+.. update the following to the URL for :ref:`concept_penalty` post-restructure:
+
+Ocean's
+`contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
 has guidelines for contributing to Ocean packages.
 
 Release Notes
 ~~~~~~~~~~~~~
 
-penaltymodel makes use of `reno <https://docs.openstack.org/reno/>`_ to manage its
-release notes.
+penaltymodel makes use of `reno <https://docs.openstack.org/reno/>`_ to manage
+its release notes.
 
 When making a contribution to penaltymodel that will affect users, create a new
 release note file by running
