@@ -27,7 +27,7 @@ QUBO. This mapping is called a *penalty model*.
 
 .. end_penaltymodel_about
 
-.. update the following to the URL for :ref:`concept_penalty` post-restructure:
+.. todo:: update the following link post-restructure:
 
 For more information, see
 `penalty models <https://docs.ocean.dwavesys.com/en/stable/concepts/penalty.html>`_.
@@ -49,7 +49,7 @@ Released under the Apache License 2.0
 Contributing
 ------------
 
-.. update the following to the URL for :ref:`concept_penalty` post-restructure:
+.. todo:: update the following link post-restructure:
 
 Ocean's
 `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
