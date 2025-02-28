@@ -13,6 +13,7 @@
 .. image:: https://circleci.com/gh/dwavesystems/penaltymodel.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/penaltymodel
 
+============
 penaltymodel
 ============
 
@@ -33,7 +34,7 @@ For more information, see
 `penalty models <https://docs.ocean.dwavesys.com/en/stable/concepts/penalty.html>`_.
 
 Installation
-------------
+============
 
 To install the core package:
 
@@ -42,12 +43,12 @@ To install the core package:
     pip install penaltymodel
 
 License
--------
+=======
 
 Released under the Apache License 2.0
 
 Contributing
-------------
+============
 
 .. todo:: update the following link post-restructure:
 
@@ -56,7 +57,7 @@ Ocean's
 has guidelines for contributing to Ocean packages.
 
 Release Notes
-~~~~~~~~~~~~~
+-------------
 
 penaltymodel makes use of `reno <https://docs.openstack.org/reno/>`_ to manage
 its release notes.

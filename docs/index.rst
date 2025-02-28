@@ -18,4 +18,10 @@ About penaltymodel
     :start-after: start_penaltymodel_about
     :end-before: end_penaltymodel_about
 
-For more information, see :ref:`concept_penalty`.
+Usage Information
+=================
+
+.. todo:: add the intersphinx prefix to enable these links for self builds
+
+*   :ref:`index_concepts` for terminology
+*   :ref:`concept_penalty` for more information on penalties.
