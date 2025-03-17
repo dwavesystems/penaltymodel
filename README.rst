@@ -28,10 +28,8 @@ QUBO. This mapping is called a *penalty model*.
 
 .. end_penaltymodel_about
 
-.. todo:: update the following link post-restructure:
-
 For more information, see
-`penalty models <https://docs.ocean.dwavesys.com/en/stable/concepts/penalty.html>`_.
+`penalty models <https://docs.dwavequantum.com/en/latest/concepts/penalty.html>`_.
 
 Installation
 ============
@@ -50,10 +48,8 @@ Released under the Apache License 2.0
 Contributing
 ============
 
-.. todo:: update the following link post-restructure:
-
 Ocean's
-`contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
+`contributing guide <https://docs.dwavequantum.com/en/latest/ocean/ocean_contribute.html>`_
 has guidelines for contributing to Ocean packages.
 
 Release Notes

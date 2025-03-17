@@ -23,8 +23,6 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.ifconfig',
-    'sphinx_design',
-    'reno.sphinxext',
 ]
 
 autosummary_generate = True
@@ -38,7 +36,7 @@ language = 'en'
 
 add_module_names = False
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'sdk_index.rst']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.rst']
 
 linkcheck_retries = 2
 linkcheck_anchors = False
@@ -60,8 +58,6 @@ html_theme_options = {
 }
 html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
-# TODO: verify the link to dwave docs
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-    'qbsolv': ('https://docs.ocean.dwavesys.com/projects/qbsolv/en/latest/', None),
     'dwave': ('https://docs.dwavequantum.com/en/latest/', None),
     }

@@ -21,7 +21,5 @@ About penaltymodel
 Usage Information
 =================
 
-.. todo:: add the intersphinx prefix to enable these links for self builds
-
 *   :ref:`index_concepts` for terminology
 *   :ref:`concept_penalty` for more information on penalties.
