@@ -1,43 +1,25 @@
-..  -*- coding: utf-8 -*-
-
-.. _index_penalty:
+.. _index_penaltymodel:
 
 ============
 penaltymodel
 ============
 
+.. toctree::
+    :caption: Reference documentation for penaltymodel:
+    :maxdepth: 1
+
+    api_ref
+
+
+About penaltymodel
+==================
+
 .. include:: README.rst
-  :start-after: index-start-marker
-  :end-before: index-end-marker
+    :start-after: start_penaltymodel_about
+    :end-before: end_penaltymodel_about
 
-.. sdk-start-marker
+Usage Information
+=================
 
-.. toctree::
-  :maxdepth: 1
-
-  reference
-  release_notes
-
-.. sdk-end-marker
-
-.. toctree::
-  :caption: Code
-  :maxdepth: 1
-
-  Source <https://github.com/dwavesystems/penaltymodel>
-
-.. toctree::
-  :caption: Ocean Software
-  :maxdepth: 1
-
-  Ocean Home <https://ocean.dwavesys.com/>
-  Ocean Documentation <https://docs.ocean.dwavesys.com>
-  Ocean Glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>
-
-.. toctree::
-  :caption: D-Wave
-  :maxdepth: 1
-
-  D-Wave <https://www.dwavesys.com>
-  Leap <https://cloud.dwavesys.com/leap/>
-  D-Wave System Documentation <https://docs.dwavesys.com/docs/latest/index.html>
+*   :ref:`index_concepts` for terminology
+*   :ref:`concept_penalty` for more information on penalties.

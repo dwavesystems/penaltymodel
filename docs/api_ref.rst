@@ -1,21 +1,22 @@
-.. _reference_penaltymodel:
+.. _penaltymodel_api_ref:
 
-Reference Documentation
-***********************
+=============
+API Reference
+=============
 
 .. currentmodule:: penaltymodel
 
 This package implements the generation and caching of :term:`penalty model`\ s.
+The main function for penalty models is :func:`get_penalty_model`. In addition,
+the package provides some more-advanced interfaces.
 
-The main function for penalty models is:
+Function
+--------
 
 .. autofunction:: get_penalty_model
 
-In addition to :func:`get_penalty_model`, there are some more advanced
-interfaces available.
-
 Cache
-=====
+-----
 
 .. autoclass:: PenaltyModelCache
 
@@ -37,7 +38,7 @@ Methods
     PenaltyModelCache.retrieve
 
 Exceptions
-==========
+----------
 
 .. autosummary::
     :toctree: generated/
@@ -46,7 +47,7 @@ Exceptions
     MissingPenaltyModel
 
 Utilities
-=========
+---------
 
 .. autosummary::
     :toctree: generated/
