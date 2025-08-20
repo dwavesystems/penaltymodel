@@ -1,0 +1,5 @@
+---
+prelude: >
+    ``penaltymodel`` is deprecated and will be removed in Ocean 10.
+    For solving problems with constraints, we recommend using the hybrid
+    solvers in the Leap service.
