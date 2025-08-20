@@ -64,7 +64,7 @@ jobs:
         type: string
 
     macos:
-      xcode: 16.2.0
+      xcode: 16.4.0  # latest as of August 2025
     resource_class: macos.m1.medium.gen1
 
     steps:
@@ -152,7 +152,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: python:3.9
+      - image: python:3.10
 
     steps:
       - checkout
@@ -195,7 +195,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: python:3.9
+      - image: python:3.10
 
     steps:
       - checkout
@@ -225,7 +225,7 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.9", "3.10", "3.11", "3.12", "3.13"]
+              python-version: &python-versions ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
               pip-constraints:
                 # test the min and max (as of July 2024) version ranges
                 - dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
@@ -239,6 +239,8 @@ workflows:
                 - python-version: "3.12"
                   pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
                 - python-version: "3.13"
+                  pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
+                - python-version: "3.14"
                   pip-constraints: dimod==0.10.9 scipy==1.6.0 numpy==1.20.0 networkx==2.4
       - test-macos:
           name: test-macos-<< matrix.python-version >>
