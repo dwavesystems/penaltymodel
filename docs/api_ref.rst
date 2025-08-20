@@ -4,6 +4,12 @@
 API Reference
 =============
 
+.. deprecated:: 1.3.0
+
+    ``penaltymodel`` is deprecated and will be removed in Ocean 10.
+    For solving problems with constraints, we recommend using the hybrid
+    solvers in the Leap service.
+
 .. currentmodule:: penaltymodel
 
 This package implements the generation and caching of :term:`penalty model`\ s.

@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from warnings import warn as _warn  # so it doesn't get pulled in by import *
+
 __version__ = '1.2.0'
 
 import penaltymodel.core
@@ -30,3 +32,11 @@ import penaltymodel.typing
 
 from penaltymodel.utils import *
 import penaltymodel.utils
+
+_warn("penaltymodel is deprecated and will be removed in Ocean 10. "
+      "For solving problems with constraints, "
+      "we recommend using the hybrid solvers in the Leap service. "
+      "You can find documentation for the hybrid solvers at https://docs.dwavequantum.com.",
+      category=DeprecationWarning,
+      stacklevel=2,
+)
