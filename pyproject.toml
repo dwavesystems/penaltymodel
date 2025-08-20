@@ -5,6 +5,38 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "penaltymodel"
+dynamic = ["version"]
+authors = [
+    {name = "D-Wave", email = "tools@dwavesys.com"},
+]
+description = "Enables the formulation of nonlinear models for industrial optimization problems."
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "dimod>=0.10.9",
+    "homebase>=1.0.1",
+    "networkx>=2.4.0",
+    "numpy>=1.20.0",
+    "scipy>=1.6.0",
+]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.urls]
+Changelog = "https://github.com/dwavesystems/penaltymodel/releases"
+Documentation = "https://docs.dwavequantum.com"
+"Source Code" = "https://github.com/dwavesystems/penaltymodel"
+
 [tool.coverage.run]
 source = [
     "penaltymodel/",
@@ -16,3 +48,13 @@ exclude_lines = [
     "RuntimeError",
     "pass",
 ]
+
+[tool.setuptools]
+packages = [
+    "penaltymodel",
+    "penaltymodel.core",
+    "penaltymodel.core.classes",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "penaltymodel.__version__"}
