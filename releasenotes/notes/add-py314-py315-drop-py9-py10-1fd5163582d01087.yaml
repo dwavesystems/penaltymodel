@@ -5,4 +5,4 @@ upgrade:
   - |
     Drop support for Python 3.10.
   - |
-    Drop support for dimod<0.12.
+    Drop support for dimod<0.12, networkx<3.2 and numpy<2.
