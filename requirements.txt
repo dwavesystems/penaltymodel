@@ -4,10 +4,8 @@ homebase==1.0.1
 
 networkx==3.0
 
-numpy==1.21.0;python_version<"3.10"  # oldest that supports arm on macos
-numpy==2.1.0;python_version >= '3.10'
+numpy==2.1.0
 
-scipy==1.7.3;python_version<"3.10"
-scipy==1.14.1;python_version>="3.10"
+scipy==1.14.1
 
 reno==3.3.0

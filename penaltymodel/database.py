@@ -622,18 +622,8 @@ def isolated_cache(*args, **kwargs):
     This context manager is not reentrant.
 
     """
-    import sys
-
-    if sys.version_info[:2] >= (3, 10):
-        # Added in 3.10
-        # We need ignore_cleanup_errors for Windows, it will still make a "best effort"
-        # to remove the directory.
-        kwarg = dict(ignore_cleanup_errors=True)
-    else:
-        kwarg = dict()
-
     with threading.RLock():
-        with tempfile.TemporaryDirectory(**kwarg) as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             current = PenaltyModelCache.database_path
             PenaltyModelCache.database_path = d
             try:
