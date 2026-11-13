@@ -1,8 +1,8 @@
-dimod==0.12.17
+dimod==0.12.23
 
 homebase==1.0.1
 
-networkx==3.0
+networkx==3.2
 
 numpy==2.1.0
 
