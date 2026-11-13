@@ -19,8 +19,6 @@ PenaltyModel
 
 from numbers import Number
 
-import networkx as nx
-
 from dimod import BinaryQuadraticModel, Vartype
 
 from penaltymodel.core.classes.specification import Specification

@@ -15,10 +15,9 @@
 """The module is considered internal."""
 
 from collections import OrderedDict
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import dimod
-import networkx as nx
 import numpy as np
 import scipy.optimize
 

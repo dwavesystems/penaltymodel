@@ -14,14 +14,10 @@
 
 r"""This package implements the generation and caching of :term:`penalty model`\ s."""
 
-import copy
-
-from typing import Mapping, Optional, Sequence, Tuple
+from typing import Optional, Tuple
 
 import dimod
 import networkx as nx
-
-from dimod.typing import Variable
 
 from penaltymodel.database import PenaltyModelCache
 from penaltymodel.exceptions import MissingPenaltyModel
