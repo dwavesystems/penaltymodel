@@ -35,8 +35,6 @@ Functions and Utilities
 """
 import warnings
 
-import dimod
-
 from penaltymodel.database import PenaltyModelCache
 from penaltymodel.core.classes import PenaltyModel, Specification
 from penaltymodel.interface import get_penalty_model as _get_penalty_model

@@ -21,7 +21,7 @@ import struct
 import tempfile
 import threading
 
-from typing import Dict, Iterator, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterator, NamedTuple, Optional, Tuple, Union
 
 import dimod
 import homebase
